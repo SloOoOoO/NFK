@@ -2,12 +2,13 @@ using Renci.SshNet;
 
 namespace NFK.Infrastructure.DATEV;
 
-public class DATEVSftpService
+public class DATEVSftpService : IDisposable
 {
     private readonly string _host;
     private readonly int _port;
     private readonly string _username;
-    private readonly string _password;
+    private string _password;
+    private bool _disposed;
 
     public DATEVSftpService(string host, int port, string username, string password)
     {
@@ -15,6 +16,25 @@ public class DATEVSftpService
         _port = port;
         _username = username;
         _password = password;
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // Clear sensitive data
+                _password = string.Empty;
+            }
+            _disposed = true;
+        }
     }
 
     public async Task<bool> UploadFileAsync(string localFilePath, string remoteFilePath)

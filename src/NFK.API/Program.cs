@@ -142,6 +142,17 @@ public class HangfireAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthoriz
 {
     public bool Authorize(Hangfire.Dashboard.DashboardContext context)
     {
-        return true; // TODO: Implement proper authorization
+        // WARNING: This allows unrestricted access to Hangfire dashboard in development
+        // In production, implement proper authentication:
+        // 1. Check if user is authenticated
+        // 2. Verify user has SuperAdmin or DATEVManager role
+        // 3. Use context properties to access request information
+        // Example for ASP.NET Core:
+        // var httpContext = context.GetHttpContext();
+        // return httpContext.User.Identity?.IsAuthenticated == true &&
+        //        (httpContext.User.IsInRole("SuperAdmin") || httpContext.User.IsInRole("DATEVManager"));
+        
+        // TODO: Implement proper role-based authorization before deploying to production
+        return false; // Deny access by default for security
     }
 }

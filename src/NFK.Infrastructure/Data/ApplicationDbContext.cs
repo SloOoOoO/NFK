@@ -94,13 +94,18 @@ public class ApplicationDbContext : DbContext
         }
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, LambdaExpression> _filterCache = new();
+
     private static LambdaExpression GetSoftDeleteFilter(Type entityType)
     {
-        var parameter = Expression.Parameter(entityType, "e");
-        var property = Expression.Property(parameter, nameof(Domain.Common.BaseEntity.IsDeleted));
-        var falseConstant = Expression.Constant(false);
-        var equality = Expression.Equal(property, falseConstant);
-        return Expression.Lambda(equality, parameter);
+        return _filterCache.GetOrAdd(entityType, type =>
+        {
+            var parameter = Expression.Parameter(type, "e");
+            var property = Expression.Property(parameter, nameof(Domain.Common.BaseEntity.IsDeleted));
+            var falseConstant = Expression.Constant(false);
+            var equality = Expression.Equal(property, falseConstant);
+            return Expression.Lambda(equality, parameter);
+        });
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
