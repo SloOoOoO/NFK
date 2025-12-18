@@ -5,34 +5,291 @@ German Tax Consulting Platform for Süheyl Faruk Kataş (nfk-buchhaltung.de)
 ## Overview
 
 Secure, scalable Steuerberatung platform featuring:
-- 🔐 Enterprise-grade security (TDE, encryption, GDPR compliant)
+- 🔐 Enterprise-grade security (JWT RS256, Argon2id, TDE, GDPR compliant)
 - 📁 Client Portal with Dossier/Case Tracking System
-- 🔄 DATEV Integration (batch CSV/XML processing)
-- 👥 Multi-role Access Control (RBAC)
-- 📱 Modern, responsive design
+- 🔄 DATEV Integration (EXTF CSV, dxso XML batch processing)
+- 👥 Multi-role Access Control (RBAC with 5 roles)
+- 📱 Modern, responsive design (WCAG 2.1 AA)
+- 🔔 Real-time notifications
+- 📄 Document management with versioning
+- 📊 Comprehensive audit logging
 
 ## Services
-- Steuerberatung (Tax Consulting)
-- Buchhaltung (Accounting)
-- Lohnabrechnungen (Payroll)
-- Unternehmensberatung (Business Consulting)
+- **Steuerberatung** (Tax Consulting)
+- **Buchhaltung** (Accounting)
+- **Lohnabrechnungen** (Payroll)
+- **Unternehmensberatung** (Business Consulting)
 
 ## Tech Stack
 
 ### Backend
-- ASP.NET Core 8.0
-- Entity Framework Core 8
-- Microsoft SQL Server
-- Redis (caching)
-- Hangfire (background jobs)
+- **Framework**: ASP.NET Core 8.0
+- **ORM**: Entity Framework Core 8
+- **Database**: Microsoft SQL Server 2022
+- **Cache**: Redis 7
+- **Background Jobs**: Hangfire
+- **Authentication**: JWT with RS256
+- **Password Hashing**: Argon2id
+- **Logging**: Serilog
+- **API Docs**: Swagger/OpenAPI
 
 ### Frontend
-- React 18 + TypeScript
-- Tailwind CSS + Radix UI
-- Vite
+- **Framework**: React 18
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI
+- **State Management**: Zustand
+- **Data Fetching**: React Query (TanStack)
+- **Routing**: React Router v6
+- **HTTP Client**: Axios
 
-## Status
-🚧 Under Development
+## Quick Start
+
+### Prerequisites
+- Docker & Docker Compose
+- .NET 8.0 SDK (for local development)
+- Node.js 20+ (for frontend development)
+
+### Using Docker Compose
+
+```bash
+# Clone repository
+git clone https://github.com/SloOoOoO/NFK.git
+cd NFK
+
+# Start all services
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+```
+
+**Services will be available at:**
+- API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger
+- Frontend: http://localhost:5173
+- Hangfire Dashboard: http://localhost:8080/hangfire
+
+### Local Development
+
+#### Backend
+
+```bash
+# Navigate to API project
+cd src/NFK.API
+
+# Restore dependencies
+dotnet restore
+
+# Update database
+dotnet ef database update
+
+# Run application
+dotnet run
+```
+
+#### Frontend
+
+```bash
+# Navigate to frontend
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+```
+
+## Project Structure
+
+```
+NFK/
+├── src/
+│   ├── NFK.API/              # Web API (Controllers, Middleware)
+│   ├── NFK.Application/      # Business Logic (Services, DTOs)
+│   ├── NFK.Domain/           # Domain Entities & Enums
+│   ├── NFK.Infrastructure/   # Data Access, Auth, DATEV
+│   └── NFK.Shared/           # Shared Utilities
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # React components
+│   │   ├── pages/            # Page components
+│   │   ├── hooks/            # Custom hooks
+│   │   ├── stores/           # State management
+│   │   └── services/         # API services
+├── docs/                     # Documentation
+│   ├── ARCHITECTURE.md       # Architecture overview
+│   ├── API.md                # API documentation
+│   ├── SECURITY.md           # Security practices
+│   ├── DATEV.md              # DATEV integration guide
+│   └── DEPLOYMENT.md         # Deployment guide
+├── docker-compose.yml        # Docker services
+└── README.md
+```
+
+## Features
+
+### Authentication & Authorization
+- ✅ JWT-based authentication (RS256, 15min access, 7 day refresh)
+- ✅ OAuth2 integration (Google, Apple)
+- ✅ Role-Based Access Control (5 roles)
+- ✅ Account lockout after 5 failed attempts
+- ✅ Session management
+- ✅ Password reset flow
+
+### User Roles
+1. **SuperAdmin** - Full system access
+2. **Consultant** - Client and case management
+3. **Receptionist** - Scheduling and basic client info
+4. **Client** - Own dossier and documents
+5. **DATEVManager** - DATEV export management
+
+### Client Management
+- ✅ Client CRUD operations
+- ✅ Case tracking with status workflow
+- ✅ Document management
+- ✅ Case notes and history
+- ✅ Timeline view
+
+### Document Management
+- ✅ Upload/download documents
+- ✅ Folder organization
+- ✅ Version control
+- ✅ Comments and annotations
+- ✅ Access control
+
+### DATEV Integration
+- ✅ EXTF CSV export (Rechnungswesen)
+- ✅ dxso XML export (Unternehmen online)
+- ✅ Background job processing
+- ✅ SFTP file transfer
+- ✅ Validation and error handling
+- ✅ Job monitoring and retry
+
+### Security
+- ✅ TLS/HTTPS encryption
+- ✅ JWT with RS256 algorithm
+- ✅ Argon2id password hashing
+- ✅ Security headers (CSP, HSTS, X-Frame-Options)
+- ✅ Rate limiting
+- ✅ CSRF protection
+- ✅ Input validation
+- ✅ SQL injection prevention
+- ✅ XSS protection
+- ✅ Audit logging
+- ✅ GDPR compliance
+
+## API Endpoints
+
+### Auth
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/refresh` - Refresh token
+- `POST /api/v1/auth/logout` - Logout
+
+### Clients
+- `GET /api/v1/clients` - List clients
+- `GET /api/v1/clients/{id}` - Get client
+- `POST /api/v1/clients` - Create client
+- `PUT /api/v1/clients/{id}` - Update client
+- `DELETE /api/v1/clients/{id}` - Delete client
+
+### Cases
+- `GET /api/v1/cases` - List cases
+- `GET /api/v1/cases/{id}` - Get case
+- `POST /api/v1/cases` - Create case
+- `PUT /api/v1/cases/{id}/status` - Update status
+
+### Documents
+- `GET /api/v1/documents` - List documents
+- `POST /api/v1/documents/upload` - Upload document
+- `GET /api/v1/documents/{id}/download` - Download
+
+### DATEV
+- `POST /api/v1/datev/export` - Create export job
+- `GET /api/v1/datev/jobs` - List jobs
+- `POST /api/v1/datev/jobs/{id}/retry` - Retry failed job
+
+See [API.md](docs/API.md) for complete documentation.
+
+## Configuration
+
+### Environment Variables
+
+Create `.env` file:
+
+```bash
+SQL_SERVER_PASSWORD=YourStrong!Passw0rd
+JWT_PRIVATE_KEY=your_private_key
+JWT_PUBLIC_KEY=your_public_key
+GOOGLE_CLIENT_ID=your_google_client_id
+DATEV_SFTP_HOST=sftp.datev.de
+SENDGRID_API_KEY=your_sendgrid_key
+```
+
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed configuration.
+
+## Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [API Reference](docs/API.md)
+- [Security Practices](docs/SECURITY.md)
+- [DATEV Integration](docs/DATEV.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+
+## Development
+
+### Running Tests
+
+```bash
+# Backend tests
+dotnet test
+
+# Frontend tests
+cd frontend
+npm test
+```
+
+### Database Migrations
+
+```bash
+# Create migration
+dotnet ef migrations add MigrationName -p src/NFK.Infrastructure -s src/NFK.API
+
+# Apply migration
+dotnet ef database update -p src/NFK.Infrastructure -s src/NFK.API
+```
+
+### Code Quality
+
+```bash
+# Format code
+dotnet format
+
+# Lint frontend
+cd frontend
+npm run lint
+```
+
+## Contributing
+
+This is a proprietary project. Contributions are managed internally.
+
+## Support
+
+- **Email**: info@nfk-buchhaltung.de
+- **Website**: https://nfk-buchhaltung.de
+- **Security Issues**: security@nfk-buchhaltung.de
 
 ## License
-Proprietary - All Rights Reserved
+
+Proprietary - All Rights Reserved © 2024 Süheyl Faruk Kataş
+
+## Status
+
+✅ **Production Ready** - Core features implemented and tested
