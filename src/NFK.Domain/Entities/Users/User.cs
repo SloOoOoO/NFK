@@ -16,7 +16,7 @@ public class User : BaseEntity
     public DateTime? LockedUntil { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public string? GoogleId { get; set; }
-    public string? AppleId { get; set; }
+    public string? DATEVId { get; set; }
 
     // Navigation properties
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();

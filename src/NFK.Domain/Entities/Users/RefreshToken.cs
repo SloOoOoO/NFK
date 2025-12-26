@@ -8,6 +8,7 @@ public class RefreshToken : BaseEntity
     public string Token { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
     public bool IsRevoked { get; set; }
+    public DateTime? RevokedAt { get; set; }
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
 
