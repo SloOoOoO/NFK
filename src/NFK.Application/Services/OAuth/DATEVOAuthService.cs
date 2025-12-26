@@ -183,8 +183,10 @@ public class DATEVOAuthService : IDATEVOAuthService
             throw new InvalidOperationException("DATEV OAuth is not enabled");
         }
 
-        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-        var response = await _httpClient.GetAsync(_userInfoEndpoint);
+        var request = new HttpRequestMessage(HttpMethod.Get, _userInfoEndpoint);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        
+        var response = await _httpClient.SendAsync(request);
         
         if (!response.IsSuccessStatusCode)
         {
@@ -199,19 +201,30 @@ public class DATEVOAuthService : IDATEVOAuthService
 
     public async Task<bool> ValidateConsultantCredentialsAsync(string consultantNumber)
     {
-        // TODO: Implement actual DATEV API validation
-        // This would typically call DATEV's API to verify:
-        // 1. The consultant number is valid
-        // 2. The consultant has an active license
-        // 3. The consultant is certified for tax/accounting services
-        // 4. The consultant's credentials haven't been revoked
+        // SECURITY CRITICAL: This method MUST be implemented with actual DATEV API validation before production
+        // Current implementation is a placeholder that logs a warning
         
-        _logger.LogInformation("Validating DATEV consultant credentials: {ConsultantNumber}", consultantNumber);
+        _logger.LogWarning("DATEV consultant validation is not fully implemented. Consultant number: {ConsultantNumber}. " +
+                          "This MUST be replaced with actual DATEV API calls before production deployment.", 
+                          consultantNumber);
 
-        // For now, return true if consultant number is provided
-        // In production, this MUST be implemented with actual DATEV API calls
+        if (string.IsNullOrWhiteSpace(consultantNumber))
+        {
+            _logger.LogWarning("Empty consultant number provided for DATEV validation");
+            return false;
+        }
+
+        // TODO: SECURITY - Implement actual DATEV API validation before production:
+        // 1. Call DATEV's API to verify the consultant number exists
+        // 2. Verify the consultant has an active license
+        // 3. Confirm the consultant is certified for tax/accounting services  
+        // 4. Check that the consultant's credentials haven't been revoked
+        // 5. Validate the consultant number format and checksum
+        
+        // For development/testing: Accept any non-empty consultant number
+        // WARNING: This is NOT secure for production use
         await Task.CompletedTask;
-        return !string.IsNullOrEmpty(consultantNumber);
+        return true; // PLACEHOLDER - Replace with actual validation
     }
 
     private async Task<User> FindOrCreateDATEVUserAsync(DATEVUserProfile profile)

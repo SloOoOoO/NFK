@@ -326,8 +326,17 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(input))
             return string.Empty;
 
-        // Remove any potentially dangerous characters
-        return input.Trim();
+        // Remove potentially dangerous characters that could be used in injection attacks
+        // Allow only letters, spaces, hyphens, and apostrophes for names
+        var allowedChars = input.Where(c => 
+            char.IsLetter(c) || 
+            char.IsWhiteSpace(c) || 
+            c == '-' || 
+            c == '\'' ||
+            c == '.'
+        ).ToArray();
+        
+        return new string(allowedChars).Trim();
     }
 
     private string GetClientIpAddress()

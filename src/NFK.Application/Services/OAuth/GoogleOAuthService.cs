@@ -133,8 +133,10 @@ public class GoogleOAuthService : IGoogleOAuthService
 
     public async Task<GoogleUserProfile> GetUserProfileAsync(string accessToken)
     {
-        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-        var response = await _httpClient.GetAsync(UserInfoEndpoint);
+        var request = new HttpRequestMessage(HttpMethod.Get, UserInfoEndpoint);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        
+        var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var profile = await response.Content.ReadFromJsonAsync<GoogleUserProfile>();
