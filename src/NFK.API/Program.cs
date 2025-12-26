@@ -2,9 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using NFK.Infrastructure.Data;
+using NFK.Infrastructure.Security;
+using NFK.Application.Interfaces;
+using NFK.Application.Services;
 using Hangfire;
 using Hangfire.SqlServer;
 using System.Security.Cryptography;
+using System.Text;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,28 +46,69 @@ builder.Services.AddStackExchangeRedisCache(options =>
 // JWT Authentication
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "NFK.API";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "NFK.Client";
-var jwtPublicKey = builder.Configuration["Jwt:PublicKey"] ?? GenerateTempRsaKey();
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+var jwtPublicKey = builder.Configuration["Jwt:PublicKey"];
+var accessTokenExpiration = int.Parse(builder.Configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
+var refreshTokenExpiration = int.Parse(builder.Configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
 
-var rsa = RSA.Create();
-rsa.ImportFromPem(jwtPublicKey);
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+// Register JWT Service - use symmetric key if Secret is provided, otherwise use RSA
+if (!string.IsNullOrEmpty(jwtSecret))
+{
+    builder.Services.AddSingleton(sp => 
+        new JwtService(jwtIssuer, jwtAudience, jwtSecret, accessTokenExpiration, refreshTokenExpiration));
+    
+    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new RsaSecurityKey(rsa),
-            ClockSkew = TimeSpan.Zero
-        };
-    });
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = key,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+}
+else if (!string.IsNullOrEmpty(jwtPublicKey))
+{
+    var jwtPrivateKey = builder.Configuration["Jwt:PrivateKey"] ?? GenerateTempRsaKey();
+    builder.Services.AddSingleton(sp => 
+        new JwtService(jwtIssuer, jwtAudience, jwtPrivateKey, jwtPublicKey, accessTokenExpiration, refreshTokenExpiration));
+    
+    var rsa = RSA.Create();
+    rsa.ImportFromPem(jwtPublicKey);
+    
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new RsaSecurityKey(rsa),
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+}
+else
+{
+    throw new InvalidOperationException("JWT configuration requires either Secret or PublicKey/PrivateKey to be set");
+}
 
 builder.Services.AddAuthorization();
+
+// Register application services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<PasswordHasher>();
 
 // Hangfire
 builder.Services.AddHangfire(configuration => configuration
