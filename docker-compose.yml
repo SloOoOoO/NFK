@@ -1,12 +1,12 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: nfk-sqlserver
-    environment:
+    environment: 
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong!Passw0rd
+      - SA_PASSWORD=SqlServer2025
       - MSSQL_PID=Developer
     ports:
       - "1433:1433"
@@ -14,28 +14,29 @@ services:
       - sqlserver-data:/var/opt/mssql
     networks:
       - nfk-network
-    healthcheck:
-      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong!Passw0rd -Q "SELECT 1" || exit 1
-      interval: 10s
-      timeout: 3s
-      retries: 10
+    healthcheck: 
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "SqlServer2025" -C -Q "SELECT 1" || exit 1
+      interval: 30s
+      timeout:  10s
+      retries: 5
+      start_period:  60s
 
   redis:
     image: redis:7-alpine
     container_name: nfk-redis
     ports:
       - "6379:6379"
-    volumes:
+    volumes: 
       - redis-data:/data
     networks:
       - nfk-network
-    healthcheck:
+    healthcheck: 
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 3s
+      timeout:  3s
       retries: 10
 
-  api:
+  api: 
     build:
       context: .
       dockerfile: src/NFK.API/Dockerfile
@@ -43,39 +44,42 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NFK;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;MultipleActiveResultSets=true
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NFK;User Id=sa;Password=SqlServer2025;TrustServerCertificate=True;MultipleActiveResultSets=true
       - ConnectionStrings__Redis=redis:6379
-    ports:
+      - Jwt__Secret=ThisIsAVeryLongSecretKeyForJWTTokenGenerationAtLeast32CharactersLong2025
+      - Jwt__Issuer=NFK. API
+      - Jwt__Audience=NFK. Client
+    ports: 
       - "8080:8080"
-    depends_on:
+    depends_on: 
       sqlserver:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
+    networks: 
       - nfk-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: nfk-frontend
-    environment:
+    container_name:  nfk-frontend
+    environment: 
       - VITE_API_URL=http://localhost:8080/api/v1
-    ports:
+    ports: 
       - "5173:5173"
     depends_on:
       - api
-    networks:
+    networks: 
       - nfk-network
     volumes:
       - ./frontend:/app
       - /app/node_modules
 
 networks:
-  nfk-network:
+  nfk-network: 
     driver: bridge
 
 volumes:
-  sqlserver-data:
+  sqlserver-data: 
   redis-data:
