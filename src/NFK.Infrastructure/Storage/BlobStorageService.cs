@@ -68,6 +68,7 @@ public class BlobStorageService
 
         _logger.LogInformation("Stub: Downloading file {FileName} from blob storage", fileName);
         await Task.Delay(100); // Simulate async operation
+        // NOTE: This stub returns an empty stream. Replace with actual implementation for real file downloads.
         return new MemoryStream();
     }
 
@@ -104,6 +105,7 @@ public class BlobStorageService
 
         _logger.LogInformation("Stub: Checking if file {FileName} exists in blob storage", fileName);
         await Task.Delay(50); // Simulate async operation
+        // NOTE: This stub always returns false. Replace with actual implementation for real existence checks.
         return false;
     }
 }
