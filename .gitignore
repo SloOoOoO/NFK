@@ -54,7 +54,8 @@ out/
 .env
 .env.local
 .env.*.local
-appsettings.Development.json
+# appsettings.Development.json is tracked in the repo with placeholders as a template
+# appsettings.Development.json
 appsettings.Production.json
 
 # OS
