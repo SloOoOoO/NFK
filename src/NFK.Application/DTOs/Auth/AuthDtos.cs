@@ -39,3 +39,12 @@ public record UserInfo(
     string LastName,
     string Role
 );
+
+public record UserResponse(
+    int Id,
+    string Email,
+    string FirstName,
+    string LastName,
+    string Role,
+    bool IsActive
+);

@@ -110,6 +110,7 @@ builder.Services.AddAuthorization();
 // Register application services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<PasswordHasher>();
+builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 
 // Hangfire
 builder.Services.AddHangfire(configuration => configuration

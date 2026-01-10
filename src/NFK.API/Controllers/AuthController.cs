@@ -92,6 +92,28 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Logout failed" });
         }
     }
+
+    [HttpGet("me")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { error = "invalid_token", message = "User not found in token" });
+            }
+
+            var user = await _authService.GetUserByIdAsync(int.Parse(userId));
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Get current user failed");
+            return StatusCode(500, new { error = "internal_error", message = "Failed to get current user" });
+        }
+    }
 }
 
 public record RefreshTokenRequest(string RefreshToken);

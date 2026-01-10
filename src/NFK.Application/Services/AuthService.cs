@@ -289,6 +289,30 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<UserResponse> GetUserByIdAsync(int userId)
+    {
+        var user = await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            throw new InvalidOperationException("User not found");
+        }
+
+        var role = user.UserRoles.FirstOrDefault()?.Role.Name ?? "Client";
+
+        return new UserResponse(
+            user.Id,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            role,
+            user.IsActive
+        );
+    }
+
     private bool ValidatePassword(string password)
     {
         if (password.Length < 8)
