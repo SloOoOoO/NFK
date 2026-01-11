@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/public/Landing';
 import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
 import Dashboard from './pages/portal/Dashboard';
 import AdminDashboard from './pages/portal/AdminDashboard';
 import ClientPortal from './pages/portal/ClientPortal';
@@ -19,6 +20,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/register" element={<Register />} />
         
         {/* Portal Routes */}
         <Route path="/portal/dashboard" element={<Dashboard />} />

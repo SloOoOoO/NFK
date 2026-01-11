@@ -14,11 +14,11 @@ export default function Landing() {
               Professionelle Steuerberatung für Ihr Unternehmen
             </p>
             <div className="flex gap-4">
-              <Link to="/auth/login" className="btn-primary bg-white text-primary px-8 py-3 rounded-md hover:bg-gray-100">
-                Anmelden
+              <Link to="/auth/register" className="btn-primary bg-white text-primary px-8 py-3 rounded-md hover:bg-gray-100">
+                Jetzt registrieren
               </Link>
-              <Link to="/contact" className="btn-secondary border-2 border-white text-white px-8 py-3 rounded-md hover:bg-white/10">
-                Kontakt
+              <Link to="/auth/login" className="btn-secondary border-2 border-white text-white px-8 py-3 rounded-md hover:bg-white/10">
+                Anmelden
               </Link>
             </div>
           </div>
