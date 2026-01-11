@@ -58,56 +58,64 @@ export default function Dashboard() {
         {/* Key Stats Cards - CLIENT_, DOC_, COMPLY_, DATEV_ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {/* CLIENT_ Stats */}
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">👥</span>
+          <Link to="/portal/clients" className="block">
+            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <span className="text-xs text-green-600 font-medium">+{CLIENT_stats.new_this_month} neu</span>
               </div>
-              <span className="text-xs text-green-600 font-medium">+{CLIENT_stats.new_this_month} neu</span>
+              <h3 className="text-sm font-semibold text-textSecondary mb-1">Aktive Mandanten</h3>
+              <p className="text-3xl font-bold text-primary">{CLIENT_stats.active}</p>
+              <p className="text-xs text-textSecondary mt-2">von {CLIENT_stats.total} gesamt</p>
             </div>
-            <h3 className="text-sm font-semibold text-textSecondary mb-1">Aktive Mandanten</h3>
-            <p className="text-3xl font-bold text-primary">{CLIENT_stats.active}</p>
-            <p className="text-xs text-textSecondary mt-2">von {CLIENT_stats.total} gesamt</p>
-          </div>
+          </Link>
 
           {/* DOC_ Stats */}
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📄</span>
+          <Link to="/portal/documents" className="block">
+            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">📄</span>
+                </div>
+                <span className="text-xs text-orange-600 font-medium">{DOC_stats.pending_signature} ausstehend</span>
               </div>
-              <span className="text-xs text-orange-600 font-medium">{DOC_stats.pending_signature} ausstehend</span>
+              <h3 className="text-sm font-semibold text-textSecondary mb-1">Dokumente</h3>
+              <p className="text-3xl font-bold text-primary">{DOC_stats.total}</p>
+              <p className="text-xs text-textSecondary mt-2">{DOC_stats.uploaded_today} heute hochgeladen</p>
             </div>
-            <h3 className="text-sm font-semibold text-textSecondary mb-1">Dokumente</h3>
-            <p className="text-3xl font-bold text-primary">{DOC_stats.total}</p>
-            <p className="text-xs text-textSecondary mt-2">{DOC_stats.uploaded_today} heute hochgeladen</p>
-          </div>
+          </Link>
 
           {/* COMPLY_ Stats */}
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">⏰</span>
+          <Link to="/portal/cases" className="block">
+            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">⏰</span>
+                </div>
+                <span className="text-xs text-red-600 font-medium">Dringend</span>
               </div>
-              <span className="text-xs text-red-600 font-medium">Dringend</span>
+              <h3 className="text-sm font-semibold text-textSecondary mb-1">Anstehende Fristen</h3>
+              <p className="text-3xl font-bold text-primary">{COMPLY_deadlines.length}</p>
+              <p className="text-xs text-textSecondary mt-2">Diese Woche fällig</p>
             </div>
-            <h3 className="text-sm font-semibold text-textSecondary mb-1">Anstehende Fristen</h3>
-            <p className="text-3xl font-bold text-primary">{COMPLY_deadlines.length}</p>
-            <p className="text-xs text-textSecondary mt-2">Diese Woche fällig</p>
-          </div>
+          </Link>
 
           {/* DATEV_ Stats */}
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">🔄</span>
+          <Link to="/portal/datev" className="block">
+            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">🔄</span>
+                </div>
+                <span className="text-xs text-green-600 font-medium">Aktiv</span>
               </div>
-              <span className="text-xs text-green-600 font-medium">Aktiv</span>
+              <h3 className="text-sm font-semibold text-textSecondary mb-1">DATEV Exports</h3>
+              <p className="text-3xl font-bold text-primary">{DATEV_recent.length}</p>
+              <p className="text-xs text-textSecondary mt-2">Letzte 24 Stunden</p>
             </div>
-            <h3 className="text-sm font-semibold text-textSecondary mb-1">DATEV Exports</h3>
-            <p className="text-3xl font-bold text-primary">{DATEV_recent.length}</p>
-            <p className="text-xs text-textSecondary mt-2">Letzte 24 Stunden</p>
-          </div>
+          </Link>
         </div>
 
         {/* Main Content Grid */}
