@@ -35,49 +35,11 @@ export default function Messages() {
     } catch (err: any) {
       console.log('Messages endpoint not available:', err);
       setEndpointAvailable(false);
-      // Use demo data for now
-      setMessages([
-        { 
-          id: 1, 
-          sender: 'Anna Schmidt', 
-          subject: 'Dokumente für Jahresabschluss', 
-          preview: 'Sehr geehrter Herr Berater, anbei sende ich Ihnen die angeforderten Unterlagen...', 
-          timestamp: '10.01.2025 14:23', 
-          unread: true,
-          body: 'Sehr geehrter Herr Berater,\n\nanbei sende ich Ihnen die angeforderten Unterlagen für den Jahresabschluss 2024. Bitte prüfen Sie die Vollständigkeit.\n\nMit freundlichen Grüßen\nAnna Schmidt'
-        },
-        { 
-          id: 2, 
-          sender: 'System Benachrichtigung', 
-          subject: 'Fall-Update: FALL-2025-001', 
-          preview: 'Der Status Ihres Falls wurde auf "In Bearbeitung" geändert...', 
-          timestamp: '10.01.2025 10:15', 
-          unread: true,
-          body: 'Automatische Benachrichtigung:\n\nDer Status Ihres Falls FALL-2025-001 "Jahresabschluss 2024" wurde auf "In Bearbeitung" geändert.\n\nBearbeiter: M. Berater\nZeitpunkt: 10.01.2025 10:15'
-        },
-        { 
-          id: 3, 
-          sender: 'Max Berater', 
-          subject: 'Rückfrage zu Belegen Q4', 
-          preview: 'Guten Tag, ich habe eine Frage zu den eingereichten Belegen...', 
-          timestamp: '09.01.2025 16:45', 
-          unread: false,
-          body: 'Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint ein Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nMax Berater'
-        },
-        { 
-          id: 4, 
-          sender: 'Koch Consulting', 
-          subject: 'Terminvereinbarung', 
-          preview: 'Sehr geehrtes Team, ich würde gerne einen Termin für eine Beratung vereinbaren...', 
-          timestamp: '09.01.2025 11:30', 
-          unread: false,
-          body: 'Sehr geehrtes Team,\n\nich würde gerne einen Termin für eine Beratung bezüglich einer geplanten Investition vereinbaren.\n\nWären Sie am 15. oder 16. Januar verfügbar?\n\nMit freundlichen Grüßen\nHerr Koch'
-        },
-        { 
-          id: 5, 
-          sender: 'DATEV System', 
-          subject: 'Export erfolgreich abgeschlossen', 
-          preview: 'Ihr DATEV Export wurde erfolgreich abgeschlossen...', 
+      setMessages([]); // Empty state on error
+    } finally {
+      setLoading(false);
+    }
+  };
           timestamp: '08.01.2025 22:10', 
           unread: false,
           body: 'Automatische Benachrichtigung:\n\nIhr DATEV Export (Job-ID: EXP-20250108-001) wurde erfolgreich abgeschlossen.\n\nExportierte Datensätze: 245\nZeitpunkt: 08.01.2025 22:10\nStatus: Erfolgreich'
