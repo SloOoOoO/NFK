@@ -6,11 +6,11 @@ export default function Clients() {
   const [filterStatus, setFilterStatus] = useState('all');
 
   const clients = [
-    { id: 1, name: 'Schmidt GmbH', email: 'info@schmidt-gmbh.de', status: 'Aktiv', mandantNr: 'M-1001', phone: '+49 30 123456', lastContact: '05.01.2025' },
-    { id: 2, name: 'Müller & Partner', email: 'kontakt@mueller-partner.de', status: 'Aktiv', mandantNr: 'M-1002', phone: '+49 40 234567', lastContact: '03.01.2025' },
-    { id: 3, name: 'Weber Trading GmbH', email: 'info@weber-trading.de', status: 'Inaktiv', mandantNr: 'M-1003', phone: '+49 89 345678', lastContact: '28.12.2024' },
-    { id: 4, name: 'Koch Consulting', email: 'office@koch-consulting.de', status: 'Aktiv', mandantNr: 'M-1004', phone: '+49 69 456789', lastContact: '10.01.2025' },
-    { id: 5, name: 'Becker Handels AG', email: 'info@becker-ag.de', status: 'Wartend', mandantNr: 'M-1005', phone: '+49 221 567890', lastContact: '08.01.2025' },
+    { id: 1, name: 'Schmidt GmbH', email: 'info@schmidt-gmbh.de', contact: 'Anna Schmidt', status: 'Aktiv', mandantNr: 'M-1001', phone: '+49 30 123456', lastContact: '05.01.2025' },
+    { id: 2, name: 'Müller & Partner', email: 'kontakt@mueller-partner.de', contact: 'Thomas Müller', status: 'Aktiv', mandantNr: 'M-1002', phone: '+49 40 234567', lastContact: '03.01.2025' },
+    { id: 3, name: 'Weber Trading GmbH', email: 'info@weber-trading.de', contact: 'Sarah Weber', status: 'Inaktiv', mandantNr: 'M-1003', phone: '+49 89 345678', lastContact: '28.12.2024' },
+    { id: 4, name: 'Koch Consulting', email: 'office@koch-consulting.de', contact: 'Michael Koch', status: 'Aktiv', mandantNr: 'M-1004', phone: '+49 69 456789', lastContact: '10.01.2025' },
+    { id: 5, name: 'Becker Handels AG', email: 'info@becker-ag.de', contact: 'Lisa Becker', status: 'Ausstehend', mandantNr: 'M-1005', phone: '+49 221 567890', lastContact: '08.01.2025' },
   ];
 
   const filteredClients = clients.filter(client => {
@@ -27,11 +27,18 @@ export default function Clients() {
         return 'bg-green-100 text-green-800';
       case 'Inaktiv':
         return 'bg-gray-100 text-gray-800';
-      case 'Wartend':
+      case 'Ausstehend':
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const statusCounts = {
+    all: clients.length,
+    aktiv: clients.filter(c => c.status === 'Aktiv').length,
+    ausstehend: clients.filter(c => c.status === 'Ausstehend').length,
+    inaktiv: clients.filter(c => c.status === 'Inaktiv').length,
   };
 
   return (
@@ -59,17 +66,6 @@ export default function Clients() {
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-              >
-                <option value="all">Alle Status</option>
-                <option value="Aktiv">Aktiv</option>
-                <option value="Inaktiv">Inaktiv</option>
-                <option value="Wartend">Wartend</option>
-              </select>
-              
               <button className="btn-primary whitespace-nowrap">
                 + Neuer Mandant
               </button>
@@ -77,25 +73,53 @@ export default function Clients() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary mb-1">Gesamt</p>
-            <p className="text-2xl font-bold text-primary">{clients.length}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary mb-1">Aktiv</p>
-            <p className="text-2xl font-bold text-green-600">{clients.filter(c => c.status === 'Aktiv').length}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary mb-1">Inaktiv</p>
-            <p className="text-2xl font-bold text-gray-600">{clients.filter(c => c.status === 'Inaktiv').length}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary mb-1">Wartend</p>
-            <p className="text-2xl font-bold text-yellow-600">{clients.filter(c => c.status === 'Wartend').length}</p>
+        {/* Filter Chips */}
+        <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+          <div className="flex gap-2 overflow-x-auto">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-4 py-2 rounded-md whitespace-nowrap ${
+                filterStatus === 'all'
+                  ? 'bg-primary text-white'
+                  : 'bg-secondary text-textPrimary hover:bg-gray-200'
+              }`}
+            >
+              Alle ({statusCounts.all})
+            </button>
+            <button
+              onClick={() => setFilterStatus('Aktiv')}
+              className={`px-4 py-2 rounded-md whitespace-nowrap ${
+                filterStatus === 'Aktiv'
+                  ? 'bg-primary text-white'
+                  : 'bg-secondary text-textPrimary hover:bg-gray-200'
+              }`}
+            >
+              ✓ Aktiv ({statusCounts.aktiv})
+            </button>
+            <button
+              onClick={() => setFilterStatus('Ausstehend')}
+              className={`px-4 py-2 rounded-md whitespace-nowrap ${
+                filterStatus === 'Ausstehend'
+                  ? 'bg-primary text-white'
+                  : 'bg-secondary text-textPrimary hover:bg-gray-200'
+              }`}
+            >
+              ⏳ Ausstehend ({statusCounts.ausstehend})
+            </button>
+            <button
+              onClick={() => setFilterStatus('Inaktiv')}
+              className={`px-4 py-2 rounded-md whitespace-nowrap ${
+                filterStatus === 'Inaktiv'
+                  ? 'bg-primary text-white'
+                  : 'bg-secondary text-textPrimary hover:bg-gray-200'
+              }`}
+            >
+              ✕ Inaktiv ({statusCounts.inaktiv})
+            </button>
           </div>
         </div>
+
+
 
         {/* Clients Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -104,19 +128,16 @@ export default function Clients() {
               <thead className="bg-secondary">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Mandant-Nr.
+                    Mandant
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Kontakt
+                    Ansprechpartner
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Letzter Kontakt
+                    Letzte Änderung
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
                     Aktionen
@@ -127,15 +148,13 @@ export default function Clients() {
                 {filteredClients.length > 0 ? (
                   filteredClients.map((client) => (
                     <tr key={client.id} className="hover:bg-secondary transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-medium text-primary">{client.mandantNr}</span>
-                      </td>
                       <td className="px-6 py-4">
                         <div className="font-medium text-textPrimary">{client.name}</div>
+                        <div className="text-sm text-textSecondary">{client.mandantNr}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-textPrimary">{client.email}</div>
-                        <div className="text-sm text-textSecondary">{client.phone}</div>
+                        <div className="text-sm text-textPrimary">{client.contact}</div>
+                        <div className="text-sm text-textSecondary">{client.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
@@ -153,9 +172,12 @@ export default function Clients() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td colSpan={5} className="px-6 py-12 text-center">
                       <div className="text-4xl mb-2">🔍</div>
                       <p className="text-textSecondary">Keine Mandanten gefunden</p>
+                      <p className="text-sm text-textSecondary mt-2">
+                        Versuchen Sie einen anderen Suchbegriff oder Filter
+                      </p>
                     </td>
                   </tr>
                 )}
