@@ -93,24 +93,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 space-y-4">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-textSecondary">Oder anmelden mit</span>
-            </div>
-          </div>
-
-          <button className="w-full btn-secondary flex items-center justify-center gap-2">
-            <span>🔍</span> Google
-          </button>
-          <button className="w-full btn-secondary flex items-center justify-center gap-2">
-            <span>🍎</span> Apple
-          </button>
-        </div>
-
         <div className="mt-6 text-center">
           <Link to="/auth/register" className="text-primary hover:underline">
             Noch kein Konto? Registrieren
