@@ -5,6 +5,7 @@ using NFK.Infrastructure.Data;
 using NFK.Infrastructure.Security;
 using NFK.Application.Interfaces;
 using NFK.Application.Services;
+using NFK.API.Swagger;
 using Hangfire;
 using Hangfire.SqlServer;
 using System.Security.Cryptography;
@@ -29,6 +30,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "NFK Steuerberatung API", Version = "v1" });
+    
+    // Add support for file upload
+    c.OperationFilter<SwaggerFileOperationFilter>();
 });
 
 // Database
