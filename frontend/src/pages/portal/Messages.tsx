@@ -40,15 +40,6 @@ export default function Messages() {
       setLoading(false);
     }
   };
-          timestamp: '08.01.2025 22:10', 
-          unread: false,
-          body: 'Automatische Benachrichtigung:\n\nIhr DATEV Export (Job-ID: EXP-20250108-001) wurde erfolgreich abgeschlossen.\n\nExportierte Datensätze: 245\nZeitpunkt: 08.01.2025 22:10\nStatus: Erfolgreich'
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const selectedMsg = messages.find(m => m.id === selectedMessage);
 
