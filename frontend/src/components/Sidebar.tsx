@@ -1,6 +1,17 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Clear tokens from localStorage
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    
+    // Redirect to login page
+    navigate('/auth/login');
+  };
+
   const navItems = [
     { name: 'Dashboard', path: '/portal/dashboard', icon: '📊' },
     { name: 'Mandanten', path: '/portal/clients', icon: '👥' },
@@ -38,7 +49,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white">
             MB
           </div>
@@ -47,6 +58,13 @@ export default function Sidebar() {
             <p className="text-xs text-textSecondary">Steuerberater</p>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+        >
+          <span>🚪</span>
+          <span>Abmelden</span>
+        </button>
       </div>
     </aside>
   );
