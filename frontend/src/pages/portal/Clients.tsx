@@ -119,8 +119,6 @@ export default function Clients() {
           </div>
         </div>
 
-
-
         {/* Clients Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
