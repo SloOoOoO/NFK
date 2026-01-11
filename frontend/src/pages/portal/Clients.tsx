@@ -20,8 +20,20 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [newClient, setNewClient] = useState({
+    name: '',
+    email: '',
+    contact: '',
+    phone: '',
+  });
+  const [editClient, setEditClient] = useState({
     name: '',
     email: '',
     contact: '',
@@ -63,6 +75,60 @@ export default function Clients() {
     } finally {
       setCreateLoading(false);
     }
+  };
+
+  const handleEditClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    setEditLoading(true);
+    try {
+      await clientsAPI.update(selectedClient.id, editClient);
+      setShowEditModal(false);
+      setSelectedClient(null);
+      await fetchClients();
+    } catch (err: any) {
+      console.error('Error updating client:', err);
+      alert('Fehler beim Aktualisieren des Mandanten');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!selectedClient) return;
+    setDeleteLoading(true);
+    try {
+      await clientsAPI.delete(selectedClient.id);
+      setShowDeleteModal(false);
+      setSelectedClient(null);
+      await fetchClients();
+    } catch (err: any) {
+      console.error('Error deleting client:', err);
+      alert('Fehler beim Löschen des Mandanten');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const openEditModal = (client: Client) => {
+    setSelectedClient(client);
+    setEditClient({
+      name: client.name,
+      email: client.email,
+      contact: client.contact,
+      phone: client.phone || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const openDetailsModal = (client: Client) => {
+    setSelectedClient(client);
+    setShowDetailsModal(true);
+  };
+
+  const openDeleteModal = (client: Client) => {
+    setSelectedClient(client);
+    setShowDeleteModal(true);
   };
 
   const filteredClients = clients.filter(client => {
@@ -233,8 +299,24 @@ export default function Clients() {
                           {client.lastContact || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button className="text-primary hover:underline mr-3">Details</button>
-                          <button className="text-textSecondary hover:underline">Bearbeiten</button>
+                          <button 
+                            onClick={() => openDetailsModal(client)}
+                            className="text-primary hover:underline mr-3"
+                          >
+                            Details
+                          </button>
+                          <button 
+                            onClick={() => openEditModal(client)}
+                            className="text-primary hover:underline mr-3"
+                          >
+                            Bearbeiten
+                          </button>
+                          <button 
+                            onClick={() => openDeleteModal(client)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Löschen
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -329,6 +411,173 @@ export default function Clients() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Client Modal */}
+        {showEditModal && selectedClient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Mandant bearbeiten</h2>
+              </div>
+              
+              <form onSubmit={handleEditClient} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Name *</label>
+                  <input
+                    type="text"
+                    value={editClient.name}
+                    onChange={(e) => setEditClient({ ...editClient, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">E-Mail *</label>
+                  <input
+                    type="email"
+                    value={editClient.email}
+                    onChange={(e) => setEditClient({ ...editClient, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Ansprechpartner *</label>
+                  <input
+                    type="text"
+                    value={editClient.contact}
+                    onChange={(e) => setEditClient({ ...editClient, contact: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Telefon</label>
+                  <input
+                    type="tel"
+                    value={editClient.phone}
+                    onChange={(e) => setEditClient({ ...editClient, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 btn-secondary"
+                    disabled={editLoading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 btn-primary"
+                    disabled={editLoading}
+                  >
+                    {editLoading ? 'Wird gespeichert...' : 'Speichern'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Details Client Modal */}
+        {showDetailsModal && selectedClient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Mandant Details</h2>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Name</label>
+                  <p className="text-textPrimary">{selectedClient.name}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">E-Mail</label>
+                  <p className="text-textPrimary">{selectedClient.email}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Ansprechpartner</label>
+                  <p className="text-textPrimary">{selectedClient.contact}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Telefon</label>
+                  <p className="text-textPrimary">{selectedClient.phone || 'Nicht angegeben'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Mandantennummer</label>
+                  <p className="text-textPrimary">{selectedClient.mandantNr || 'Nicht angegeben'}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Status</label>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedClient.status)}`}>
+                    {selectedClient.status}
+                  </span>
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowDetailsModal(false)}
+                    className="flex-1 btn-secondary"
+                  >
+                    Schließen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedClient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Mandant löschen</h2>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-textSecondary mb-6">
+                  Sind Sie sicher, dass Sie den Mandanten <strong>{selectedClient.name}</strong> löschen möchten? 
+                  Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 btn-secondary"
+                    disabled={deleteLoading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={handleDeleteClient}
+                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                    disabled={deleteLoading}
+                  >
+                    {deleteLoading ? 'Wird gelöscht...' : 'Löschen'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
