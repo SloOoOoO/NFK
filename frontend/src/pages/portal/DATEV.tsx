@@ -1,16 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
+import { datevAPI } from '../../services/api';
+
+interface ExportJob {
+  id: string;
+  type: string;
+  mandant: string;
+  status: string;
+  records: number;
+  started: string;
+  completed: string;
+  duration: string;
+}
 
 export default function DATEV() {
   const [filterStatus, setFilterStatus] = useState('all');
+  const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [endpointAvailable, setEndpointAvailable] = useState(false);
 
-  const exportJobs = [
-    { id: 'EXP-2025-001', type: 'Buchungsdaten', mandant: 'Schmidt GmbH', status: 'Abgeschlossen', records: 245, started: '10.01.2025 14:30', completed: '10.01.2025 14:32', duration: '2 Min' },
-    { id: 'EXP-2025-002', type: 'Stammdaten', mandant: 'Müller & Partner', status: 'In Bearbeitung', records: 89, started: '10.01.2025 15:15', completed: '-', duration: '-' },
-    { id: 'EXP-2025-003', type: 'Lohndaten', mandant: 'Koch Consulting', status: 'Fehler', records: 0, started: '09.01.2025 22:10', completed: '09.01.2025 22:11', duration: '1 Min' },
-    { id: 'EXP-2025-004', type: 'Buchungsdaten', mandant: 'Becker Handels AG', status: 'Wartend', records: 0, started: '-', completed: '-', duration: '-' },
-    { id: 'EXP-2025-005', type: 'Jahresabschluss', mandant: 'Schmidt GmbH', status: 'Abgeschlossen', records: 567, started: '08.01.2025 18:45', completed: '08.01.2025 18:50', duration: '5 Min' },
-  ];
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const response = await datevAPI.getJobs();
+      const jobsData = Array.isArray(response.data) ? response.data : [];
+      setExportJobs(jobsData);
+      setEndpointAvailable(true);
+    } catch (err: any) {
+      console.log('DATEV jobs endpoint not available:', err);
+      setEndpointAvailable(false);
+      // Use demo data
+      setExportJobs([
+        { id: 'EXP-2025-001', type: 'Buchungsdaten', mandant: 'Schmidt GmbH', status: 'Abgeschlossen', records: 245, started: '10.01.2025 14:30', completed: '10.01.2025 14:32', duration: '2 Min' },
+        { id: 'EXP-2025-002', type: 'Stammdaten', mandant: 'Müller & Partner', status: 'In Bearbeitung', records: 89, started: '10.01.2025 15:15', completed: '-', duration: '-' },
+        { id: 'EXP-2025-003', type: 'Lohndaten', mandant: 'Koch Consulting', status: 'Fehler', records: 0, started: '09.01.2025 22:10', completed: '09.01.2025 22:11', duration: '1 Min' },
+        { id: 'EXP-2025-004', type: 'Buchungsdaten', mandant: 'Becker Handels AG', status: 'Wartend', records: 0, started: '-', completed: '-', duration: '-' },
+        { id: 'EXP-2025-005', type: 'Jahresabschluss', mandant: 'Schmidt GmbH', status: 'Abgeschlossen', records: 567, started: '08.01.2025 18:45', completed: '08.01.2025 18:50', duration: '5 Min' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const recentSyncs = [
     { id: 1, action: 'Buchungsdaten Import', mandant: 'Schmidt GmbH', timestamp: '10.01.2025 14:32', status: 'Erfolgreich' },
@@ -60,6 +94,11 @@ export default function DATEV() {
                 zwischen NFK und DATEV zu synchronisieren. Beachten Sie, dass diese Funktion spezielle 
                 Berechtigungen erfordert.
               </p>
+              {!endpointAvailable && !loading && (
+                <p className="text-sm text-yellow-800 mt-2">
+                  ⚠️ DATEV-Feature ist noch nicht vollständig implementiert. Demo-Daten werden angezeigt.
+                </p>
+              )}
             </div>
           </div>
         </div>

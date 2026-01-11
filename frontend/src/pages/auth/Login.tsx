@@ -1,20 +1,50 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login
-    console.log('Login:', { email, password });
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await authAPI.login(email, password);
+      const { accessToken, refreshToken } = response.data;
+      
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      
+      // Redirect to dashboard
+      navigate('/portal/dashboard');
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      setError(
+        err.response?.data?.message || 
+        'Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-secondary flex items-center justify-center px-4">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-8">Anmelden</h1>
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -28,6 +58,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               required
+              disabled={loading}
             />
           </div>
 
@@ -42,11 +73,23 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               required
+              disabled={loading}
             />
           </div>
 
-          <button type="submit" className="w-full btn-primary">
-            Anmelden
+          <button 
+            type="submit" 
+            className="w-full btn-primary flex items-center justify-center gap-2"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="inline-block animate-spin">⏳</span>
+                <span>Wird angemeldet...</span>
+              </>
+            ) : (
+              'Anmelden'
+            )}
           </button>
         </form>
 

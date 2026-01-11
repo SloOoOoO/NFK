@@ -120,6 +120,16 @@ export const datevAPI = {
   retryJob: (id: number) => apiClient.post(`/datev/jobs/${id}/retry`),
 };
 
+// Messages API (placeholder for future implementation)
+export const messagesAPI = {
+  getAll: () => apiClient.get('/messages'),
+};
+
+// Events/Calendar API (placeholder for future implementation)
+export const eventsAPI = {
+  getAll: () => apiClient.get('/events'),
+};
+
 // Health check
 export const healthAPI = {
   check: () => axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`),

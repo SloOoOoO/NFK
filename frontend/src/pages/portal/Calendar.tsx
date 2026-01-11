@@ -1,17 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
+import { eventsAPI } from '../../services/api';
+
+interface Event {
+  id: number;
+  title: string;
+  mandant: string;
+  date: string;
+  time: string;
+  type: string;
+  color: string;
+}
 
 export default function Calendar() {
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [endpointAvailable, setEndpointAvailable] = useState(false);
 
-  const upcomingEvents = [
-    { id: 1, title: 'Jahresabschluss Besprechung', mandant: 'Schmidt GmbH', date: '15.01.2025', time: '10:00', type: 'Termin', color: 'blue' },
-    { id: 2, title: 'Frist: Umsatzsteuervoranmeldung', mandant: 'Müller & Partner', date: '20.01.2025', time: '23:59', type: 'Frist', color: 'red' },
-    { id: 3, title: 'Beratungsgespräch Investition', mandant: 'Koch Consulting', date: '18.01.2025', time: '14:30', type: 'Termin', color: 'blue' },
-    { id: 4, title: 'DATEV Export Deadline', mandant: 'System', date: '22.01.2025', time: '18:00', type: 'Aufgabe', color: 'yellow' },
-    { id: 5, title: 'Betriebsprüfung Vorbereitung', mandant: 'Becker Handels AG', date: '25.01.2025', time: '09:00', type: 'Termin', color: 'blue' },
-    { id: 6, title: 'Quartalsabschluss Deadline', mandant: 'Schmidt GmbH', date: '30.01.2025', time: '23:59', type: 'Frist', color: 'red' },
-  ];
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await eventsAPI.getAll();
+      const eventsData = Array.isArray(response.data) ? response.data : [];
+      setUpcomingEvents(eventsData);
+      setEndpointAvailable(true);
+    } catch (err: any) {
+      console.log('Events endpoint not available:', err);
+      setEndpointAvailable(false);
+      // Use demo data
+      setUpcomingEvents([
+        { id: 1, title: 'Jahresabschluss Besprechung', mandant: 'Schmidt GmbH', date: '15.01.2025', time: '10:00', type: 'Termin', color: 'blue' },
+        { id: 2, title: 'Frist: Umsatzsteuervoranmeldung', mandant: 'Müller & Partner', date: '20.01.2025', time: '23:59', type: 'Frist', color: 'red' },
+        { id: 3, title: 'Beratungsgespräch Investition', mandant: 'Koch Consulting', date: '18.01.2025', time: '14:30', type: 'Termin', color: 'blue' },
+        { id: 4, title: 'DATEV Export Deadline', mandant: 'System', date: '22.01.2025', time: '18:00', type: 'Aufgabe', color: 'yellow' },
+        { id: 5, title: 'Betriebsprüfung Vorbereitung', mandant: 'Becker Handels AG', date: '25.01.2025', time: '09:00', type: 'Termin', color: 'blue' },
+        { id: 6, title: 'Quartalsabschluss Deadline', mandant: 'Schmidt GmbH', date: '30.01.2025', time: '23:59', type: 'Frist', color: 'red' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getEventTypeColor = (color: string) => {
     const colors: { [key: string]: string } = {
@@ -59,6 +92,15 @@ export default function Calendar() {
           <h1 className="text-3xl font-bold text-textPrimary mb-2">Kalender</h1>
           <p className="text-textSecondary">Termine, Fristen und Aufgaben im Überblick</p>
         </div>
+
+        {/* Info Banner if endpoint not available */}
+        {!endpointAvailable && !loading && (
+          <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+            <p className="text-sm text-yellow-800">
+              ℹ️ Kalender-Feature ist noch nicht vollständig implementiert. Demo-Daten werden angezeigt.
+            </p>
+          </div>
+        )}
 
         {/* Actions Bar */}
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6">

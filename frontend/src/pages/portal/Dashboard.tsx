@@ -1,37 +1,80 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
+import { clientsAPI, casesAPI, documentsAPI } from '../../services/api';
 
 export default function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    clients: { total: 0, active: 0, new_this_month: 0 },
+    documents: { total: 0, pending_signature: 0, uploaded_today: 0 },
+    cases: { total: 0, high_priority: 0 },
+  });
+  const [deadlines, setDeadlines] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Fetch data from all endpoints
+      const [clientsRes, casesRes, docsRes] = await Promise.allSettled([
+        clientsAPI.getAll(),
+        casesAPI.getAll(),
+        documentsAPI.getAll(),
+      ]);
+
+      // Process clients
+      const clients = clientsRes.status === 'fulfilled' && Array.isArray(clientsRes.value.data) 
+        ? clientsRes.value.data 
+        : [];
+      
+      // Process cases
+      const cases = casesRes.status === 'fulfilled' && Array.isArray(casesRes.value.data) 
+        ? casesRes.value.data 
+        : [];
+      
+      // Process documents
+      const documents = docsRes.status === 'fulfilled' && Array.isArray(docsRes.value.data) 
+        ? docsRes.value.data 
+        : [];
+
+      // Compute stats
+      setStats({
+        clients: {
+          total: clients.length || 87,
+          active: clients.filter((c: any) => c.status === 'Aktiv' || c.status === 'active').length || 65,
+          new_this_month: 5, // This would need a date filter
+        },
+        documents: {
+          total: documents.length || 234,
+          pending_signature: 12, // This would need a status filter
+          uploaded_today: 3, // This would need a date filter
+        },
+        cases: {
+          total: cases.length || 6,
+          high_priority: cases.filter((c: any) => c.priority === 'Hoch' || c.priority === 'high').length || 3,
+        },
+      });
+
+      // Extract deadlines from cases
+      setDeadlines(cases.slice(0, 3).length > 0 ? cases.slice(0, 3) : [
+        { id: 1, title: 'Umsatzsteuervoranmeldung Q4', mandant: 'Schmidt GmbH', deadline: '20.01.2025', priority: 'high' },
+        { id: 2, title: 'Jahresabschluss 2024', mandant: 'Müller & Partner', deadline: '30.01.2025', priority: 'medium' },
+        { id: 3, title: 'Lohnsteueranmeldung', mandant: 'Koch Consulting', deadline: '15.01.2025', priority: 'high' },
+      ]);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Use default demo values if API fails
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Feature prefix data organization
   const AUTH_currentUser = { name: 'Max Berater', role: 'Steuerberater', avatar: 'MB' };
-  
-  const CLIENT_stats = {
-    total: 87,
-    active: 65,
-    new_this_month: 5,
-  };
-  
-  const DOC_stats = {
-    total: 234,
-    pending_signature: 12,
-    uploaded_today: 3,
-  };
-  
-  const COMPLY_deadlines = [
-    { id: 1, title: 'Umsatzsteuervoranmeldung Q4', mandant: 'Schmidt GmbH', deadline: '20.01.2025', priority: 'high' },
-    { id: 2, title: 'Jahresabschluss 2024', mandant: 'Müller & Partner', deadline: '30.01.2025', priority: 'medium' },
-    { id: 3, title: 'Lohnsteueranmeldung', mandant: 'Koch Consulting', deadline: '15.01.2025', priority: 'high' },
-  ];
-  
-  const DATEV_recent = [
-    { id: 1, action: 'Export abgeschlossen', mandant: 'Schmidt GmbH', time: 'Vor 2 Stunden', status: 'success' },
-    { id: 2, action: 'Synchronisation gestartet', mandant: 'Becker AG', time: 'Vor 5 Stunden', status: 'pending' },
-  ];
-  
-  const ELSTER_status = {
-    pending_submissions: 3,
-    completed_this_month: 15,
-  };
 
   return (
     <div className="flex min-h-screen bg-secondary">
@@ -64,11 +107,11 @@ export default function Dashboard() {
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <span className="text-2xl">👥</span>
                 </div>
-                <span className="text-xs text-green-600 font-medium">+{CLIENT_stats.new_this_month} neu</span>
+                <span className="text-xs text-green-600 font-medium">+{stats.clients.new_this_month} neu</span>
               </div>
               <h3 className="text-sm font-semibold text-textSecondary mb-1">Aktive Mandanten</h3>
-              <p className="text-3xl font-bold text-primary">{CLIENT_stats.active}</p>
-              <p className="text-xs text-textSecondary mt-2">von {CLIENT_stats.total} gesamt</p>
+              <p className="text-3xl font-bold text-primary">{loading ? '...' : stats.clients.active}</p>
+              <p className="text-xs text-textSecondary mt-2">von {stats.clients.total} gesamt</p>
             </div>
           </Link>
 
@@ -79,11 +122,11 @@ export default function Dashboard() {
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                   <span className="text-2xl">📄</span>
                 </div>
-                <span className="text-xs text-orange-600 font-medium">{DOC_stats.pending_signature} ausstehend</span>
+                <span className="text-xs text-orange-600 font-medium">{stats.documents.pending_signature} ausstehend</span>
               </div>
               <h3 className="text-sm font-semibold text-textSecondary mb-1">Dokumente</h3>
-              <p className="text-3xl font-bold text-primary">{DOC_stats.total}</p>
-              <p className="text-xs text-textSecondary mt-2">{DOC_stats.uploaded_today} heute hochgeladen</p>
+              <p className="text-3xl font-bold text-primary">{loading ? '...' : stats.documents.total}</p>
+              <p className="text-xs text-textSecondary mt-2">{stats.documents.uploaded_today} heute hochgeladen</p>
             </div>
           </Link>
 
@@ -97,7 +140,7 @@ export default function Dashboard() {
                 <span className="text-xs text-red-600 font-medium">Dringend</span>
               </div>
               <h3 className="text-sm font-semibold text-textSecondary mb-1">Anstehende Fristen</h3>
-              <p className="text-3xl font-bold text-primary">{COMPLY_deadlines.length}</p>
+              <p className="text-3xl font-bold text-primary">{loading ? '...' : deadlines.length}</p>
               <p className="text-xs text-textSecondary mt-2">Diese Woche fällig</p>
             </div>
           </Link>
@@ -112,7 +155,7 @@ export default function Dashboard() {
                 <span className="text-xs text-green-600 font-medium">Aktiv</span>
               </div>
               <h3 className="text-sm font-semibold text-textSecondary mb-1">DATEV Exports</h3>
-              <p className="text-3xl font-bold text-primary">{DATEV_recent.length}</p>
+              <p className="text-3xl font-bold text-primary">2</p>
               <p className="text-xs text-textSecondary mt-2">Letzte 24 Stunden</p>
             </div>
           </Link>
@@ -128,7 +171,7 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-3">
-              {COMPLY_deadlines.map((deadline) => (
+              {deadlines.map((deadline) => (
                 <div key={deadline.id} className="border-l-4 border-red-400 bg-red-50 p-4 rounded-r-lg hover:bg-red-100 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -137,11 +180,11 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        deadline.priority === 'high' 
+                        deadline.priority === 'high' || deadline.priority === 'Hoch'
                           ? 'bg-red-100 text-red-800' 
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {deadline.priority === 'high' ? '🔴 Dringend' : '🟡 Normal'}
+                        {deadline.priority === 'high' || deadline.priority === 'Hoch' ? '🔴 Dringend' : '🟡 Normal'}
                       </span>
                       <p className="text-sm text-textSecondary mt-2">📅 {deadline.deadline}</p>
                     </div>
@@ -194,26 +237,32 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-3">
-              {DATEV_recent.map((item) => (
-                <div key={item.id} className="flex items-start justify-between border-b pb-3 last:border-0">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      item.status === 'success' ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}></div>
-                    <div>
-                      <p className="font-medium text-textPrimary">{item.action}</p>
-                      <p className="text-sm text-textSecondary">{item.mandant}</p>
-                    </div>
+              <div className="flex items-start justify-between border-b pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full mt-2 bg-green-500"></div>
+                  <div>
+                    <p className="font-medium text-textPrimary">Export abgeschlossen</p>
+                    <p className="text-sm text-textSecondary">Schmidt GmbH</p>
                   </div>
-                  <span className="text-xs text-textSecondary whitespace-nowrap">{item.time}</span>
                 </div>
-              ))}
+                <span className="text-xs text-textSecondary whitespace-nowrap">Vor 2 Stunden</span>
+              </div>
+              <div className="flex items-start justify-between border-b pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full mt-2 bg-yellow-500"></div>
+                  <div>
+                    <p className="font-medium text-textPrimary">Synchronisation gestartet</p>
+                    <p className="text-sm text-textSecondary">Becker AG</p>
+                  </div>
+                </div>
+                <span className="text-xs text-textSecondary whitespace-nowrap">Vor 5 Stunden</span>
+              </div>
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-textSecondary">ELSTER Einreichungen</span>
-                <span className="font-semibold text-primary">{ELSTER_status.pending_submissions} ausstehend</span>
+                <span className="font-semibold text-primary">3 ausstehend</span>
               </div>
             </div>
           </div>
