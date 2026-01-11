@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NFK.Application.DTOs.Documents;
+using NFK.Domain.Entities.Documents;
 using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
@@ -21,18 +24,110 @@ public class DocumentsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return Ok(new { message = "Get all documents - to be implemented" });
+        try
+        {
+            var documents = await _context.Documents
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            var documentDtos = documents.Select(d => new DocumentDto(
+                d.Id,
+                d.FileName,
+                d.FileName,
+                d.FileSize,
+                d.CaseId,
+                d.CreatedAt,
+                d.UpdatedAt
+            )).ToList();
+
+            return Ok(documentDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching documents");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching documents" });
+        }
     }
 
+    /// <summary>
+    /// Upload a document with optional metadata
+    /// </summary>
+    /// <param name="file">The file to upload</param>
+    /// <param name="clientId">Optional client ID</param>
+    /// <param name="caseId">Optional case ID</param>
+    /// <returns>The uploaded document metadata</returns>
     [HttpPost("upload")]
-    public async Task<IActionResult> Upload([FromForm] IFormFile file)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] int? clientId, [FromForm] int? caseId)
     {
-        return Ok(new { message = "Upload document - to be implemented" });
+        try
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "invalid_request", message = "No file provided" });
+            }
+
+            // For now, just store metadata (not actual file)
+            // In production, you would save to blob storage
+            var document = new Document
+            {
+                FileName = file.FileName,
+                FilePath = $"/uploads/{Guid.NewGuid()}_{file.FileName}", // Placeholder path
+                FileType = file.ContentType,
+                FileSize = file.Length,
+                CaseId = caseId,
+                UploadedByUserId = GetCurrentUserId()
+            };
+
+            _context.Documents.Add(document);
+            await _context.SaveChangesAsync();
+
+            var response = new UploadDocumentResponse(
+                document.Id,
+                document.FileName,
+                document.FileSize,
+                "Document uploaded successfully"
+            );
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading document");
+            return StatusCode(500, new { error = "internal_error", message = "Error uploading document" });
+        }
     }
 
     [HttpGet("{id}/download")]
     public async Task<IActionResult> Download(int id)
     {
-        return Ok(new { message = $"Download document {id} - to be implemented" });
+        try
+        {
+            var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == id);
+
+            if (document == null)
+            {
+                return NotFound(new { error = "not_found", message = $"Document {id} not found" });
+            }
+
+            // In production, retrieve actual file from blob storage
+            // For now, return placeholder
+            return Ok(new { 
+                message = "Download endpoint placeholder", 
+                fileName = document.FileName,
+                filePath = document.FilePath 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error downloading document {DocumentId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error downloading document" });
+        }
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return userIdClaim != null ? int.Parse(userIdClaim) : null;
     }
 }
