@@ -385,9 +385,9 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructio
 
 ## Additional Resources
 
-- [Entity Framework Core Documentation](https://docs.microsoft.com/en-us/ef/core/)
-- [.NET 8.0 Documentation](https://docs.microsoft.com/en-us/dotnet/core/whats-new/dotnet-8)
-- [ASP.NET Core 8.0 Documentation](https://docs.microsoft.com/en-us/aspnet/core/)
+- [Entity Framework Core Documentation](https://learn.microsoft.com/en-us/ef/core/)
+- [.NET 8.0 Documentation](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-8)
+- [ASP.NET Core 8.0 Documentation](https://learn.microsoft.com/en-us/aspnet/core/)
 
 ## Summary
 
