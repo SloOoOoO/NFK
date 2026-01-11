@@ -7,21 +7,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNet.Security.OAuth.Apple" Version="8.0.0" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.6" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.6" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.22" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NFK.Application\NFK.Application.csproj" />
+    <ProjectReference Include="..\NFK.Domain\NFK.Domain.csproj" />
     <ProjectReference Include="..\NFK.Infrastructure\NFK.Infrastructure.csproj" />
   </ItemGroup>
 
