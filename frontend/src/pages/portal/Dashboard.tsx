@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { clientsAPI, casesAPI, documentsAPI } from '../../services/api';
+import { clientsAPI, casesAPI, documentsAPI, authAPI } from '../../services/api';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [stats, setStats] = useState({
     clients: { total: 0, active: 0, new_this_month: 0 },
     documents: { total: 0, pending_signature: 0, uploaded_today: 0 },
@@ -19,12 +20,18 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch data from all endpoints
-      const [clientsRes, casesRes, docsRes] = await Promise.allSettled([
+      // Fetch current user and data from all endpoints
+      const [userRes, clientsRes, casesRes, docsRes] = await Promise.allSettled([
+        authAPI.getCurrentUser(),
         clientsAPI.getAll(),
         casesAPI.getAll(),
         documentsAPI.getAll(),
       ]);
+
+      // Process current user
+      if (userRes.status === 'fulfilled') {
+        setCurrentUser(userRes.value.data);
+      }
 
       // Process clients
       const clients = clientsRes.status === 'fulfilled' && Array.isArray(clientsRes.value.data) 
@@ -88,9 +95,6 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-  
-  // Feature prefix data organization
-  const AUTH_currentUser = { name: 'Max Berater', role: 'Steuerberater', avatar: 'MB' };
 
   return (
     <div className="flex min-h-screen bg-secondary">
@@ -101,7 +105,9 @@ export default function Dashboard() {
         <div className="bg-gradient-to-r from-primary to-primary/80 text-white p-8 rounded-lg shadow-lg mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Willkommen zurück, {AUTH_currentUser.name}! 👋</h1>
+              <h1 className="text-3xl font-bold mb-2">
+                Willkommen zurück{currentUser?.firstName ? `, ${currentUser.firstName} ${currentUser.lastName}` : ''}! 👋
+              </h1>
               <p className="text-white/90 text-lg">
                 Hier ist Ihre Übersicht für heute, {new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>

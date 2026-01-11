@@ -10,6 +10,7 @@ import Documents from './pages/portal/Documents';
 import Messages from './pages/portal/Messages';
 import Calendar from './pages/portal/Calendar';
 import DATEV from './pages/portal/DATEV';
+import Profile from './pages/portal/Profile';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         
         {/* Portal Routes */}
         <Route path="/portal/dashboard" element={<Dashboard />} />
+        <Route path="/portal/profile" element={<Profile />} />
         <Route path="/portal/clients" element={<Clients />} />
         <Route path="/portal/cases" element={<Cases />} />
         <Route path="/portal/documents" element={<Documents />} />

@@ -133,6 +133,16 @@ export const eventsAPI = {
   getAll: () => apiClient.get('/events'),
 };
 
+// Admin API
+export const adminAPI = {
+  getAllUsers: () => apiClient.get('/admin/users'),
+  updateUserRole: (userId: number, role: string) => 
+    apiClient.put(`/admin/users/${userId}/role`, { role }),
+  getHeaderText: () => apiClient.get('/admin/header-text'),
+  updateHeaderText: (data: { welcomeTitle: string; welcomeSubtitle: string }) =>
+    apiClient.put('/admin/header-text', data),
+};
+
 // Health check
 export const healthAPI = {
   check: () => axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`),
