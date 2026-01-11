@@ -1,0 +1,214 @@
+import { useState } from 'react';
+import Sidebar from '../../components/Sidebar';
+
+export default function Calendar() {
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+
+  const upcomingEvents = [
+    { id: 1, title: 'Jahresabschluss Besprechung', mandant: 'Schmidt GmbH', date: '15.01.2025', time: '10:00', type: 'Termin', color: 'blue' },
+    { id: 2, title: 'Frist: Umsatzsteuervoranmeldung', mandant: 'Müller & Partner', date: '20.01.2025', time: '23:59', type: 'Frist', color: 'red' },
+    { id: 3, title: 'Beratungsgespräch Investition', mandant: 'Koch Consulting', date: '18.01.2025', time: '14:30', type: 'Termin', color: 'blue' },
+    { id: 4, title: 'DATEV Export Deadline', mandant: 'System', date: '22.01.2025', time: '18:00', type: 'Aufgabe', color: 'yellow' },
+    { id: 5, title: 'Betriebsprüfung Vorbereitung', mandant: 'Becker Handels AG', date: '25.01.2025', time: '09:00', type: 'Termin', color: 'blue' },
+    { id: 6, title: 'Quartalsabschluss Deadline', mandant: 'Schmidt GmbH', date: '30.01.2025', time: '23:59', type: 'Frist', color: 'red' },
+  ];
+
+  const getEventTypeColor = (color: string) => {
+    const colors: { [key: string]: string } = {
+      'blue': 'bg-blue-100 text-blue-800 border-blue-300',
+      'red': 'bg-red-100 text-red-800 border-red-300',
+      'yellow': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'green': 'bg-green-100 text-green-800 border-green-300',
+    };
+    return colors[color] || 'bg-gray-100 text-gray-800 border-gray-300';
+  };
+
+  const getEventIcon = (type: string) => {
+    const icons: { [key: string]: string } = {
+      'Termin': '📅',
+      'Frist': '⏰',
+      'Aufgabe': '✓',
+    };
+    return icons[type] || '📌';
+  };
+
+  // Simple calendar grid for January 2025
+  const daysInMonth = 31;
+  const firstDayOfWeek = 3; // Wednesday (0 = Sunday)
+  const calendarDays = [];
+  
+  // Add empty cells for days before the 1st
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    calendarDays.push({ day: null, events: [] });
+  }
+  
+  // Add days of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${day.toString().padStart(2, '0')}.01.2025`;
+    const dayEvents = upcomingEvents.filter(e => e.date === dateStr);
+    calendarDays.push({ day, events: dayEvents });
+  }
+
+  return (
+    <div className="flex min-h-screen bg-secondary">
+      <Sidebar />
+      
+      <main className="flex-1 p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-textPrimary mb-2">Kalender</h1>
+          <p className="text-textSecondary">Termine, Fristen und Aufgaben im Überblick</p>
+        </div>
+
+        {/* Actions Bar */}
+        <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-4 py-2 rounded-md ${
+                  viewMode === 'month'
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
+                }`}
+              >
+                Monat
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-4 py-2 rounded-md ${
+                  viewMode === 'week'
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
+                }`}
+              >
+                Woche
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <button className="btn-secondary">← Zurück</button>
+              <span className="font-semibold text-lg">Januar 2025</span>
+              <button className="btn-secondary">Weiter →</button>
+            </div>
+            
+            <button className="btn-primary">
+              + Termin vereinbaren
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <p className="text-sm text-textSecondary mb-1">Termine</p>
+            <p className="text-2xl font-bold text-blue-600">{upcomingEvents.filter(e => e.type === 'Termin').length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <p className="text-sm text-textSecondary mb-1">Fristen</p>
+            <p className="text-2xl font-bold text-red-600">{upcomingEvents.filter(e => e.type === 'Frist').length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <p className="text-sm text-textSecondary mb-1">Aufgaben</p>
+            <p className="text-2xl font-bold text-yellow-600">{upcomingEvents.filter(e => e.type === 'Aufgabe').length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <p className="text-sm text-textSecondary mb-1">Diese Woche</p>
+            <p className="text-2xl font-bold text-primary">3</p>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Calendar View */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+            {viewMode === 'month' ? (
+              <div>
+                <div className="grid grid-cols-7 gap-2 mb-2">
+                  {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
+                    <div key={day} className="text-center font-semibold text-textSecondary text-sm py-2">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-7 gap-2">
+                  {calendarDays.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`min-h-24 p-2 border rounded ${
+                        item.day ? 'bg-white hover:bg-secondary cursor-pointer' : 'bg-gray-50'
+                      } ${item.day === 11 ? 'border-primary border-2' : 'border-gray-200'}`}
+                    >
+                      {item.day && (
+                        <>
+                          <div className={`text-sm font-medium mb-1 ${
+                            item.day === 11 ? 'text-primary' : 'text-textPrimary'
+                          }`}>
+                            {item.day}
+                          </div>
+                          <div className="space-y-1">
+                            {item.events.slice(0, 2).map((event) => (
+                              <div
+                                key={event.id}
+                                className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)}`}
+                                title={event.title}
+                              >
+                                {getEventIcon(event.type)} {event.title.substring(0, 10)}...
+                              </div>
+                            ))}
+                            {item.events.length > 2 && (
+                              <div className="text-xs text-textSecondary">
+                                +{item.events.length - 2} mehr
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">📅</div>
+                <h3 className="text-xl font-semibold text-textPrimary mb-2">Wochenansicht</h3>
+                <p className="text-textSecondary">Wochenansicht wird in Kürze verfügbar sein</p>
+              </div>
+            )}
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-textPrimary mb-4">Anstehende Ereignisse</h2>
+            
+            <div className="space-y-3">
+              {upcomingEvents.slice(0, 6).map((event) => (
+                <div key={event.id} className={`p-3 rounded-lg border-l-4 ${getEventTypeColor(event.color)}`}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xl">{getEventIcon(event.type)}</span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm text-textPrimary truncate">
+                        {event.title}
+                      </h4>
+                      <p className="text-xs text-textSecondary mt-1">
+                        {event.mandant}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-textSecondary">
+                        <span>📅 {event.date}</span>
+                        <span>🕐 {event.time}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button className="w-full mt-4 btn-secondary text-sm">
+              Alle Ereignisse anzeigen
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
