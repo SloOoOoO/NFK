@@ -24,7 +24,12 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Prevent circular reference errors
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSwaggerGen(c =>
@@ -33,6 +38,9 @@ builder.Services.AddSwaggerGen(c =>
     
     // Add support for file upload
     c.OperationFilter<SwaggerFileOperationFilter>();
+    
+    // Ignore navigation properties that might cause issues
+    c.SchemaFilter<IgnoreNavigationPropertiesSchemaFilter>();
 });
 
 // Database
