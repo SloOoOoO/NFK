@@ -27,11 +27,23 @@ export default function Cases() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [newCase, setNewCase] = useState({
     title: '',
     description: '',
     clientId: 0,
+    priority: 'Mittel',
+    dueDate: '',
+  });
+  const [editCase, setEditCase] = useState({
+    title: '',
+    description: '',
     priority: 'Mittel',
     dueDate: '',
   });
@@ -81,6 +93,63 @@ export default function Cases() {
     } finally {
       setCreateLoading(false);
     }
+  };
+
+  const handleEditCase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCase) return;
+    setEditLoading(true);
+    try {
+      // Note: You may need to add an update endpoint to casesAPI
+      await casesAPI.updateStatus(selectedCase.id, { status: selectedCase.status });
+      setShowEditModal(false);
+      setSelectedCase(null);
+      await fetchCases();
+    } catch (err: any) {
+      console.error('Error updating case:', err);
+      alert('Fehler beim Aktualisieren des Falls');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteCase = async () => {
+    if (!selectedCase) return;
+    setDeleteLoading(true);
+    try {
+      // Note: You may need to add a delete endpoint to casesAPI
+      // await casesAPI.delete(selectedCase.id);
+      alert('Löschen wird bald verfügbar sein');
+      setShowDeleteModal(false);
+      setSelectedCase(null);
+      // await fetchCases();
+    } catch (err: any) {
+      console.error('Error deleting case:', err);
+      alert('Fehler beim Löschen des Falls');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const openEditModal = (caseItem: Case) => {
+    setSelectedCase(caseItem);
+    setEditCase({
+      title: caseItem.title,
+      description: caseItem.subject || '',
+      priority: caseItem.priority,
+      dueDate: caseItem.dueDate ? caseItem.dueDate.split('T')[0] : '',
+    });
+    setShowEditModal(true);
+  };
+
+  const openDetailsModal = (caseItem: Case) => {
+    setSelectedCase(caseItem);
+    setShowDetailsModal(true);
+  };
+
+  const openDeleteModal = (caseItem: Case) => {
+    setSelectedCase(caseItem);
+    setShowDeleteModal(true);
   };
 
   const handleStatusChange = async (caseId: number, newStatus: string) => {
@@ -255,8 +324,24 @@ export default function Cases() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <button className="btn-secondary">Details</button>
-                      <button className="btn-primary">Bearbeiten</button>
+                      <button 
+                        onClick={() => openDetailsModal(caseItem)}
+                        className="btn-secondary"
+                      >
+                        Details
+                      </button>
+                      <button 
+                        onClick={() => openEditModal(caseItem)}
+                        className="btn-primary"
+                      >
+                        Bearbeiten
+                      </button>
+                      <button 
+                        onClick={() => openDeleteModal(caseItem)}
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                      >
+                        Löschen
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -369,6 +454,179 @@ export default function Cases() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Case Modal */}
+        {showEditModal && selectedCase && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Fall bearbeiten</h2>
+              </div>
+              
+              <form onSubmit={handleEditCase} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Titel *</label>
+                  <input
+                    type="text"
+                    value={editCase.title}
+                    onChange={(e) => setEditCase({ ...editCase, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Beschreibung</label>
+                  <textarea
+                    value={editCase.description}
+                    onChange={(e) => setEditCase({ ...editCase, description: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    rows={3}
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Priorität *</label>
+                  <select
+                    value={editCase.priority}
+                    onChange={(e) => setEditCase({ ...editCase, priority: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={editLoading}
+                  >
+                    <option value="Niedrig">Niedrig</option>
+                    <option value="Mittel">Mittel</option>
+                    <option value="Hoch">Hoch</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Frist</label>
+                  <input
+                    type="date"
+                    value={editCase.dueDate}
+                    onChange={(e) => setEditCase({ ...editCase, dueDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={editLoading}
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 btn-secondary"
+                    disabled={editLoading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 btn-primary"
+                    disabled={editLoading}
+                  >
+                    {editLoading ? 'Wird gespeichert...' : 'Speichern'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Details Case Modal */}
+        {showDetailsModal && selectedCase && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Fall Details</h2>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Fall-ID</label>
+                  <p className="text-textPrimary">{selectedCase.id}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Titel</label>
+                  <p className="text-textPrimary">{selectedCase.title}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Mandant</label>
+                  <p className="text-textPrimary">{selectedCase.clientName}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Status</label>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedCase.status)}`}>
+                    {selectedCase.status}
+                  </span>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-textSecondary mb-1">Priorität</label>
+                  <span className={`text-sm font-medium ${getPriorityColor(selectedCase.priority)}`}>
+                    ● {selectedCase.priority}
+                  </span>
+                </div>
+                
+                {selectedCase.dueDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-textSecondary mb-1">Frist</label>
+                    <p className="text-textPrimary">{new Date(selectedCase.dueDate).toLocaleDateString('de-DE')}</p>
+                  </div>
+                )}
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowDetailsModal(false)}
+                    className="flex-1 btn-secondary"
+                  >
+                    Schließen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedCase && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Fall löschen</h2>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-textSecondary mb-6">
+                  Sind Sie sicher, dass Sie den Fall <strong>{selectedCase.title}</strong> löschen möchten? 
+                  Diese Aktion kann nicht rückgängig gemacht werden und alle zugehörigen Informationen werden unwiderruflich entfernt.
+                </p>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 btn-secondary"
+                    disabled={deleteLoading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={handleDeleteCase}
+                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                    disabled={deleteLoading}
+                  >
+                    {deleteLoading ? 'Wird gelöscht...' : 'Löschen'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -18,6 +18,7 @@ export default function DATEV() {
   const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [endpointAvailable, setEndpointAvailable] = useState(false);
+  const [isConnected, setIsConnected] = useState(false); // DATEV connection status
 
   useEffect(() => {
     fetchJobs();
@@ -79,8 +80,42 @@ export default function DATEV() {
       <main className="flex-1 p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-textPrimary mb-2">DATEV Integration</h1>
-          <p className="text-textSecondary">Export, Import und Synchronisation mit DATEV</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-textPrimary mb-2">DATEV Integration</h1>
+              <p className="text-textSecondary">Export, Import und Synchronisation mit DATEV</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-textSecondary">Status:</span>
+              <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                isConnected 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {isConnected ? '🟢 Verbunden' : '🟡 Nicht verbunden'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Under Construction Banner */}
+        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-400 p-6 rounded-lg mb-6">
+          <div className="flex items-start gap-4">
+            <span className="text-4xl">🚧</span>
+            <div className="flex-1">
+              <h3 className="font-bold text-lg text-orange-900 mb-2">In Entwicklung</h3>
+              <p className="text-orange-800 mb-3">
+                Die DATEV-Integration befindet sich derzeit in der Entwicklung. 
+                Die vollständige Funktionalität wird in Kürze verfügbar sein.
+              </p>
+              <ul className="text-sm text-orange-700 space-y-1">
+                <li>✓ Grundlegende Architektur implementiert</li>
+                <li>✓ Export-Jobs-Verwaltung vorbereitet</li>
+                <li>🔄 DATEV-API-Verbindung in Arbeit</li>
+                <li>🔄 Automatische Synchronisation geplant</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         {/* Info Banner */}

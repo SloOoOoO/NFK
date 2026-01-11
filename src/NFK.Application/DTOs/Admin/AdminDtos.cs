@@ -13,6 +13,20 @@ public record UpdateUserRoleRequest(
     string Role
 );
 
+public record UpdateUserProfileRequest(
+    string? FirstName = null,
+    string? LastName = null,
+    string? Email = null,
+    string? PhoneNumber = null,
+    string? FullLegalName = null,
+    DateTime? DateOfBirth = null,
+    string? TaxId = null,
+    string? Address = null,
+    string? City = null,
+    string? PostalCode = null,
+    string? Country = null
+);
+
 public record HeaderTextDto(
     string WelcomeTitle,
     string WelcomeSubtitle

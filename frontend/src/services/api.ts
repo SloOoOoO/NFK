@@ -138,6 +138,8 @@ export const adminAPI = {
   getAllUsers: () => apiClient.get('/admin/users'),
   updateUserRole: (userId: number, role: string) => 
     apiClient.put(`/admin/users/${userId}/role`, { role }),
+  updateUserProfile: (userId: number, data: any) =>
+    apiClient.put(`/admin/users/${userId}/profile`, data),
   getHeaderText: () => apiClient.get('/admin/header-text'),
   updateHeaderText: (data: { welcomeTitle: string; welcomeSubtitle: string }) =>
     apiClient.put('/admin/header-text', data),

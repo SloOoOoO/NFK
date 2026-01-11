@@ -93,6 +93,45 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpPut("users/{id}/profile")]
+    public async Task<IActionResult> UpdateUserProfile(int id, [FromBody] UpdateUserProfileRequest request)
+    {
+        try
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "not_found", message = $"User {id} not found" });
+            }
+
+            // Update personal information
+            if (request.FirstName != null) user.FirstName = request.FirstName;
+            if (request.LastName != null) user.LastName = request.LastName;
+            if (request.Email != null) user.Email = request.Email;
+            if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
+            if (request.FullLegalName != null) user.FullLegalName = request.FullLegalName;
+            if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
+            if (request.TaxId != null) user.TaxId = request.TaxId;
+            
+            // Update address
+            if (request.Address != null) user.Address = request.Address;
+            if (request.City != null) user.City = request.City;
+            if (request.PostalCode != null) user.PostalCode = request.PostalCode;
+            if (request.Country != null) user.Country = request.Country;
+
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User profile updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating user profile {UserId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error updating user profile" });
+        }
+    }
+
     [HttpGet("header-text")]
     public IActionResult GetHeaderText()
     {

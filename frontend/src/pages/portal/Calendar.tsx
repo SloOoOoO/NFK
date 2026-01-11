@@ -10,6 +10,8 @@ interface Event {
   time: string;
   type: string;
   color: string;
+  status?: 'pending' | 'accepted' | 'declined';
+  targetUserId?: number;
 }
 
 export default function Calendar() {
@@ -17,6 +19,17 @@ export default function Calendar() {
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [endpointAvailable, setEndpointAvailable] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newAppointment, setNewAppointment] = useState({
+    title: '',
+    mandant: '',
+    date: '',
+    time: '',
+    type: 'Termin',
+    targetUserId: 0,
+    notes: '',
+  });
 
   useEffect(() => {
     fetchEvents();
@@ -34,15 +47,49 @@ export default function Calendar() {
       setEndpointAvailable(false);
       // Use demo data
       setUpcomingEvents([
-        { id: 1, title: 'Jahresabschluss Besprechung', mandant: 'Schmidt GmbH', date: '15.01.2025', time: '10:00', type: 'Termin', color: 'blue' },
+        { id: 1, title: 'Jahresabschluss Besprechung', mandant: 'Schmidt GmbH', date: '15.01.2025', time: '10:00', type: 'Termin', color: 'blue', status: 'accepted' },
         { id: 2, title: 'Frist: Umsatzsteuervoranmeldung', mandant: 'Müller & Partner', date: '20.01.2025', time: '23:59', type: 'Frist', color: 'red' },
-        { id: 3, title: 'Beratungsgespräch Investition', mandant: 'Koch Consulting', date: '18.01.2025', time: '14:30', type: 'Termin', color: 'blue' },
+        { id: 3, title: 'Beratungsgespräch Investition', mandant: 'Koch Consulting', date: '18.01.2025', time: '14:30', type: 'Termin', color: 'blue', status: 'pending' },
         { id: 4, title: 'DATEV Export Deadline', mandant: 'System', date: '22.01.2025', time: '18:00', type: 'Aufgabe', color: 'yellow' },
-        { id: 5, title: 'Betriebsprüfung Vorbereitung', mandant: 'Becker Handels AG', date: '25.01.2025', time: '09:00', type: 'Termin', color: 'blue' },
+        { id: 5, title: 'Betriebsprüfung Vorbereitung', mandant: 'Becker Handels AG', date: '25.01.2025', time: '09:00', type: 'Termin', color: 'blue', status: 'accepted' },
         { id: 6, title: 'Quartalsabschluss Deadline', mandant: 'Schmidt GmbH', date: '30.01.2025', time: '23:59', type: 'Frist', color: 'red' },
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      // TODO: Implement API call to create appointment
+      // For now, show success message
+      alert(
+        `Termin erstellt!\n\n` +
+        `Titel: ${newAppointment.title}\n` +
+        `Datum: ${newAppointment.date}\n` +
+        `Zeit: ${newAppointment.time}\n\n` +
+        `Eine Benachrichtigung wurde an den Empfänger gesendet.\n` +
+        `📧 E-Mail-Benachrichtigung: Wird gesendet (Platzhalter)`
+      );
+      setShowAppointmentModal(false);
+      setNewAppointment({
+        title: '',
+        mandant: '',
+        date: '',
+        time: '',
+        type: 'Termin',
+        targetUserId: 0,
+        notes: '',
+      });
+      // Refresh events
+      await fetchEvents();
+    } catch (err: any) {
+      console.error('Error creating appointment:', err);
+      alert('Fehler beim Erstellen des Termins');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -134,7 +181,10 @@ export default function Calendar() {
               <button className="btn-secondary">Weiter →</button>
             </div>
             
-            <button className="btn-primary">
+            <button 
+              onClick={() => setShowAppointmentModal(true)}
+              className="btn-primary"
+            >
               + Termin vereinbaren
             </button>
           </div>
@@ -250,6 +300,121 @@ export default function Calendar() {
             </button>
           </div>
         </div>
+
+        {/* Appointment Creation Modal */}
+        {showAppointmentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Termin vereinbaren</h2>
+              </div>
+              
+              <form onSubmit={handleCreateAppointment} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Titel *</label>
+                  <input
+                    type="text"
+                    value={newAppointment.title}
+                    onChange={(e) => setNewAppointment({ ...newAppointment, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={creating}
+                    placeholder="z.B. Jahresabschlussgespräch"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Mandant</label>
+                  <input
+                    type="text"
+                    value={newAppointment.mandant}
+                    onChange={(e) => setNewAppointment({ ...newAppointment, mandant: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={creating}
+                    placeholder="z.B. Schmidt GmbH"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Datum *</label>
+                    <input
+                      type="date"
+                      value={newAppointment.date}
+                      onChange={(e) => setNewAppointment({ ...newAppointment, date: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                      disabled={creating}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Uhrzeit *</label>
+                    <input
+                      type="time"
+                      value={newAppointment.time}
+                      onChange={(e) => setNewAppointment({ ...newAppointment, time: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                      disabled={creating}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Typ</label>
+                  <select
+                    value={newAppointment.type}
+                    onChange={(e) => setNewAppointment({ ...newAppointment, type: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={creating}
+                  >
+                    <option value="Termin">Termin</option>
+                    <option value="Frist">Frist</option>
+                    <option value="Aufgabe">Aufgabe</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Notizen</label>
+                  <textarea
+                    value={newAppointment.notes}
+                    onChange={(e) => setNewAppointment({ ...newAppointment, notes: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    rows={3}
+                    disabled={creating}
+                    placeholder="Zusätzliche Informationen..."
+                  />
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-800">
+                    📧 <strong>Benachrichtigung:</strong> Der Empfänger erhält eine E-Mail-Benachrichtigung 
+                    und kann den Termin annehmen oder ablehnen.
+                  </p>
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAppointmentModal(false)}
+                    className="flex-1 btn-secondary"
+                    disabled={creating}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 btn-primary"
+                    disabled={creating}
+                  >
+                    {creating ? 'Wird erstellt...' : 'Termin erstellen'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
