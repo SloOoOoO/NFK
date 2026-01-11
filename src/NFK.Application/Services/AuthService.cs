@@ -70,8 +70,28 @@ public class AuthService : IAuthService
             PasswordHash = passwordHash,
             FirstName = SanitizeInput(request.FirstName),
             LastName = SanitizeInput(request.LastName),
+            PhoneNumber = request.PhoneNumber,
+            FullLegalName = request.FullLegalName,
+            DateOfBirth = request.DateOfBirth,
+            Address = request.Address,
+            City = request.City,
+            PostalCode = request.PostalCode,
+            Country = request.Country ?? "Germany",
+            TaxId = request.TaxId,
+            PhoneVerified = false,
+            // Firm details (optional)
+            FirmLegalName = request.FirmLegalName,
+            FirmTaxId = request.FirmTaxId,
+            FirmChamberRegistration = request.FirmChamberRegistration,
+            FirmAddress = request.FirmAddress,
+            FirmCity = request.FirmCity,
+            FirmPostalCode = request.FirmPostalCode,
+            FirmCountry = request.FirmCountry,
+            // OAuth IDs
+            GoogleId = request.GoogleId,
+            DATEVId = request.DATEVId,
             IsActive = true,
-            IsEmailConfirmed = false,
+            IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
             FailedLoginAttempts = 0
         };
 
@@ -308,8 +328,19 @@ public class AuthService : IAuthService
             user.Email,
             user.FirstName,
             user.LastName,
+            user.PhoneNumber,
             role,
-            user.IsActive
+            user.IsActive,
+            user.FullLegalName,
+            user.DateOfBirth,
+            user.Address,
+            user.City,
+            user.PostalCode,
+            user.Country,
+            user.TaxId,
+            user.FirmLegalName,
+            user.FirmTaxId,
+            user.FirmChamberRegistration
         );
     }
 

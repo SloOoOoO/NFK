@@ -18,6 +18,25 @@ public class User : BaseEntity
     public string? GoogleId { get; set; }
     public string? DATEVId { get; set; }
 
+    // Extended registration fields
+    public string? FullLegalName { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? PostalCode { get; set; }
+    public string? Country { get; set; }
+    public string? TaxId { get; set; }
+    public bool PhoneVerified { get; set; }
+    
+    // Optional firm details
+    public string? FirmLegalName { get; set; }
+    public string? FirmTaxId { get; set; }
+    public string? FirmChamberRegistration { get; set; }
+    public string? FirmAddress { get; set; }
+    public string? FirmCity { get; set; }
+    public string? FirmPostalCode { get; set; }
+    public string? FirmCountry { get; set; }
+
     // Navigation properties
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();

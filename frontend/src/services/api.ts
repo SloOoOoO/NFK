@@ -67,7 +67,7 @@ apiClient.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  register: (data: { email: string; password: string; firstName: string; lastName: string }) =>
+  register: (data: any) =>
     apiClient.post('/auth/register', data),
   
   login: (email: string, password: string) =>
@@ -131,6 +131,16 @@ export const messagesAPI = {
 // Events/Calendar API
 export const eventsAPI = {
   getAll: () => apiClient.get('/events'),
+};
+
+// Admin API
+export const adminAPI = {
+  getAllUsers: () => apiClient.get('/admin/users'),
+  updateUserRole: (userId: number, role: string) => 
+    apiClient.put(`/admin/users/${userId}/role`, { role }),
+  getHeaderText: () => apiClient.get('/admin/header-text'),
+  updateHeaderText: (data: { welcomeTitle: string; welcomeSubtitle: string }) =>
+    apiClient.put('/admin/header-text', data),
 };
 
 // Health check

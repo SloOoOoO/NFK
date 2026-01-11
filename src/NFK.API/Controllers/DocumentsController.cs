@@ -67,6 +67,43 @@ public class DocumentsController : ControllerBase
                 return BadRequest(new { error = "invalid_request", message = "No file provided" });
             }
 
+            // Validate file size (max 10MB)
+            const long maxFileSize = 10 * 1024 * 1024; // 10MB in bytes
+            if (file.Length > maxFileSize)
+            {
+                return BadRequest(new { 
+                    error = "file_too_large", 
+                    message = $"File size exceeds the maximum limit of {maxFileSize / (1024 * 1024)}MB" 
+                });
+            }
+
+            // Validate file type
+            var allowedExtensions = new[] { ".pdf", ".docx", ".xlsx", ".png", ".jpg", ".jpeg" };
+            var allowedMimeTypes = new[] { 
+                "application/pdf", 
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "image/png",
+                "image/jpeg"
+            };
+
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                return BadRequest(new { 
+                    error = "invalid_file_type", 
+                    message = $"File type '{fileExtension}' is not allowed. Allowed types: {string.Join(", ", allowedExtensions)}" 
+                });
+            }
+
+            if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
+            {
+                return BadRequest(new { 
+                    error = "invalid_mime_type", 
+                    message = $"MIME type '{file.ContentType}' is not allowed" 
+                });
+            }
+
             // For now, just store metadata (not actual file)
             // In production, you would save to blob storage
             var document = new Document

@@ -75,6 +75,12 @@ export default function Documents() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
+
+  const handleDownload = async (id: number) => {
+    try {
+      await documentsAPI.download(id);
+      // Download functionality not fully implemented in backend
+      alert('Download-Funktion wird bald verfügbar sein');
     } catch (err: any) {
       console.error('Error downloading document:', err);
       alert('Download noch nicht verfügbar');
