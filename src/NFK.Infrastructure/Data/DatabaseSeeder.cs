@@ -20,6 +20,19 @@ public static class DatabaseSeeder
             return; // Database already has data
         }
 
+        // Seed Roles first
+        var roles = new List<Role>
+        {
+            new Role { Name = "SuperAdmin", Description = "Full system access", IsSystemRole = true },
+            new Role { Name = "Consultant", Description = "Client and case management", IsSystemRole = true },
+            new Role { Name = "Receptionist", Description = "Scheduling and basic client info", IsSystemRole = true },
+            new Role { Name = "Client", Description = "Own dossier and documents", IsSystemRole = true },
+            new Role { Name = "DATEVManager", Description = "DATEV export management", IsSystemRole = true }
+        };
+
+        context.Roles.AddRange(roles);
+        await context.SaveChangesAsync();
+
         // Seed Users
         var testUser = new User
         {
@@ -27,6 +40,8 @@ public static class DatabaseSeeder
             PasswordHash = passwordHasher.HashPassword("Test123!"),
             FirstName = "Max",
             LastName = "Berater",
+            FullLegalName = "Max Berater",
+            PhoneNumber = "+49 30 12345678",
             IsActive = true,
             IsEmailConfirmed = true
         };
@@ -37,11 +52,26 @@ public static class DatabaseSeeder
             PasswordHash = passwordHasher.HashPassword("Test123!"),
             FirstName = "Anna",
             LastName = "Schmidt",
+            FullLegalName = "Anna Schmidt",
+            PhoneNumber = "+49 40 23456789",
             IsActive = true,
             IsEmailConfirmed = true
         };
 
         context.Users.AddRange(testUser, testUser2);
+        await context.SaveChangesAsync();
+
+        // Assign roles
+        var superAdminRole = roles.First(r => r.Name == "SuperAdmin");
+        var consultantRole = roles.First(r => r.Name == "Consultant");
+
+        var userRoles = new List<UserRole>
+        {
+            new UserRole { UserId = testUser.Id, RoleId = superAdminRole.Id },
+            new UserRole { UserId = testUser2.Id, RoleId = consultantRole.Id }
+        };
+
+        context.UserRoles.AddRange(userRoles);
         await context.SaveChangesAsync();
 
         // Seed Clients

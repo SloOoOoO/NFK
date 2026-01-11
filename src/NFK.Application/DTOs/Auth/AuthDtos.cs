@@ -4,7 +4,27 @@ public record RegisterRequest(
     string Email,
     string Password,
     string FirstName,
-    string LastName
+    string LastName,
+    // Extended mandatory fields
+    string? FullLegalName = null,
+    string? PhoneNumber = null,
+    DateTime? DateOfBirth = null,
+    string? Address = null,
+    string? City = null,
+    string? PostalCode = null,
+    string? Country = null,
+    string? TaxId = null,
+    // Optional firm fields
+    string? FirmLegalName = null,
+    string? FirmTaxId = null,
+    string? FirmChamberRegistration = null,
+    string? FirmAddress = null,
+    string? FirmCity = null,
+    string? FirmPostalCode = null,
+    string? FirmCountry = null,
+    // OAuth fields
+    string? GoogleId = null,
+    string? DATEVId = null
 );
 
 public record RegisterResponse(
@@ -45,6 +65,17 @@ public record UserResponse(
     string Email,
     string FirstName,
     string LastName,
+    string? PhoneNumber,
     string Role,
-    bool IsActive
+    bool IsActive,
+    string? FullLegalName = null,
+    DateTime? DateOfBirth = null,
+    string? Address = null,
+    string? City = null,
+    string? PostalCode = null,
+    string? Country = null,
+    string? TaxId = null,
+    string? FirmLegalName = null,
+    string? FirmTaxId = null,
+    string? FirmChamberRegistration = null
 );

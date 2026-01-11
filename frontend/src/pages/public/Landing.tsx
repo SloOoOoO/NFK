@@ -73,7 +73,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="bg-textPrimary text-white py-8">
         <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2024 NFK Buchhaltung - Süheyl Faruk Kataş. Alle Rechte vorbehalten.</p>
+          <p>&copy; 2024 NFK Buchhaltung Alle Rechte vorbehalten.</p>
         </div>
       </footer>
     </div>
