@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { authAPI } from '../services/api';
+import DarkModeToggle from './DarkModeToggle';
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -60,10 +61,15 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen">
+    <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-screen">
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-primary">NFK Portal</h1>
-        <p className="text-sm text-textSecondary mt-1">Steuerberatung</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-primary dark:text-blue-400">NFK Portal</h1>
+            <p className="text-sm text-textSecondary dark:text-gray-400 mt-1">Steuerberatung</p>
+          </div>
+          <DarkModeToggle />
+        </div>
       </div>
       
       <nav className="px-3">
@@ -74,8 +80,8 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 mb-1 rounded-md transition-colors ${
                 isActive
-                  ? 'bg-primary text-white'
-                  : 'text-textPrimary hover:bg-secondary'
+                  ? 'bg-primary text-white dark:bg-blue-600'
+                  : 'text-textPrimary dark:text-gray-300 hover:bg-secondary dark:hover:bg-gray-700'
               }`
             }
           >
@@ -85,31 +91,31 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200">
+      <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         {loading ? (
-          <div className="text-center text-sm text-textSecondary">Loading...</div>
+          <div className="text-center text-sm text-textSecondary dark:text-gray-400">Loading...</div>
         ) : (
           <>
             <div 
-              className="flex items-center gap-3 mb-3 cursor-pointer hover:bg-secondary p-2 rounded-md transition-colors"
+              className="flex items-center gap-3 mb-3 cursor-pointer hover:bg-secondary dark:hover:bg-gray-700 p-2 rounded-md transition-colors"
               onClick={handleProfileClick}
               title="Profil anzeigen"
             >
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white">
+              <div className="w-10 h-10 bg-primary dark:bg-blue-600 rounded-full flex items-center justify-center text-white">
                 {getInitials(currentUser?.firstName, currentUser?.lastName)}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">
+                <p className="font-medium text-sm dark:text-gray-200">
                   {currentUser?.firstName} {currentUser?.lastName}
                 </p>
-                <p className="text-xs text-textSecondary">
+                <p className="text-xs text-textSecondary dark:text-gray-400">
                   {currentUser?.role || 'User'}
                 </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+              className="w-full btn-secondary text-sm flex items-center justify-center gap-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               <span>🚪</span>
               <span>Abmelden</span>
