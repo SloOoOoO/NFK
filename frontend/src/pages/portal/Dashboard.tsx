@@ -41,33 +41,49 @@ export default function Dashboard() {
         ? docsRes.value.data 
         : [];
 
-      // Compute stats
+      // Compute stats from real data
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
       setStats({
         clients: {
-          total: clients.length || 87,
-          active: clients.filter((c: any) => c.status === 'Aktiv' || c.status === 'active').length || 65,
-          new_this_month: 5, // This would need a date filter
+          total: clients.length,
+          active: clients.filter((c: any) => c.status === 'Aktiv' || c.status === 'active').length,
+          new_this_month: clients.filter((c: any) => {
+            const createdAt = new Date(c.createdAt);
+            return createdAt >= firstDayOfMonth;
+          }).length,
         },
         documents: {
-          total: documents.length || 234,
-          pending_signature: 12, // This would need a status filter
-          uploaded_today: 3, // This would need a date filter
+          total: documents.length,
+          pending_signature: documents.filter((d: any) => d.status === 'pending_signature').length,
+          uploaded_today: documents.filter((d: any) => {
+            const uploadedAt = new Date(d.createdAt);
+            return uploadedAt.toDateString() === now.toDateString();
+          }).length,
         },
         cases: {
-          total: cases.length || 6,
-          high_priority: cases.filter((c: any) => c.priority === 'Hoch' || c.priority === 'high').length || 3,
+          total: cases.length,
+          high_priority: cases.filter((c: any) => c.priority === 'Hoch' || c.priority === 'high' || c.priority === 'High').length,
         },
       });
 
-      // Extract deadlines from cases
-      setDeadlines(cases.slice(0, 3).length > 0 ? cases.slice(0, 3) : [
-        { id: 1, title: 'Umsatzsteuervoranmeldung Q4', mandant: 'Schmidt GmbH', deadline: '20.01.2025', priority: 'high' },
-        { id: 2, title: 'Jahresabschluss 2024', mandant: 'Müller & Partner', deadline: '30.01.2025', priority: 'medium' },
-        { id: 3, title: 'Lohnsteueranmeldung', mandant: 'Koch Consulting', deadline: '15.01.2025', priority: 'high' },
-      ]);
+      // Extract deadlines from cases with due dates
+      const upcomingCases = cases
+        .filter((c: any) => c.dueDate)
+        .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .slice(0, 3);
+      
+      setDeadlines(upcomingCases.length > 0 ? upcomingCases : []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Use default demo values if API fails
+      // Set empty state on error
+      setStats({
+        clients: { total: 0, active: 0, new_this_month: 0 },
+        documents: { total: 0, pending_signature: 0, uploaded_today: 0 },
+        cases: { total: 0, high_priority: 0 },
+      });
+      setDeadlines([]);
     } finally {
       setLoading(false);
     }
@@ -171,26 +187,30 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-3">
-              {deadlines.map((deadline) => (
-                <div key={deadline.id} className="border-l-4 border-red-400 bg-red-50 p-4 rounded-r-lg hover:bg-red-100 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-textPrimary mb-1">{deadline.title}</h3>
-                      <p className="text-sm text-textSecondary">Mandant: {deadline.mandant}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        deadline.priority === 'high' || deadline.priority === 'Hoch'
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {deadline.priority === 'high' || deadline.priority === 'Hoch' ? '🔴 Dringend' : '🟡 Normal'}
-                      </span>
-                      <p className="text-sm text-textSecondary mt-2">📅 {deadline.deadline}</p>
+              {deadlines.length === 0 ? (
+                <p className="text-textSecondary text-center py-4">Keine anstehenden Fristen</p>
+              ) : (
+                deadlines.map((deadline) => (
+                  <div key={deadline.id} className="border-l-4 border-red-400 bg-red-50 p-4 rounded-r-lg hover:bg-red-100 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-textPrimary mb-1">{deadline.title}</h3>
+                        <p className="text-sm text-textSecondary">Mandant: {deadline.clientName}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          deadline.priority === 'Hoch'
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {deadline.priority === 'Hoch' ? '🔴 Dringend' : '🟡 Normal'}
+                        </span>
+                        <p className="text-sm text-textSecondary mt-2">📅 {new Date(deadline.dueDate).toLocaleDateString('de-DE')}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

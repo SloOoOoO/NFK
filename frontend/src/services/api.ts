@@ -103,9 +103,11 @@ export const casesAPI = {
 // Documents API
 export const documentsAPI = {
   getAll: () => apiClient.get('/documents'),
-  upload: (file: File) => {
+  upload: (file: File, clientId?: number, caseId?: number) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (clientId) formData.append('clientId', clientId.toString());
+    if (caseId) formData.append('caseId', caseId.toString());
     return apiClient.post('/documents/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -120,12 +122,13 @@ export const datevAPI = {
   retryJob: (id: number) => apiClient.post(`/datev/jobs/${id}/retry`),
 };
 
-// Messages API (placeholder for future implementation)
+// Messages API
 export const messagesAPI = {
   getAll: () => apiClient.get('/messages'),
+  markAsRead: (id: number) => apiClient.put(`/messages/${id}/read`),
 };
 
-// Events/Calendar API (placeholder for future implementation)
+// Events/Calendar API
 export const eventsAPI = {
   getAll: () => apiClient.get('/events'),
 };

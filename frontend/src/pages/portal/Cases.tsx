@@ -1,34 +1,55 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { casesAPI } from '../../services/api';
+import { casesAPI, clientsAPI } from '../../services/api';
 
 interface Case {
-  id: string;
-  mandant: string;
+  id: number;
   title: string;
+  subject: string;
+  clientId: number;
+  clientName: string;
   status: string;
   priority: string;
-  deadline: string;
-  assignee: string;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface Client {
+  id: number;
+  name: string;
 }
 
 export default function Cases() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [cases, setCases] = useState<Case[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [newCase, setNewCase] = useState({
     title: '',
-    mandant: '',
+    description: '',
+    clientId: 0,
     priority: 'Mittel',
-    deadline: '',
+    dueDate: '',
   });
 
   useEffect(() => {
     fetchCases();
+    fetchClients();
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const response = await clientsAPI.getAll();
+      const clientsData = Array.isArray(response.data) ? response.data : [];
+      setClients(clientsData);
+    } catch (err: any) {
+      console.error('Error fetching clients:', err);
+    }
+  };
 
   const fetchCases = async () => {
     setLoading(true);
@@ -40,15 +61,7 @@ export default function Cases() {
     } catch (err: any) {
       console.error('Error fetching cases:', err);
       setError('Fehler beim Laden der Fälle');
-      // Use demo data as fallback
-      setCases([
-        { id: 'FALL-2025-001', mandant: 'Schmidt GmbH', title: 'Jahresabschluss 2024', status: 'Offen', priority: 'Hoch', deadline: '15.01.2025', assignee: 'M. Berater' },
-        { id: 'FALL-2025-002', mandant: 'Müller & Partner', title: 'Umsatzsteuervoranmeldung Q4', status: 'In Bearbeitung', priority: 'Mittel', deadline: '20.01.2025', assignee: 'A. Schmidt' },
-        { id: 'FALL-2025-003', mandant: 'Weber Trading GmbH', title: 'Lohnabrechnung Dezember', status: 'Abgeschlossen', priority: 'Niedrig', deadline: '05.01.2025', assignee: 'M. Berater' },
-        { id: 'FALL-2025-004', mandant: 'Koch Consulting', title: 'Steuerberatung Investition', status: 'Wartend', priority: 'Hoch', deadline: '18.01.2025', assignee: 'K. Fischer' },
-        { id: 'FALL-2025-005', mandant: 'Becker Handels AG', title: 'Betriebsprüfung Vorbereitung', status: 'In Bearbeitung', priority: 'Hoch', deadline: '25.01.2025', assignee: 'M. Berater' },
-        { id: 'FALL-2025-006', mandant: 'Schmidt GmbH', title: 'Quartalsabschluss Q4', status: 'Offen', priority: 'Mittel', deadline: '30.01.2025', assignee: 'A. Schmidt' },
-      ]);
+      setCases([]); // Empty state on error
     } finally {
       setLoading(false);
     }
@@ -60,7 +73,7 @@ export default function Cases() {
     try {
       await casesAPI.create(newCase);
       setShowCreateModal(false);
-      setNewCase({ title: '', mandant: '', priority: 'Mittel', deadline: '' });
+      setNewCase({ title: '', description: '', clientId: 0, priority: 'Mittel', dueDate: '' });
       await fetchCases();
     } catch (err: any) {
       console.error('Error creating case:', err);
@@ -70,9 +83,9 @@ export default function Cases() {
     }
   };
 
-  const handleStatusChange = async (caseId: string, newStatus: string) => {
+  const handleStatusChange = async (caseId: number, newStatus: string) => {
     try {
-      await casesAPI.updateStatus(parseInt(caseId.split('-')[2]), { status: newStatus });
+      await casesAPI.updateStatus(caseId, { status: newStatus });
       await fetchCases();
     } catch (err: any) {
       console.error('Error updating case status:', err);
@@ -85,14 +98,14 @@ export default function Cases() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Offen':
+      case 'Neu':
         return 'bg-blue-100 text-blue-800';
       case 'In Bearbeitung':
         return 'bg-yellow-100 text-yellow-800';
-      case 'Wartend':
-        return 'bg-orange-100 text-orange-800';
       case 'Abgeschlossen':
         return 'bg-green-100 text-green-800';
+      case 'Abgebrochen':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -117,9 +130,8 @@ export default function Cases() {
 
   const statusCounts = {
     all: cases.length,
-    offen: cases.filter(c => c.status === 'Offen').length,
+    neu: cases.filter(c => c.status === 'Neu').length,
     inBearbeitung: cases.filter(c => c.status === 'In Bearbeitung').length,
-    wartend: cases.filter(c => c.status === 'Wartend').length,
     abgeschlossen: cases.filter(c => c.status === 'Abgeschlossen').length,
   };
 
@@ -156,14 +168,14 @@ export default function Cases() {
                 Alle ({statusCounts.all})
               </button>
               <button
-                onClick={() => setFilterStatus('Offen')}
+                onClick={() => setFilterStatus('Neu')}
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
-                  filterStatus === 'Offen'
+                  filterStatus === 'Neu'
                     ? 'bg-primary text-white'
                     : 'bg-secondary text-textPrimary hover:bg-gray-200'
                 }`}
               >
-                Offen ({statusCounts.offen})
+                Neu ({statusCounts.neu})
               </button>
               <button
                 onClick={() => setFilterStatus('In Bearbeitung')}
@@ -174,16 +186,6 @@ export default function Cases() {
                 }`}
               >
                 In Bearbeitung ({statusCounts.inBearbeitung})
-              </button>
-              <button
-                onClick={() => setFilterStatus('Wartend')}
-                className={`px-4 py-2 rounded-md whitespace-nowrap ${
-                  filterStatus === 'Wartend'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
-                }`}
-              >
-                Wartend ({statusCounts.wartend})
               </button>
               <button
                 onClick={() => setFilterStatus('Abgeschlossen')}
@@ -241,16 +243,14 @@ export default function Cases() {
                       <div className="flex flex-wrap gap-4 text-sm text-textSecondary">
                         <div className="flex items-center gap-1">
                           <span>👥</span>
-                          <span>{caseItem.mandant}</span>
+                          <span>{caseItem.clientName}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span>📅</span>
-                          <span>Frist: {caseItem.deadline}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span>👤</span>
-                          <span>{caseItem.assignee}</span>
-                        </div>
+                        {caseItem.dueDate && (
+                          <div className="flex items-center gap-1">
+                            <span>📅</span>
+                            <span>Frist: {new Date(caseItem.dueDate).toLocaleDateString('de-DE')}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -299,15 +299,30 @@ export default function Cases() {
                 </div>
                 
                 <div>
+                  <label className="block text-sm font-medium mb-2">Beschreibung</label>
+                  <textarea
+                    value={newCase.description}
+                    onChange={(e) => setNewCase({ ...newCase, description: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    rows={3}
+                    disabled={createLoading}
+                  />
+                </div>
+                
+                <div>
                   <label className="block text-sm font-medium mb-2">Mandant *</label>
-                  <input
-                    type="text"
-                    value={newCase.mandant}
-                    onChange={(e) => setNewCase({ ...newCase, mandant: e.target.value })}
+                  <select
+                    value={newCase.clientId}
+                    onChange={(e) => setNewCase({ ...newCase, clientId: parseInt(e.target.value) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     required
                     disabled={createLoading}
-                  />
+                  >
+                    <option value={0}>Mandant auswählen...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
@@ -326,13 +341,12 @@ export default function Cases() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Frist *</label>
+                  <label className="block text-sm font-medium mb-2">Frist</label>
                   <input
                     type="date"
-                    value={newCase.deadline}
-                    onChange={(e) => setNewCase({ ...newCase, deadline: e.target.value })}
+                    value={newCase.dueDate}
+                    onChange={(e) => setNewCase({ ...newCase, dueDate: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                    required
                     disabled={createLoading}
                   />
                 </div>

@@ -5,6 +5,7 @@ using NFK.Infrastructure.Data;
 using NFK.Infrastructure.Security;
 using NFK.Application.Interfaces;
 using NFK.Application.Services;
+using NFK.API.Swagger;
 using Hangfire;
 using Hangfire.SqlServer;
 using System.Security.Cryptography;
@@ -29,6 +30,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "NFK Steuerberatung API", Version = "v1" });
+    
+    // Add support for file upload
+    c.OperationFilter<SwaggerFileOperationFilter>();
 });
 
 // Database
@@ -142,6 +146,32 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Run migrations and seed data
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        var passwordHasher = services.GetRequiredService<PasswordHasher>();
+        
+        logger.LogInformation("Running database migrations...");
+        await context.Database.MigrateAsync();
+        
+        logger.LogInformation("Seeding database...");
+        await DatabaseSeeder.SeedAsync(context, passwordHasher);
+        
+        logger.LogInformation("Database initialization completed successfully");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating or seeding the database");
+        throw;
+    }
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -177,7 +207,7 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
-app.Run();
+await app.RunAsync();
 
 static string GenerateTempRsaKey()
 {

@@ -43,14 +43,7 @@ export default function Clients() {
     } catch (err: any) {
       console.error('Error fetching clients:', err);
       setError('Fehler beim Laden der Mandanten');
-      // Use demo data as fallback
-      setClients([
-        { id: 1, name: 'Schmidt GmbH', email: 'info@schmidt-gmbh.de', contact: 'Anna Schmidt', status: 'Aktiv', mandantNr: 'M-1001', phone: '+49 30 123456', lastContact: '05.01.2025' },
-        { id: 2, name: 'Müller & Partner', email: 'kontakt@mueller-partner.de', contact: 'Thomas Müller', status: 'Aktiv', mandantNr: 'M-1002', phone: '+49 40 234567', lastContact: '03.01.2025' },
-        { id: 3, name: 'Weber Trading GmbH', email: 'info@weber-trading.de', contact: 'Sarah Weber', status: 'Inaktiv', mandantNr: 'M-1003', phone: '+49 89 345678', lastContact: '28.12.2024' },
-        { id: 4, name: 'Koch Consulting', email: 'office@koch-consulting.de', contact: 'Michael Koch', status: 'Aktiv', mandantNr: 'M-1004', phone: '+49 69 456789', lastContact: '10.01.2025' },
-        { id: 5, name: 'Becker Handels AG', email: 'info@becker-ag.de', contact: 'Lisa Becker', status: 'Ausstehend', mandantNr: 'M-1005', phone: '+49 221 567890', lastContact: '08.01.2025' },
-      ]);
+      setClients([]); // Empty state on error
     } finally {
       setLoading(false);
     }
