@@ -5,11 +5,11 @@ import { documentsAPI } from '../../services/api';
 interface Document {
   id: number;
   name: string;
-  mandant: string;
-  type: string;
-  size: string;
-  updated: string;
-  icon: string;
+  fileName: string;
+  size: number;
+  clientId?: number;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export default function Documents() {
@@ -34,17 +34,7 @@ export default function Documents() {
     } catch (err: any) {
       console.error('Error fetching documents:', err);
       setError('Fehler beim Laden der Dokumente');
-      // Use demo data as fallback
-      setDocuments([
-        { id: 1, name: 'Jahresabschluss_2024.pdf', mandant: 'Schmidt GmbH', type: 'Abschluss', size: '2.4 MB', updated: '10.01.2025', icon: '📊' },
-        { id: 2, name: 'Rechnung_12345.pdf', mandant: 'Müller & Partner', type: 'Rechnung', size: '245 KB', updated: '09.01.2025', icon: '🧾' },
-        { id: 3, name: 'Kontoauszug_Dezember.pdf', mandant: 'Weber Trading GmbH', type: 'Kontoauszug', size: '1.2 MB', updated: '08.01.2025', icon: '💳' },
-        { id: 4, name: 'Lohnabrechnung_12-2024.pdf', mandant: 'Koch Consulting', type: 'Lohn', size: '890 KB', updated: '07.01.2025', icon: '💰' },
-        { id: 5, name: 'Belege_Q4_2024.zip', mandant: 'Becker Handels AG', type: 'Belege', size: '15.8 MB', updated: '06.01.2025', icon: '📎' },
-        { id: 6, name: 'Steuerbescheid_2023.pdf', mandant: 'Schmidt GmbH', type: 'Bescheid', size: '567 KB', updated: '05.01.2025', icon: '📄' },
-        { id: 7, name: 'Vertrag_Beraterleistung.pdf', mandant: 'Müller & Partner', type: 'Vertrag', size: '423 KB', updated: '04.01.2025', icon: '📝' },
-        { id: 8, name: 'Betriebsprüfung_Unterlagen.pdf', mandant: 'Becker Handels AG', type: 'Prüfung', size: '3.2 MB', updated: '03.01.2025', icon: '🔍' },
-      ]);
+      setDocuments([]); // Empty state on error
     } finally {
       setLoading(false);
     }
@@ -67,17 +57,24 @@ export default function Documents() {
     }
   };
 
-  const handleDownload = async (docId: number) => {
-    try {
-      const response = await documentsAPI.download(docId);
-      // Create blob and download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `document_${docId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf': return '📄';
+      case 'xlsx': case 'xls': return '📊';
+      case 'docx': case 'doc': return '📝';
+      case 'zip': return '📎';
+      default: return '📁';
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
     } catch (err: any) {
       console.error('Error downloading document:', err);
       alert('Download noch nicht verfügbar');
@@ -205,29 +202,24 @@ export default function Documents() {
             {filteredDocuments.map((doc) => (
               <div key={doc.id} className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="text-4xl">{doc.icon}</div>
+                  <div className="text-4xl">{getFileIcon(doc.fileName)}</div>
                   <button className="text-textSecondary hover:text-primary">⋮</button>
                 </div>
                 
-                <h3 className="font-medium text-textPrimary mb-2 truncate" title={doc.name}>
-                  {doc.name}
+                <h3 className="font-medium text-textPrimary mb-2 truncate" title={doc.fileName}>
+                  {doc.fileName}
                 </h3>
                 
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-textSecondary">Mandant:</span>
-                    <span className="font-medium text-textPrimary text-xs">{doc.mandant}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(doc.type)}`}>
-                      {doc.type}
+                    <span className={`px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800`}>
+                      {doc.fileName.split('.').pop()?.toUpperCase() || 'FILE'}
                     </span>
-                    <span className="text-textSecondary text-xs">{doc.size}</span>
+                    <span className="text-textSecondary text-xs">{formatFileSize(doc.size)}</span>
                   </div>
                   
                   <div className="text-textSecondary text-xs">
-                    Aktualisiert: {doc.updated}
+                    Hochgeladen: {new Date(doc.createdAt).toLocaleDateString('de-DE')}
                   </div>
                 </div>
                 
