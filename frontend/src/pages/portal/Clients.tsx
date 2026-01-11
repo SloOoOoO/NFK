@@ -1,22 +1,81 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
+import { clientsAPI } from '../../services/api';
+
+interface Client {
+  id: number;
+  name: string;
+  email: string;
+  contact: string;
+  status: string;
+  mandantNr?: string;
+  phone?: string;
+  lastContact?: string;
+}
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: '',
+    email: '',
+    contact: '',
+    phone: '',
+  });
 
-  const clients = [
-    { id: 1, name: 'Schmidt GmbH', email: 'info@schmidt-gmbh.de', contact: 'Anna Schmidt', status: 'Aktiv', mandantNr: 'M-1001', phone: '+49 30 123456', lastContact: '05.01.2025' },
-    { id: 2, name: 'Müller & Partner', email: 'kontakt@mueller-partner.de', contact: 'Thomas Müller', status: 'Aktiv', mandantNr: 'M-1002', phone: '+49 40 234567', lastContact: '03.01.2025' },
-    { id: 3, name: 'Weber Trading GmbH', email: 'info@weber-trading.de', contact: 'Sarah Weber', status: 'Inaktiv', mandantNr: 'M-1003', phone: '+49 89 345678', lastContact: '28.12.2024' },
-    { id: 4, name: 'Koch Consulting', email: 'office@koch-consulting.de', contact: 'Michael Koch', status: 'Aktiv', mandantNr: 'M-1004', phone: '+49 69 456789', lastContact: '10.01.2025' },
-    { id: 5, name: 'Becker Handels AG', email: 'info@becker-ag.de', contact: 'Lisa Becker', status: 'Ausstehend', mandantNr: 'M-1005', phone: '+49 221 567890', lastContact: '08.01.2025' },
-  ];
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const fetchClients = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await clientsAPI.getAll();
+      // Handle both array and object responses
+      const clientsData = Array.isArray(response.data) ? response.data : [];
+      setClients(clientsData);
+    } catch (err: any) {
+      console.error('Error fetching clients:', err);
+      setError('Fehler beim Laden der Mandanten');
+      // Use demo data as fallback
+      setClients([
+        { id: 1, name: 'Schmidt GmbH', email: 'info@schmidt-gmbh.de', contact: 'Anna Schmidt', status: 'Aktiv', mandantNr: 'M-1001', phone: '+49 30 123456', lastContact: '05.01.2025' },
+        { id: 2, name: 'Müller & Partner', email: 'kontakt@mueller-partner.de', contact: 'Thomas Müller', status: 'Aktiv', mandantNr: 'M-1002', phone: '+49 40 234567', lastContact: '03.01.2025' },
+        { id: 3, name: 'Weber Trading GmbH', email: 'info@weber-trading.de', contact: 'Sarah Weber', status: 'Inaktiv', mandantNr: 'M-1003', phone: '+49 89 345678', lastContact: '28.12.2024' },
+        { id: 4, name: 'Koch Consulting', email: 'office@koch-consulting.de', contact: 'Michael Koch', status: 'Aktiv', mandantNr: 'M-1004', phone: '+49 69 456789', lastContact: '10.01.2025' },
+        { id: 5, name: 'Becker Handels AG', email: 'info@becker-ag.de', contact: 'Lisa Becker', status: 'Ausstehend', mandantNr: 'M-1005', phone: '+49 221 567890', lastContact: '08.01.2025' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateLoading(true);
+    try {
+      await clientsAPI.create(newClient);
+      setShowCreateModal(false);
+      setNewClient({ name: '', email: '', contact: '', phone: '' });
+      await fetchClients();
+    } catch (err: any) {
+      console.error('Error creating client:', err);
+      alert('Fehler beim Erstellen des Mandanten');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.mandantNr.toLowerCase().includes(searchTerm.toLowerCase());
+                         (client.mandantNr?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || client.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
@@ -52,6 +111,13 @@ export default function Clients() {
           <p className="text-textSecondary">Verwalten Sie Ihre Mandanten und deren Informationen</p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">⚠️ {error} - Demo-Daten werden angezeigt</p>
+          </div>
+        )}
+
         {/* Actions Bar */}
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -66,7 +132,10 @@ export default function Clients() {
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
-              <button className="btn-primary whitespace-nowrap">
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary whitespace-nowrap"
+              >
                 + Neuer Mandant
               </button>
             </div>
@@ -121,68 +190,155 @@ export default function Clients() {
 
         {/* Clients Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-secondary">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Mandant
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Ansprechpartner
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Letzte Änderung
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
-                    Aktionen
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredClients.length > 0 ? (
-                  filteredClients.map((client) => (
-                    <tr key={client.id} className="hover:bg-secondary transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-textPrimary">{client.name}</div>
-                        <div className="text-sm text-textSecondary">{client.mandantNr}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-textPrimary">{client.contact}</div>
-                        <div className="text-sm text-textSecondary">{client.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
-                          {client.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary">
-                        {client.lastContact}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button className="text-primary hover:underline mr-3">Details</button>
-                        <button className="text-textSecondary hover:underline">Bearbeiten</button>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="inline-block animate-spin text-4xl mb-4">⏳</div>
+                <p className="text-textSecondary">Lade Mandanten...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-secondary">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
+                      Mandant
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
+                      Ansprechpartner
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
+                      Letzte Änderung
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary uppercase tracking-wider">
+                      Aktionen
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredClients.length > 0 ? (
+                    filteredClients.map((client) => (
+                      <tr key={client.id} className="hover:bg-secondary transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-textPrimary">{client.name}</div>
+                          <div className="text-sm text-textSecondary">{client.mandantNr || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-textPrimary">{client.contact}</div>
+                          <div className="text-sm text-textSecondary">{client.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
+                            {client.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary">
+                          {client.lastContact || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button className="text-primary hover:underline mr-3">Details</button>
+                          <button className="text-textSecondary hover:underline">Bearbeiten</button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="text-4xl mb-2">🔍</div>
+                        <p className="text-textSecondary">Keine Mandanten gefunden</p>
+                        <p className="text-sm text-textSecondary mt-2">
+                          Versuchen Sie einen anderen Suchbegriff oder Filter
+                        </p>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <div className="text-4xl mb-2">🔍</div>
-                      <p className="text-textSecondary">Keine Mandanten gefunden</p>
-                      <p className="text-sm text-textSecondary mt-2">
-                        Versuchen Sie einen anderen Suchbegriff oder Filter
-                      </p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
+
+        {/* Create Client Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-textPrimary">Neuer Mandant</h2>
+              </div>
+              
+              <form onSubmit={handleCreateClient} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Name *</label>
+                  <input
+                    type="text"
+                    value={newClient.name}
+                    onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={createLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">E-Mail *</label>
+                  <input
+                    type="email"
+                    value={newClient.email}
+                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={createLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Ansprechpartner *</label>
+                  <input
+                    type="text"
+                    value={newClient.contact}
+                    onChange={(e) => setNewClient({ ...newClient, contact: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={createLoading}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Telefon</label>
+                  <input
+                    type="tel"
+                    value={newClient.phone}
+                    onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={createLoading}
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 btn-secondary"
+                    disabled={createLoading}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 btn-primary"
+                    disabled={createLoading}
+                  >
+                    {createLoading ? 'Wird erstellt...' : 'Erstellen'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

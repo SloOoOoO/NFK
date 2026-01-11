@@ -1,20 +1,88 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
+import { documentsAPI } from '../../services/api';
+
+interface Document {
+  id: number;
+  name: string;
+  mandant: string;
+  type: string;
+  size: string;
+  updated: string;
+  icon: string;
+}
 
 export default function Documents() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterType, setFilterType] = useState('all');
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  const documents = [
-    { id: 1, name: 'Jahresabschluss_2024.pdf', mandant: 'Schmidt GmbH', type: 'Abschluss', size: '2.4 MB', updated: '10.01.2025', icon: '📊' },
-    { id: 2, name: 'Rechnung_12345.pdf', mandant: 'Müller & Partner', type: 'Rechnung', size: '245 KB', updated: '09.01.2025', icon: '🧾' },
-    { id: 3, name: 'Kontoauszug_Dezember.pdf', mandant: 'Weber Trading GmbH', type: 'Kontoauszug', size: '1.2 MB', updated: '08.01.2025', icon: '💳' },
-    { id: 4, name: 'Lohnabrechnung_12-2024.pdf', mandant: 'Koch Consulting', type: 'Lohn', size: '890 KB', updated: '07.01.2025', icon: '💰' },
-    { id: 5, name: 'Belege_Q4_2024.zip', mandant: 'Becker Handels AG', type: 'Belege', size: '15.8 MB', updated: '06.01.2025', icon: '📎' },
-    { id: 6, name: 'Steuerbescheid_2023.pdf', mandant: 'Schmidt GmbH', type: 'Bescheid', size: '567 KB', updated: '05.01.2025', icon: '📄' },
-    { id: 7, name: 'Vertrag_Beraterleistung.pdf', mandant: 'Müller & Partner', type: 'Vertrag', size: '423 KB', updated: '04.01.2025', icon: '📝' },
-    { id: 8, name: 'Betriebsprüfung_Unterlagen.pdf', mandant: 'Becker Handels AG', type: 'Prüfung', size: '3.2 MB', updated: '03.01.2025', icon: '🔍' },
-  ];
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await documentsAPI.getAll();
+      const docsData = Array.isArray(response.data) ? response.data : [];
+      setDocuments(docsData);
+    } catch (err: any) {
+      console.error('Error fetching documents:', err);
+      setError('Fehler beim Laden der Dokumente');
+      // Use demo data as fallback
+      setDocuments([
+        { id: 1, name: 'Jahresabschluss_2024.pdf', mandant: 'Schmidt GmbH', type: 'Abschluss', size: '2.4 MB', updated: '10.01.2025', icon: '📊' },
+        { id: 2, name: 'Rechnung_12345.pdf', mandant: 'Müller & Partner', type: 'Rechnung', size: '245 KB', updated: '09.01.2025', icon: '🧾' },
+        { id: 3, name: 'Kontoauszug_Dezember.pdf', mandant: 'Weber Trading GmbH', type: 'Kontoauszug', size: '1.2 MB', updated: '08.01.2025', icon: '💳' },
+        { id: 4, name: 'Lohnabrechnung_12-2024.pdf', mandant: 'Koch Consulting', type: 'Lohn', size: '890 KB', updated: '07.01.2025', icon: '💰' },
+        { id: 5, name: 'Belege_Q4_2024.zip', mandant: 'Becker Handels AG', type: 'Belege', size: '15.8 MB', updated: '06.01.2025', icon: '📎' },
+        { id: 6, name: 'Steuerbescheid_2023.pdf', mandant: 'Schmidt GmbH', type: 'Bescheid', size: '567 KB', updated: '05.01.2025', icon: '📄' },
+        { id: 7, name: 'Vertrag_Beraterleistung.pdf', mandant: 'Müller & Partner', type: 'Vertrag', size: '423 KB', updated: '04.01.2025', icon: '📝' },
+        { id: 8, name: 'Betriebsprüfung_Unterlagen.pdf', mandant: 'Becker Handels AG', type: 'Prüfung', size: '3.2 MB', updated: '03.01.2025', icon: '🔍' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      await documentsAPI.upload(file);
+      await fetchDocuments();
+      e.target.value = ''; // Reset input
+    } catch (err: any) {
+      console.error('Error uploading document:', err);
+      alert('Fehler beim Hochladen des Dokuments');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownload = async (docId: number) => {
+    try {
+      const response = await documentsAPI.download(docId);
+      // Create blob and download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `document_${docId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      console.error('Error downloading document:', err);
+      alert('Download noch nicht verfügbar');
+    }
+  };
 
   const getTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
@@ -46,6 +114,13 @@ export default function Documents() {
           <h1 className="text-3xl font-bold text-textPrimary mb-2">Dokumente</h1>
           <p className="text-textSecondary">Dokumentenverwaltung und Archiv</p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">⚠️ {error} - Demo-Daten werden angezeigt</p>
+          </div>
+        )}
 
         {/* Actions Bar */}
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
@@ -84,9 +159,15 @@ export default function Documents() {
                 placeholder="Dokumente suchen..."
                 className="flex-1 md:flex-none md:w-64 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               />
-              <button className="btn-primary whitespace-nowrap">
-                📤 Hochladen
-              </button>
+              <label className="btn-primary whitespace-nowrap cursor-pointer">
+                {uploading ? '⏳ Lädt hoch...' : '📤 Hochladen'}
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              </label>
             </div>
           </div>
         </div>
@@ -112,7 +193,14 @@ export default function Documents() {
         </div>
 
         {/* Documents Grid/List */}
-        {viewMode === 'grid' ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="inline-block animate-spin text-4xl mb-4">⏳</div>
+              <p className="text-textSecondary">Lade Dokumente...</p>
+            </div>
+          </div>
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredDocuments.map((doc) => (
               <div key={doc.id} className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
@@ -144,7 +232,12 @@ export default function Documents() {
                 </div>
                 
                 <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-                  <button className="flex-1 text-sm text-primary hover:underline">📥 Download</button>
+                  <button 
+                    onClick={() => handleDownload(doc.id)}
+                    className="flex-1 text-sm text-primary hover:underline"
+                  >
+                    📥 Download
+                  </button>
                   <button className="flex-1 text-sm text-primary hover:underline">👁️ Vorschau</button>
                 </div>
               </div>
@@ -181,7 +274,12 @@ export default function Documents() {
                     <td className="px-6 py-4 text-sm text-textSecondary">{doc.size}</td>
                     <td className="px-6 py-4 text-sm text-textSecondary">{doc.updated}</td>
                     <td className="px-6 py-4 text-sm">
-                      <button className="text-primary hover:underline mr-3">Download</button>
+                      <button 
+                        onClick={() => handleDownload(doc.id)}
+                        className="text-primary hover:underline mr-3"
+                      >
+                        Download
+                      </button>
                       <button className="text-primary hover:underline">Vorschau</button>
                     </td>
                   </tr>
@@ -191,12 +289,20 @@ export default function Documents() {
           </div>
         )}
 
-        {filteredDocuments.length === 0 && (
+        {filteredDocuments.length === 0 && !loading && (
           <div className="bg-white p-12 rounded-lg shadow-sm text-center">
             <div className="text-6xl mb-4">📄</div>
             <h3 className="text-xl font-semibold text-textPrimary mb-2">Keine Dokumente gefunden</h3>
             <p className="text-textSecondary mb-4">Laden Sie Ihr erstes Dokument hoch.</p>
-            <button className="btn-primary">📤 Dokument hochladen</button>
+            <label className="btn-primary cursor-pointer inline-block">
+              📤 Dokument hochladen
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
           </div>
         )}
       </main>
