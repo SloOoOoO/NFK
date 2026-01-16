@@ -17,18 +17,6 @@ export default function Landing() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-primary">NFK Buchhaltung</h2>
             <div className="flex gap-4 items-center">
-              <button
-                onClick={scrollToTop}
-                className="text-textPrimary hover:text-primary px-4 py-2"
-              >
-                {t('common.homepage')}
-              </button>
-              <Link
-                to="/contact"
-                className="text-textPrimary hover:text-primary px-4 py-2"
-              >
-                {t('common.contact')}
-              </Link>
               <LanguageSwitcher />
               <Link
                 to="/auth/register"
