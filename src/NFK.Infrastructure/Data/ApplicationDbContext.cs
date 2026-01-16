@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NFK.Domain.Entities.Audit;
 using NFK.Domain.Entities.Clients;
 using NFK.Domain.Entities.DATEV;
+using NFK.Domain.Entities.Deadlines;
 using NFK.Domain.Entities.Documents;
 using NFK.Domain.Entities.Messaging;
 using NFK.Domain.Entities.Other;
@@ -32,6 +33,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Case> Cases { get; set; }
     public DbSet<CaseNote> CaseNotes { get; set; }
     public DbSet<CaseStatusHistory> CaseStatusHistories { get; set; }
+    
+    // Deadlines
+    public DbSet<Deadline> Deadlines { get; set; }
 
     // Documents
     public DbSet<Document> Documents { get; set; }
