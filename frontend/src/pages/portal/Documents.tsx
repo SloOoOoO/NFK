@@ -10,6 +10,9 @@ interface Document {
   clientId?: number;
   createdAt: string;
   updatedAt?: string;
+  type?: string;
+  icon?: string;
+  mandant?: string;
 }
 
 export default function Documents() {
@@ -259,18 +262,18 @@ export default function Documents() {
                   <tr key={doc.id} className="hover:bg-secondary transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{doc.icon}</span>
+                        <span className="text-2xl">{doc.icon || getFileIcon(doc.fileName)}</span>
                         <span className="font-medium text-textPrimary">{doc.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-textSecondary">{doc.mandant}</td>
+                    <td className="px-6 py-4 text-sm text-textSecondary">{doc.mandant || 'N/A'}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(doc.type)}`}>
-                        {doc.type}
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(doc.type || 'Unknown')}`}>
+                        {doc.type || 'Unknown'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-textSecondary">{doc.size}</td>
-                    <td className="px-6 py-4 text-sm text-textSecondary">{doc.updated}</td>
+                    <td className="px-6 py-4 text-sm text-textSecondary">{formatFileSize(doc.size)}</td>
+                    <td className="px-6 py-4 text-sm text-textSecondary">{doc.updatedAt || doc.createdAt}</td>
                     <td className="px-6 py-4 text-sm">
                       <button 
                         onClick={() => handleDownload(doc.id)}
