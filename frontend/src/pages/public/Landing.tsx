@@ -58,11 +58,17 @@ export default function Landing() {
               {t('landing.subtitle')}
             </p>
             <div className="flex gap-4">
-              <Link to="/auth/register" className="btn-primary bg-white text-primary px-8 py-3 rounded-md hover:bg-gray-100">
-                {t('landing.registerNow')}
-              </Link>
-              <Link to="/auth/login" className="btn-secondary border-2 border-white text-white px-8 py-3 rounded-md hover:bg-white/10">
-                {t('common.login')}
+              <button
+                onClick={scrollToTop}
+                className="bg-white text-primary px-8 py-3 rounded-md hover:bg-gray-100 font-medium"
+              >
+                {t('common.homepage')}
+              </button>
+              <Link 
+                to="/contact" 
+                className="bg-primary border-2 border-white text-white px-8 py-3 rounded-md hover:bg-white hover:text-primary transition-colors font-medium"
+              >
+                {t('common.contact')}
               </Link>
             </div>
           </div>
