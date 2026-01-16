@@ -21,6 +21,14 @@ public record CreateCaseRequest(
     DateTime? DueDate
 );
 
+public record UpdateCaseRequest(
+    string Title,
+    string? Description,
+    string? Status,
+    string? Priority,
+    DateTime? DueDate
+);
+
 public record UpdateCaseStatusRequest(
     string Status
 );

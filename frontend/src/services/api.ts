@@ -97,7 +97,9 @@ export const casesAPI = {
   getAll: () => apiClient.get('/cases'),
   getById: (id: number) => apiClient.get(`/cases/${id}`),
   create: (data: any) => apiClient.post('/cases', data),
+  update: (id: number, data: any) => apiClient.put(`/cases/${id}`, data),
   updateStatus: (id: number, status: any) => apiClient.put(`/cases/${id}/status`, status),
+  delete: (id: number) => apiClient.delete(`/cases/${id}`),
 };
 
 // Documents API

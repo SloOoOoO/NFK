@@ -9,6 +9,10 @@ public record ClientDto(
     string? Phone,
     string? MandantNr,
     string? LastContact,
+    string? TaxNumber,
+    string? Address,
+    string? City,
+    string? PostalCode,
     DateTime CreatedAt,
     DateTime? UpdatedAt
 );
@@ -25,5 +29,9 @@ public record UpdateClientRequest(
     string Email,
     string Contact,
     string? Phone,
-    string? Status
+    string? Status,
+    string? TaxNumber,
+    string? Address,
+    string? City,
+    string? PostalCode
 );

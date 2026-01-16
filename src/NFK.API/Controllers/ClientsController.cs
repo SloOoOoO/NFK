@@ -40,6 +40,10 @@ public class ClientsController : ControllerBase
                 c.PhoneNumber,
                 c.TaxNumber,
                 c.UpdatedAt?.ToString("dd.MM.yyyy") ?? c.CreatedAt.ToString("dd.MM.yyyy"),
+                c.TaxNumber,
+                c.Address,
+                c.City,
+                c.PostalCode,
                 c.CreatedAt,
                 c.UpdatedAt
             )).ToList();
@@ -76,6 +80,10 @@ public class ClientsController : ControllerBase
                 client.PhoneNumber,
                 client.TaxNumber,
                 client.UpdatedAt?.ToString("dd.MM.yyyy") ?? client.CreatedAt.ToString("dd.MM.yyyy"),
+                client.TaxNumber,
+                client.Address,
+                client.City,
+                client.PostalCode,
                 client.CreatedAt,
                 client.UpdatedAt
             );
@@ -121,6 +129,10 @@ public class ClientsController : ControllerBase
                 client.PhoneNumber,
                 null,
                 DateTime.UtcNow.ToString("dd.MM.yyyy"),
+                client.TaxNumber,
+                client.Address,
+                client.City,
+                client.PostalCode,
                 client.CreatedAt,
                 client.UpdatedAt
             );
@@ -150,6 +162,10 @@ public class ClientsController : ControllerBase
 
             client.CompanyName = request.Name;
             client.PhoneNumber = request.Phone;
+            client.TaxNumber = request.TaxNumber ?? client.TaxNumber;
+            client.Address = request.Address ?? client.Address;
+            client.City = request.City ?? client.City;
+            client.PostalCode = request.PostalCode ?? client.PostalCode;
             if (!string.IsNullOrEmpty(request.Status))
             {
                 client.IsActive = request.Status == "Aktiv";
@@ -166,6 +182,10 @@ public class ClientsController : ControllerBase
                 client.PhoneNumber,
                 client.TaxNumber,
                 client.UpdatedAt?.ToString("dd.MM.yyyy") ?? client.CreatedAt.ToString("dd.MM.yyyy"),
+                client.TaxNumber,
+                client.Address,
+                client.City,
+                client.PostalCode,
                 client.CreatedAt,
                 client.UpdatedAt
             );
