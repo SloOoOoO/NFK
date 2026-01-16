@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import { adminAPI } from '../../services/api';
+import * as Dialog from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
@@ -9,6 +11,12 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
   const [headerText, setHeaderText] = useState({ welcomeTitle: '', welcomeSubtitle: '' });
   const [editingHeader, setEditingHeader] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [newRole, setNewRole] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,12 +48,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleRoleChange = async (userId: number, newRole: string) => {
+  const openRoleModal = (user: any) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setShowRoleModal(true);
+  };
+
+  const handleRoleChange = async () => {
+    if (!selectedUser) return;
     try {
-      await adminAPI.updateUserRole(userId, newRole);
-      // Refresh users list
+      await adminAPI.updateUserRole(selectedUser.id, newRole);
       const response = await adminAPI.getAllUsers();
       setUsers(response.data);
+      setShowRoleModal(false);
       alert('Benutzerrolle erfolgreich aktualisiert');
     } catch (error) {
       console.error('Failed to update user role:', error);
@@ -53,7 +68,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const openEditModal = (user: any) => {
+    setSelectedUser(user);
+    setEditForm({
+      fullLegalName: user.fullLegalName || user.fullName || '',
+      email: user.email || '',
+      phoneNumber: user.phoneNumber || '',
+      taxId: user.taxId || '',
+      address: user.address || '',
+      city: user.city || '',
+      postalCode: user.postalCode || '',
+      dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split('T')[0] : '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUserUpdate = async () => {
+    if (!selectedUser) return;
+    try {
+      await adminAPI.updateUserProfile(selectedUser.id, editForm);
+      const response = await adminAPI.getAllUsers();
+      setUsers(response.data);
+      setShowEditModal(false);
+      alert('Benutzer erfolgreich aktualisiert');
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      alert('Fehler beim Aktualisieren des Benutzers');
+    }
+  };
+
   const handleHeaderTextUpdate = async () => {
+    setSavingHeader(true);
     try {
       await adminAPI.updateHeaderText(headerText);
       setEditingHeader(false);
@@ -61,27 +106,29 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Failed to update header text:', error);
       alert('Fehler beim Aktualisieren des Header-Textes');
+    } finally {
+      setSavingHeader(false);
     }
   };
 
   const roles = ['SuperAdmin', 'Consultant', 'Receptionist', 'Client', 'DATEVManager'];
 
   return (
-    <div className="flex min-h-screen bg-secondary">
+    <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-primary">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-8 text-primary dark:text-blue-400">Admin Dashboard</h1>
           
           {/* Tabs */}
-          <div className="flex gap-4 mb-6 border-b border-gray-300">
+          <div className="flex gap-4 mb-6 border-b border-gray-300 dark:border-gray-700">
             <button
               onClick={() => setActiveTab('users')}
               className={`pb-3 px-4 font-medium transition-colors ${
                 activeTab === 'users'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-textSecondary hover:text-primary'
+                  ? 'border-b-2 border-primary text-primary dark:text-blue-400'
+                  : 'text-textSecondary dark:text-gray-400 hover:text-primary dark:hover:text-blue-400'
               }`}
             >
               👥 Benutzerverwaltung
@@ -90,8 +137,8 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('header')}
               className={`pb-3 px-4 font-medium transition-colors ${
                 activeTab === 'header'
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-textSecondary hover:text-primary'
+                  ? 'border-b-2 border-primary text-primary dark:text-blue-400'
+                  : 'text-textSecondary dark:text-gray-400 hover:text-primary dark:hover:text-blue-400'
               }`}
             >
               ✏️ Header-Text
@@ -100,58 +147,61 @@ export default function AdminDashboard() {
 
           {/* Users Tab */}
           {activeTab === 'users' && (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Benutzerverwaltung</h2>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4 dark:text-white">Benutzerverwaltung</h2>
               
               {loading ? (
-                <div className="text-center py-8">Lädt...</div>
+                <div className="text-center py-8 dark:text-gray-400">Lädt...</div>
               ) : users.length === 0 ? (
-                <div className="text-center py-8 text-textSecondary">Keine Benutzer gefunden</div>
+                <div className="text-center py-8 text-textSecondary dark:text-gray-400">Keine Benutzer gefunden</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-secondary">
+                    <thead className="bg-secondary dark:bg-gray-700">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">ID</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">E-Mail</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Rolle</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Erstellt am</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">E-Mail</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Rolle</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Aktionen</th>
                       </tr>
                     </thead>
                     <tbody>
                       {users.map((user) => (
-                        <tr key={user.id} className="border-b hover:bg-secondary/50">
-                          <td className="px-4 py-3 text-sm">{user.id}</td>
-                          <td className="px-4 py-3 text-sm font-medium">{user.fullName}</td>
-                          <td className="px-4 py-3 text-sm">{user.email}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <select
-                              value={user.role}
-                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                            >
-                              {roles.map((role) => (
-                                <option key={role} value={role}>
-                                  {role}
-                                </option>
-                              ))}
-                            </select>
+                        <tr key={user.id} className="border-b dark:border-gray-700 hover:bg-secondary/50 dark:hover:bg-gray-700/50">
+                          <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">{user.fullName}</td>
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">{user.email}</td>
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">
+                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                              {user.role}
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <span
                               className={`inline-block px-3 py-1 rounded-full text-xs ${
                                 user.isActive
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                  : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                               }`}
                             >
                               {user.isActive ? 'Aktiv' : 'Inaktiv'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-textSecondary">
-                            {new Date(user.createdAt).toLocaleDateString('de-DE')}
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openRoleModal(user)}
+                                className="px-3 py-1 bg-primary dark:bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 text-xs"
+                              >
+                                Rolle ändern
+                              </button>
+                              <button
+                                onClick={() => openEditModal(user)}
+                                className="px-3 py-1 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 text-xs"
+                              >
+                                Bearbeiten
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -164,9 +214,9 @@ export default function AdminDashboard() {
 
           {/* Header Text Tab */}
           {activeTab === 'header' && (
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Dashboard Header-Text</h2>
+                <h2 className="text-xl font-semibold dark:text-white">Dashboard Header-Text</h2>
                 {!editingHeader ? (
                   <button
                     onClick={() => setEditingHeader(true)}
@@ -179,12 +229,14 @@ export default function AdminDashboard() {
                     <button
                       onClick={handleHeaderTextUpdate}
                       className="btn-primary text-sm"
+                      disabled={savingHeader}
                     >
-                      Speichern
+                      {savingHeader ? 'Speichert...' : 'Speichern'}
                     </button>
                     <button
                       onClick={() => setEditingHeader(false)}
                       className="btn-secondary text-sm"
+                      disabled={savingHeader}
                     >
                       Abbrechen
                     </button>
@@ -194,40 +246,40 @@ export default function AdminDashboard() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                  <label className="block text-sm font-medium text-textSecondary dark:text-gray-300 mb-2">
                     Willkommenstitel
                   </label>
                   {editingHeader ? (
-                    <input
-                      type="text"
+                    <textarea
                       value={headerText.welcomeTitle}
                       onChange={(e) =>
                         setHeaderText({ ...headerText, welcomeTitle: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
                       placeholder="z.B. Willkommen zurück"
+                      rows={3}
                     />
                   ) : (
-                    <p className="text-lg font-semibold">{headerText.welcomeTitle}</p>
+                    <p className="text-lg font-semibold dark:text-gray-200">{headerText.welcomeTitle}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                  <label className="block text-sm font-medium text-textSecondary dark:text-gray-300 mb-2">
                     Untertitel
                   </label>
                   {editingHeader ? (
-                    <input
-                      type="text"
+                    <textarea
                       value={headerText.welcomeSubtitle}
                       onChange={(e) =>
                         setHeaderText({ ...headerText, welcomeSubtitle: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
                       placeholder="z.B. Ihr persönliches Steuerberatungsportal"
+                      rows={3}
                     />
                   ) : (
-                    <p className="text-textSecondary">{headerText.welcomeSubtitle}</p>
+                    <p className="text-textSecondary dark:text-gray-300">{headerText.welcomeSubtitle}</p>
                   )}
                 </div>
               </div>
@@ -235,6 +287,199 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* Role Change Modal */}
+      <Dialog.Root open={showRoleModal} onOpenChange={setShowRoleModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+            <Dialog.Title className="text-xl font-bold mb-4 dark:text-white">
+              Rolle ändern
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-textSecondary dark:text-gray-400 mb-4">
+              Rolle für {selectedUser?.fullName} ändern
+            </Dialog.Description>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                Neue Rolle
+              </label>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+              >
+                {roles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button className="btn-secondary">
+                  Abbrechen
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleRoleChange}
+                className="btn-primary"
+              >
+                Speichern
+              </button>
+            </div>
+
+            <Dialog.Close asChild>
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Edit User Modal */}
+      <Dialog.Root open={showEditModal} onOpenChange={setShowEditModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <Dialog.Title className="text-xl font-bold mb-4 dark:text-white">
+              Benutzer bearbeiten
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-textSecondary dark:text-gray-400 mb-4">
+              Informationen für {selectedUser?.fullName} bearbeiten
+            </Dialog.Description>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Vollständiger Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.fullLegalName || ''}
+                  onChange={(e) => setEditForm({ ...editForm, fullLegalName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  E-Mail
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email || ''}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Telefon
+                </label>
+                <input
+                  type="tel"
+                  value={editForm.phoneNumber || ''}
+                  onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Steuernummer
+                </label>
+                <input
+                  type="text"
+                  value={editForm.taxId || ''}
+                  onChange={(e) => setEditForm({ ...editForm, taxId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Adresse
+                </label>
+                <input
+                  type="text"
+                  value={editForm.address || ''}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                    Stadt
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.city || ''}
+                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                    Postleitzahl
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.postalCode || ''}
+                    onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Geburtsdatum
+                </label>
+                <input
+                  type="date"
+                  value={editForm.dateOfBirth || ''}
+                  onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button className="btn-secondary">
+                  Abbrechen
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleUserUpdate}
+                className="btn-primary"
+              >
+                Speichern
+              </button>
+            </div>
+
+            <Dialog.Close asChild>
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

@@ -61,14 +61,21 @@ export default function Profile() {
   };
 
   const isAdmin = user?.role === 'SuperAdmin';
+  const canEditField = (field: string) => {
+    // For non-admin users, FullLegalName, Email, and TaxId are read-only
+    if (!isAdmin && ['fullLegalName', 'email', 'taxId'].includes(field)) {
+      return false;
+    }
+    return isEditing;
+  };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-secondary">
+      <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
         <Sidebar />
         <main className="flex-1 p-8">
           <div className="text-center py-12">
-            <div className="text-lg text-textSecondary">Lade Profil...</div>
+            <div className="text-lg text-textSecondary dark:text-gray-400">Lade Profil...</div>
           </div>
         </main>
       </div>
@@ -77,11 +84,11 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen bg-secondary">
+      <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
         <Sidebar />
         <main className="flex-1 p-8">
           <div className="text-center py-12">
-            <div className="text-lg text-red-600">Profil konnte nicht geladen werden</div>
+            <div className="text-lg text-red-600 dark:text-red-400">Profil konnte nicht geladen werden</div>
           </div>
         </main>
       </div>
@@ -89,15 +96,15 @@ export default function Profile() {
   }
 
   return (
-    <div className="flex min-h-screen bg-secondary">
+    <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-primary">Mein Profil</h1>
+            <h1 className="text-3xl font-bold text-primary dark:text-blue-400">Mein Profil</h1>
             <div className="flex gap-2">
-              {isAdmin && !isEditing && (
+              {!isEditing && (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="btn-primary text-sm"
@@ -108,7 +115,10 @@ export default function Profile() {
               {isEditing && (
                 <>
                   <button
-                    onClick={() => setIsEditing(false)}
+                    onClick={() => {
+                      setIsEditing(false);
+                      fetchUserProfile(); // Reset form
+                    }}
                     className="btn-secondary text-sm"
                     disabled={saving}
                   >
@@ -132,162 +142,177 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <div className="flex items-center gap-6 mb-8 pb-6 border-b border-gray-200">
-              <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-white text-3xl">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-6">
+            <div className="flex items-center gap-6 mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="w-24 h-24 bg-primary dark:bg-blue-600 rounded-full flex items-center justify-center text-white text-3xl">
                 {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-textPrimary">
+                <h2 className="text-2xl font-bold text-textPrimary dark:text-white">
                   {user.firstName} {user.lastName}
                 </h2>
-                <p className="text-textSecondary">{user.email}</p>
-                <p className="text-sm text-primary mt-1">{user.role}</p>
+                <p className="text-textSecondary dark:text-gray-400">{user.email}</p>
+                <p className="text-sm text-primary dark:text-blue-400 mt-1">{user.role}</p>
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="font-semibold text-lg mb-4 text-primary">Persönliche Informationen</h3>
+                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">Persönliche Informationen</h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Vollständiger Name</label>
-                    {isEditing ? (
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
+                      Vollständiger Name
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">(Nur lesbar)</span>}
+                    </label>
+                    {canEditField('fullLegalName') ? (
                       <input
                         type="text"
                         value={editForm.fullLegalName}
                         onChange={(e) => setEditForm({ ...editForm, fullLegalName: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.fullLegalName || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
+                        {user.fullLegalName || 'Nicht angegeben'}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">E-Mail</label>
-                    {isEditing ? (
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
+                      E-Mail
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">(Nur lesbar)</span>}
+                    </label>
+                    {canEditField('email') ? (
                       <input
                         type="email"
                         value={editForm.email}
                         onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.email}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
+                        {user.email}
+                      </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Telefon</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Telefon</label>
                     {isEditing ? (
                       <input
                         type="tel"
                         value={editForm.phoneNumber}
                         onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.phoneNumber || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.phoneNumber || 'Nicht angegeben'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Geburtsdatum</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Geburtsdatum</label>
                     {isEditing ? (
                       <input
                         type="date"
                         value={editForm.dateOfBirth}
                         onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{formatDate(user.dateOfBirth)}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{formatDate(user.dateOfBirth)}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Steuernummer</label>
-                    {isEditing ? (
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
+                      Steuernummer
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">(Nur lesbar)</span>}
+                    </label>
+                    {canEditField('taxId') ? (
                       <input
                         type="text"
                         value={editForm.taxId}
                         onChange={(e) => setEditForm({ ...editForm, taxId: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.taxId || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
+                        {user.taxId || 'Nicht angegeben'}
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="font-semibold text-lg mb-4 text-primary">Adresse</h3>
+                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">Adresse</h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Straße</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Straße</label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editForm.address}
                         onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.address || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.address || 'Nicht angegeben'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Stadt</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Stadt</label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editForm.city}
                         onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.city || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.city || 'Nicht angegeben'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Postleitzahl</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Postleitzahl</label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editForm.postalCode}
                         onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.postalCode || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.postalCode || 'Nicht angegeben'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Land</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Land</label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editForm.country}
                         onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary mt-1">{user.country || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.country || 'Nicht angegeben'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Status</label>
-                    <p className="text-textPrimary mt-1">
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Status</label>
+                    <p className="text-textPrimary dark:text-gray-200 mt-1">
                       <span className={`inline-block px-3 py-1 rounded-full text-sm ${
-                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        user.isActive ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                       }`}>
                         {user.isActive ? 'Aktiv' : 'Inaktiv'}
                       </span>
@@ -298,23 +323,23 @@ export default function Profile() {
             </div>
 
             {user.firmLegalName && (
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold text-lg mb-4 text-primary">Unternehmensinformationen</h3>
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">Unternehmensinformationen</h3>
                 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Firmenname</label>
-                    <p className="text-textPrimary mt-1">{user.firmLegalName}</p>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Firmenname</label>
+                    <p className="text-textPrimary dark:text-gray-200 mt-1">{user.firmLegalName}</p>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Firmensteuernummer</label>
-                    <p className="text-textPrimary mt-1">{user.firmTaxId || 'Nicht angegeben'}</p>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Firmensteuernummer</label>
+                    <p className="text-textPrimary dark:text-gray-200 mt-1">{user.firmTaxId || 'Nicht angegeben'}</p>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary">Kammernummer</label>
-                    <p className="text-textPrimary mt-1">{user.firmChamberRegistration || 'Nicht angegeben'}</p>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Kammernummer</label>
+                    <p className="text-textPrimary dark:text-gray-200 mt-1">{user.firmChamberRegistration || 'Nicht angegeben'}</p>
                   </div>
                 </div>
               </div>
