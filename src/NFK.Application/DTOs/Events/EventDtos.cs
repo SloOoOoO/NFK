@@ -9,3 +9,12 @@ public record EventDto(
     string Type,
     string? Notes
 );
+
+public record CreateEventDto(
+    int ClientId,
+    string Title,
+    string? Description,
+    DateTime Date,
+    string Time,
+    string? Location
+);

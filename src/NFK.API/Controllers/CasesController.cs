@@ -136,6 +136,50 @@ public class CasesController : ControllerBase
         }
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateCaseRequest request)
+    {
+        try
+        {
+            var caseEntity = await _context.Cases
+                .Include(c => c.Client)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (caseEntity == null)
+            {
+                return NotFound(new { error = "not_found", message = $"Case {id} not found" });
+            }
+
+            caseEntity.Title = request.Title;
+            caseEntity.Description = request.Description ?? caseEntity.Description;
+            caseEntity.Status = MapStatusFromString(request.Status ?? MapCaseStatus(caseEntity.Status));
+            caseEntity.Priority = MapPriorityFromString(request.Priority ?? MapPriority(caseEntity.Priority));
+            caseEntity.DueDate = request.DueDate ?? caseEntity.DueDate;
+
+            await _context.SaveChangesAsync();
+
+            var caseDto = new CaseDto(
+                caseEntity.Id,
+                caseEntity.Title,
+                caseEntity.Description,
+                caseEntity.ClientId,
+                caseEntity.Client.CompanyName,
+                MapCaseStatus(caseEntity.Status),
+                MapPriority(caseEntity.Priority),
+                caseEntity.DueDate,
+                caseEntity.CreatedAt,
+                caseEntity.UpdatedAt
+            );
+
+            return Ok(caseDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating case {CaseId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error updating case" });
+        }
+    }
+
     [HttpPut("{id}/status")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateCaseStatusRequest request)
     {
@@ -172,6 +216,30 @@ public class CasesController : ControllerBase
         {
             _logger.LogError(ex, "Error updating case status {CaseId}", id);
             return StatusCode(500, new { error = "internal_error", message = "Error updating case status" });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        try
+        {
+            var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.Id == id);
+
+            if (caseEntity == null)
+            {
+                return NotFound(new { error = "not_found", message = $"Case {id} not found" });
+            }
+
+            _context.Cases.Remove(caseEntity);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Case deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting case {CaseId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error deleting case" });
         }
     }
 

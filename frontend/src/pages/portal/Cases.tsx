@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { casesAPI, clientsAPI } from '../../services/api';
+import * as Dialog from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
 
 interface Case {
   id: number;
@@ -44,9 +46,11 @@ export default function Cases() {
   const [editCase, setEditCase] = useState({
     title: '',
     description: '',
+    status: 'Neu',
     priority: 'Mittel',
     dueDate: '',
   });
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     fetchCases();
@@ -86,10 +90,12 @@ export default function Cases() {
       await casesAPI.create(newCase);
       setShowCreateModal(false);
       setNewCase({ title: '', description: '', clientId: 0, priority: 'Mittel', dueDate: '' });
+      setSuccessMessage('Fall erfolgreich erstellt');
+      setTimeout(() => setSuccessMessage(''), 3000);
       await fetchCases();
     } catch (err: any) {
       console.error('Error creating case:', err);
-      alert('Fehler beim Erstellen des Falls');
+      alert('Fehler beim Erstellen des Falls: ' + (err.response?.data?.message || err.message));
     } finally {
       setCreateLoading(false);
     }
@@ -100,14 +106,15 @@ export default function Cases() {
     if (!selectedCase) return;
     setEditLoading(true);
     try {
-      // Note: You may need to add an update endpoint to casesAPI
-      await casesAPI.updateStatus(selectedCase.id, { status: selectedCase.status });
+      await casesAPI.update(selectedCase.id, editCase);
       setShowEditModal(false);
       setSelectedCase(null);
+      setSuccessMessage('Fall erfolgreich aktualisiert');
+      setTimeout(() => setSuccessMessage(''), 3000);
       await fetchCases();
     } catch (err: any) {
       console.error('Error updating case:', err);
-      alert('Fehler beim Aktualisieren des Falls');
+      alert('Fehler beim Aktualisieren des Falls: ' + (err.response?.data?.message || err.message));
     } finally {
       setEditLoading(false);
     }
@@ -117,15 +124,15 @@ export default function Cases() {
     if (!selectedCase) return;
     setDeleteLoading(true);
     try {
-      // Note: You may need to add a delete endpoint to casesAPI
-      // await casesAPI.delete(selectedCase.id);
-      alert('Löschen wird bald verfügbar sein');
+      await casesAPI.delete(selectedCase.id);
       setShowDeleteModal(false);
       setSelectedCase(null);
-      // await fetchCases();
+      setSuccessMessage('Fall erfolgreich gelöscht');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      await fetchCases();
     } catch (err: any) {
       console.error('Error deleting case:', err);
-      alert('Fehler beim Löschen des Falls');
+      alert('Fehler beim Löschen des Falls: ' + (err.response?.data?.message || err.message));
     } finally {
       setDeleteLoading(false);
     }
@@ -136,6 +143,7 @@ export default function Cases() {
     setEditCase({
       title: caseItem.title,
       description: caseItem.subject || '',
+      status: caseItem.status,
       priority: caseItem.priority,
       dueDate: caseItem.dueDate ? caseItem.dueDate.split('T')[0] : '',
     });
@@ -205,25 +213,32 @@ export default function Cases() {
   };
 
   return (
-    <div className="flex min-h-screen bg-secondary">
+    <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-textPrimary mb-2">Fälle</h1>
-          <p className="text-textSecondary">Verwalten Sie alle laufenden und abgeschlossenen Fälle</p>
+          <h1 className="text-3xl font-bold text-textPrimary dark:text-white mb-2">Fälle</h1>
+          <p className="text-textSecondary dark:text-gray-400">Verwalten Sie alle laufenden und abgeschlossenen Fälle</p>
         </div>
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+            <p className="text-sm text-green-800 dark:text-green-200">✓ {successMessage}</p>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">⚠️ {error} - Demo-Daten werden angezeigt</p>
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">⚠️ {error} - Demo-Daten werden angezeigt</p>
           </div>
         )}
 
         {/* Actions Bar */}
-        <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-2 overflow-x-auto w-full">
               <button
@@ -231,7 +246,7 @@ export default function Cases() {
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'all'
                     ? 'bg-primary text-white'
-                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
+                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 Alle ({statusCounts.all})
@@ -241,7 +256,7 @@ export default function Cases() {
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'Neu'
                     ? 'bg-primary text-white'
-                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
+                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 Neu ({statusCounts.neu})
@@ -251,7 +266,7 @@ export default function Cases() {
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'In Bearbeitung'
                     ? 'bg-primary text-white'
-                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
+                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 In Bearbeitung ({statusCounts.inBearbeitung})
@@ -261,7 +276,7 @@ export default function Cases() {
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'Abgeschlossen'
                     ? 'bg-primary text-white'
-                    : 'bg-secondary text-textPrimary hover:bg-gray-200'
+                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 Abgeschlossen ({statusCounts.abgeschlossen})
@@ -287,18 +302,18 @@ export default function Cases() {
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <div className="inline-block animate-spin text-4xl mb-4">⏳</div>
-              <p className="text-textSecondary">Lade Fälle...</p>
+              <p className="text-textSecondary dark:text-gray-400">Lade Fälle...</p>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredCases.length > 0 ? (
               filteredCases.map((caseItem) => (
-                <div key={caseItem.id} className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                <div key={caseItem.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-primary">{caseItem.id}</h3>
+                        <h3 className="text-lg font-semibold text-primary">#{caseItem.id}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(caseItem.status)}`}>
                           {caseItem.status}
                         </span>
@@ -307,9 +322,9 @@ export default function Cases() {
                         </span>
                       </div>
                       
-                      <h4 className="text-lg font-medium text-textPrimary mb-2">{caseItem.title}</h4>
+                      <h4 className="text-lg font-medium text-textPrimary dark:text-white mb-2">{caseItem.title}</h4>
                       
-                      <div className="flex flex-wrap gap-4 text-sm text-textSecondary">
+                      <div className="flex flex-wrap gap-4 text-sm text-textSecondary dark:text-gray-400">
                         <div className="flex items-center gap-1">
                           <span>👥</span>
                           <span>{caseItem.clientName}</span>
@@ -338,7 +353,7 @@ export default function Cases() {
                       </button>
                       <button 
                         onClick={() => openDeleteModal(caseItem)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
                       >
                         Löschen
                       </button>
@@ -347,10 +362,10 @@ export default function Cases() {
                 </div>
               ))
             ) : (
-              <div className="bg-white p-12 rounded-lg shadow-sm text-center">
+              <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm text-center">
                 <div className="text-6xl mb-4">📁</div>
-                <h3 className="text-xl font-semibold text-textPrimary mb-2">Keine Fälle gefunden</h3>
-                <p className="text-textSecondary mb-4">Es gibt keine Fälle mit diesem Status.</p>
+                <h3 className="text-xl font-semibold text-textPrimary dark:text-white mb-2">Keine Fälle gefunden</h3>
+                <p className="text-textSecondary dark:text-gray-400 mb-4">Es gibt keine Fälle mit diesem Status.</p>
                 <button 
                   onClick={() => setShowCreateModal(true)}
                   className="btn-primary"
@@ -363,43 +378,51 @@ export default function Cases() {
         )}
 
         {/* Create Case Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-textPrimary">Neuer Fall</h2>
+        <Dialog.Root open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto z-50">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <Dialog.Title className="text-xl font-semibold text-textPrimary dark:text-white">
+                  Neuer Fall
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <X size={24} />
+                  </button>
+                </Dialog.Close>
               </div>
               
               <form onSubmit={handleCreateCase} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Titel *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Titel *</label>
                   <input
                     type="text"
                     value={newCase.title}
                     onChange={(e) => setNewCase({ ...newCase, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     required
                     disabled={createLoading}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Beschreibung</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Beschreibung</label>
                   <textarea
                     value={newCase.description}
                     onChange={(e) => setNewCase({ ...newCase, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     rows={3}
                     disabled={createLoading}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Mandant *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Mandant *</label>
                   <select
                     value={newCase.clientId}
                     onChange={(e) => setNewCase({ ...newCase, clientId: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     required
                     disabled={createLoading}
                   >
@@ -411,11 +434,11 @@ export default function Cases() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Priorität *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Priorität *</label>
                   <select
                     value={newCase.priority}
                     onChange={(e) => setNewCase({ ...newCase, priority: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     required
                     disabled={createLoading}
                   >
@@ -426,25 +449,26 @@ export default function Cases() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Frist</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Frist</label>
                   <input
                     type="date"
                     value={newCase.dueDate}
                     onChange={(e) => setNewCase({ ...newCase, dueDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     disabled={createLoading}
                   />
                 </div>
                 
                 <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="flex-1 btn-secondary"
-                    disabled={createLoading}
-                  >
-                    Abbrechen
-                  </button>
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="flex-1 btn-secondary"
+                      disabled={createLoading}
+                    >
+                      Abbrechen
+                    </button>
+                  </Dialog.Close>
                   <button
                     type="submit"
                     className="flex-1 btn-primary"
@@ -454,48 +478,72 @@ export default function Cases() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
 
         {/* Edit Case Modal */}
-        {showEditModal && selectedCase && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-textPrimary">Fall bearbeiten</h2>
+        <Dialog.Root open={showEditModal} onOpenChange={setShowEditModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto z-50">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <Dialog.Title className="text-xl font-semibold text-textPrimary dark:text-white">
+                  Fall bearbeiten
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <X size={24} />
+                  </button>
+                </Dialog.Close>
               </div>
               
               <form onSubmit={handleEditCase} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Titel *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Titel *</label>
                   <input
                     type="text"
                     value={editCase.title}
                     onChange={(e) => setEditCase({ ...editCase, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     required
                     disabled={editLoading}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Beschreibung</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Beschreibung</label>
                   <textarea
                     value={editCase.description}
                     onChange={(e) => setEditCase({ ...editCase, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     rows={3}
                     disabled={editLoading}
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Status *</label>
+                  <select
+                    value={editCase.status}
+                    onChange={(e) => setEditCase({ ...editCase, status: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    required
+                    disabled={editLoading}
+                  >
+                    <option value="Neu">Neu</option>
+                    <option value="In Bearbeitung">In Bearbeitung</option>
+                    <option value="Abgeschlossen">Abgeschlossen</option>
+                    <option value="Abgebrochen">Abgebrochen</option>
+                  </select>
+                </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Priorität *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Priorität *</label>
                   <select
                     value={editCase.priority}
                     onChange={(e) => setEditCase({ ...editCase, priority: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     required
                     disabled={editLoading}
                   >
@@ -506,25 +554,26 @@ export default function Cases() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Frist</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Frist</label>
                   <input
                     type="date"
                     value={editCase.dueDate}
                     onChange={(e) => setEditCase({ ...editCase, dueDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                     disabled={editLoading}
                   />
                 </div>
                 
                 <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="flex-1 btn-secondary"
-                    disabled={editLoading}
-                  >
-                    Abbrechen
-                  </button>
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="flex-1 btn-secondary"
+                      disabled={editLoading}
+                    >
+                      Abbrechen
+                    </button>
+                  </Dialog.Close>
                   <button
                     type="submit"
                     className="flex-1 btn-primary"
@@ -534,102 +583,128 @@ export default function Cases() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
 
         {/* Details Case Modal */}
-        {showDetailsModal && selectedCase && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-textPrimary">Fall Details</h2>
+        <Dialog.Root open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto z-50">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <Dialog.Title className="text-xl font-semibold text-textPrimary dark:text-white">
+                  Fall Details
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <X size={24} />
+                  </button>
+                </Dialog.Close>
               </div>
               
               <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-1">Fall-ID</label>
-                  <p className="text-textPrimary">{selectedCase.id}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-1">Titel</label>
-                  <p className="text-textPrimary">{selectedCase.title}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-1">Mandant</label>
-                  <p className="text-textPrimary">{selectedCase.clientName}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-1">Status</label>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedCase.status)}`}>
-                    {selectedCase.status}
-                  </span>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-1">Priorität</label>
-                  <span className={`text-sm font-medium ${getPriorityColor(selectedCase.priority)}`}>
-                    ● {selectedCase.priority}
-                  </span>
-                </div>
-                
-                {selectedCase.dueDate && (
-                  <div>
-                    <label className="block text-sm font-medium text-textSecondary mb-1">Frist</label>
-                    <p className="text-textPrimary">{new Date(selectedCase.dueDate).toLocaleDateString('de-DE')}</p>
-                  </div>
+                {selectedCase && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Fall-ID</label>
+                      <p className="text-textPrimary dark:text-white">#{selectedCase.id}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Titel</label>
+                      <p className="text-textPrimary dark:text-white">{selectedCase.title}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Beschreibung</label>
+                      <p className="text-textPrimary dark:text-white">{selectedCase.subject || 'Keine Beschreibung'}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Mandant</label>
+                      <p className="text-textPrimary dark:text-white">{selectedCase.clientName}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Status</label>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedCase.status)}`}>
+                        {selectedCase.status}
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Priorität</label>
+                      <span className={`text-sm font-medium ${getPriorityColor(selectedCase.priority)}`}>
+                        ● {selectedCase.priority}
+                      </span>
+                    </div>
+                    
+                    {selectedCase.dueDate && (
+                      <div>
+                        <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Frist</label>
+                        <p className="text-textPrimary dark:text-white">{new Date(selectedCase.dueDate).toLocaleDateString('de-DE')}</p>
+                      </div>
+                    )}
+                  </>
                 )}
                 
                 <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => setShowDetailsModal(false)}
-                    className="flex-1 btn-secondary"
-                  >
-                    Schließen
-                  </button>
+                  <Dialog.Close asChild>
+                    <button className="flex-1 btn-secondary">
+                      Schließen
+                    </button>
+                  </Dialog.Close>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
 
         {/* Delete Confirmation Modal */}
-        {showDeleteModal && selectedCase && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-textPrimary">Fall löschen</h2>
+        <Dialog.Root open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <Dialog.Title className="text-xl font-semibold text-textPrimary dark:text-white">
+                  Fall löschen
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <X size={24} />
+                  </button>
+                </Dialog.Close>
               </div>
               
               <div className="p-6">
-                <p className="text-textSecondary mb-6">
-                  Sind Sie sicher, dass Sie den Fall <strong>{selectedCase.title}</strong> löschen möchten? 
-                  Diese Aktion kann nicht rückgängig gemacht werden und alle zugehörigen Informationen werden unwiderruflich entfernt.
-                </p>
+                {selectedCase && (
+                  <p className="text-textSecondary dark:text-gray-300 mb-6">
+                    Sind Sie sicher, dass Sie diesen Fall löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+                  </p>
+                )}
                 
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowDeleteModal(false)}
-                    className="flex-1 btn-secondary"
-                    disabled={deleteLoading}
-                  >
-                    Abbrechen
-                  </button>
+                  <Dialog.Close asChild>
+                    <button
+                      className="flex-1 btn-secondary"
+                      disabled={deleteLoading}
+                    >
+                      Abbrechen
+                    </button>
+                  </Dialog.Close>
                   <button
                     onClick={handleDeleteCase}
-                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
                     disabled={deleteLoading}
                   >
                     {deleteLoading ? 'Wird gelöscht...' : 'Löschen'}
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </main>
     </div>
   );

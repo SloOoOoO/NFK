@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace NFK.Application.DTOs.Auth;
 
 public record RegisterRequest(
@@ -78,4 +80,20 @@ public record UserResponse(
     string? FirmLegalName = null,
     string? FirmTaxId = null,
     string? FirmChamberRegistration = null
+);
+
+public record ForgotPasswordRequest(
+    [Required(ErrorMessage = "Email is required")]
+    [EmailAddress(ErrorMessage = "Invalid email format")]
+    string Email
+);
+
+public record ResetPasswordRequest(
+    [Required(ErrorMessage = "Token is required")]
+    [MinLength(1, ErrorMessage = "Token is required")]
+    string Token,
+    
+    [Required(ErrorMessage = "New password is required")]
+    [MinLength(8, ErrorMessage = "Password must be at least 8 characters")]
+    string NewPassword
 );

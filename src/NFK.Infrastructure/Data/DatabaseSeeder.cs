@@ -7,6 +7,7 @@ using NFK.Domain.Entities.DATEV;
 using NFK.Domain.Entities.Users;
 using NFK.Domain.Enums;
 using NFK.Infrastructure.Security;
+using UserRoleEntity = NFK.Domain.Entities.Users.UserRole;
 
 namespace NFK.Infrastructure.Data;
 
@@ -65,10 +66,10 @@ public static class DatabaseSeeder
         var superAdminRole = roles.First(r => r.Name == "SuperAdmin");
         var consultantRole = roles.First(r => r.Name == "Consultant");
 
-        var userRoles = new List<UserRole>
+        var userRoles = new List<UserRoleEntity>
         {
-            new UserRole { UserId = testUser.Id, RoleId = superAdminRole.Id },
-            new UserRole { UserId = testUser2.Id, RoleId = consultantRole.Id }
+            new UserRoleEntity { UserId = testUser.Id, RoleId = superAdminRole.Id },
+            new UserRoleEntity { UserId = testUser2.Id, RoleId = consultantRole.Id }
         };
 
         context.UserRoles.AddRange(userRoles);
