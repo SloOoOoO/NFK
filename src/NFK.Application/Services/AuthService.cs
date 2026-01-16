@@ -386,9 +386,9 @@ public class AuthService : IAuthService
         _logger.LogInformation("Password reset token created for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
 
         // TODO: Send email with reset link
-        // For now, log the token to console (placeholder for email functionality)
-        Console.WriteLine($"Password reset token for {email}: {token}");
-        Console.WriteLine($"Reset link: /reset-password?token={token}");
+        // For now, log the token at debug level (placeholder for email functionality)
+        _logger.LogDebug("Password reset token for {Email}: {Token}", email, token);
+        _logger.LogDebug("Reset link: /reset-password?token={Token}", token);
 
         return token;
     }
