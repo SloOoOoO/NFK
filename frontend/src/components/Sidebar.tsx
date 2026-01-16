@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../services/api';
 import DarkModeToggle from './DarkModeToggle';
 
 export default function Sidebar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -41,18 +43,18 @@ export default function Sidebar() {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/portal/dashboard', icon: '📊' },
-    { name: 'Mandanten', path: '/portal/clients', icon: '👥' },
-    { name: 'Fälle', path: '/portal/cases', icon: '📁' },
-    { name: 'Dokumente', path: '/portal/documents', icon: '📄' },
-    { name: 'Nachrichten', path: '/portal/messages', icon: '✉️' },
-    { name: 'Kalender', path: '/portal/calendar', icon: '📅' },
-    { name: 'DATEV', path: '/portal/datev', icon: '🔄' },
+    { name: t('dashboard.nav.dashboard'), path: '/portal/dashboard', icon: '📊' },
+    { name: t('dashboard.nav.clients'), path: '/portal/clients', icon: '👥' },
+    { name: t('dashboard.nav.cases'), path: '/portal/cases', icon: '📁' },
+    { name: t('dashboard.nav.documents'), path: '/portal/documents', icon: '📄' },
+    { name: t('dashboard.nav.messages'), path: '/portal/messages', icon: '✉️' },
+    { name: t('dashboard.nav.calendar'), path: '/portal/calendar', icon: '📅' },
+    { name: t('dashboard.nav.datev'), path: '/portal/datev', icon: '🔄' },
   ];
 
   // Add Admin tab if user is SuperAdmin
   if (currentUser?.role === 'SuperAdmin') {
-    navItems.push({ name: 'Admin', path: '/portal/admin', icon: '⚙️' });
+    navItems.push({ name: t('dashboard.nav.admin'), path: '/portal/admin', icon: '⚙️' });
   }
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -93,7 +95,7 @@ export default function Sidebar() {
 
       <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         {loading ? (
-          <div className="text-center text-sm text-textSecondary dark:text-gray-400">Loading...</div>
+          <div className="text-center text-sm text-textSecondary dark:text-gray-400">{t('common.loading')}</div>
         ) : (
           <>
             <div 
@@ -118,7 +120,7 @@ export default function Sidebar() {
               className="w-full btn-secondary text-sm flex items-center justify-center gap-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               <span>🚪</span>
-              <span>Abmelden</span>
+              <span>{t('common.logout')}</span>
             </button>
           </>
         )}

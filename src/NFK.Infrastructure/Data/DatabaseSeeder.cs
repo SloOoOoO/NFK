@@ -35,6 +35,18 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         // Seed Users
+        var suheylUser = new User
+        {
+            Email = "karatas@nfk-buchhaltung.de",
+            PasswordHash = passwordHasher.HashPassword("Test123!"),
+            FirstName = "Suheyl",
+            LastName = "Karatas",
+            FullLegalName = "Süheyl Faruk Kataş",
+            PhoneNumber = "+49 221 1234567",
+            IsActive = true,
+            IsEmailConfirmed = true
+        };
+
         var testUser = new User
         {
             Email = "test@nfk.de",
@@ -59,7 +71,7 @@ public static class DatabaseSeeder
             IsEmailConfirmed = true
         };
 
-        context.Users.AddRange(testUser, testUser2);
+        context.Users.AddRange(suheylUser, testUser, testUser2);
         await context.SaveChangesAsync();
 
         // Assign roles
@@ -68,6 +80,7 @@ public static class DatabaseSeeder
 
         var userRoles = new List<UserRoleEntity>
         {
+            new UserRoleEntity { UserId = suheylUser.Id, RoleId = superAdminRole.Id },
             new UserRoleEntity { UserId = testUser.Id, RoleId = superAdminRole.Id },
             new UserRoleEntity { UserId = testUser2.Id, RoleId = consultantRole.Id }
         };
