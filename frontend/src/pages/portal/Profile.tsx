@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import { authAPI, adminAPI } from '../../services/api';
 
 export default function Profile() {
+  const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,17 +48,17 @@ export default function Profile() {
       await adminAPI.updateUserProfile(user.id, editForm);
       await fetchUserProfile();
       setIsEditing(false);
-      alert('Profil erfolgreich aktualisiert');
+      alert(t('profile.successUpdate'));
     } catch (error) {
       console.error('Failed to update profile:', error);
-      alert('Fehler beim Aktualisieren des Profils');
+      alert(t('profile.errorUpdate'));
     } finally {
       setSaving(false);
     }
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Nicht angegeben';
+    if (!dateString) return t('profile.notSpecified');
     return new Date(dateString).toLocaleDateString('de-DE');
   };
 
@@ -75,7 +77,7 @@ export default function Profile() {
         <Sidebar />
         <main className="flex-1 p-8">
           <div className="text-center py-12">
-            <div className="text-lg text-textSecondary dark:text-gray-400">Lade Profil...</div>
+            <div className="text-lg text-textSecondary dark:text-gray-400">{t('profile.loadingProfile')}</div>
           </div>
         </main>
       </div>
@@ -88,7 +90,7 @@ export default function Profile() {
         <Sidebar />
         <main className="flex-1 p-8">
           <div className="text-center py-12">
-            <div className="text-lg text-red-600 dark:text-red-400">Profil konnte nicht geladen werden</div>
+            <div className="text-lg text-red-600 dark:text-red-400">{t('profile.errorLoading')}</div>
           </div>
         </main>
       </div>
@@ -102,14 +104,14 @@ export default function Profile() {
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-primary dark:text-blue-400">Mein Profil</h1>
+            <h1 className="text-3xl font-bold text-primary dark:text-blue-400">{t('profile.title')}</h1>
             <div className="flex gap-2">
               {!isEditing && (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="btn-primary text-sm"
                 >
-                  ✏️ Bearbeiten
+                  ✏️ {t('profile.editButton')}
                 </button>
               )}
               {isEditing && (
@@ -122,14 +124,14 @@ export default function Profile() {
                     className="btn-secondary text-sm"
                     disabled={saving}
                   >
-                    Abbrechen
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSave}
                     className="btn-primary text-sm"
                     disabled={saving}
                   >
-                    {saving ? 'Speichert...' : '💾 Speichern'}
+                    {saving ? t('common.saving') : `💾 ${t('profile.saveButton')}`}
                   </button>
                 </>
               )}
@@ -137,7 +139,7 @@ export default function Profile() {
                 onClick={() => navigate('/portal/dashboard')}
                 className="btn-secondary text-sm"
               >
-                ← Zurück
+                ← {t('common.back')}
               </button>
             </div>
           </div>
@@ -158,13 +160,13 @@ export default function Profile() {
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">Persönliche Informationen</h3>
+                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">{t('profile.personalInfo')}</h3>
                 
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
-                      Vollständiger Name
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">(Nur lesbar)</span>}
+                      {t('profile.fullLegalName')}
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
                     </label>
                     {canEditField('fullLegalName') ? (
                       <input
@@ -175,15 +177,15 @@ export default function Profile() {
                       />
                     ) : (
                       <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
-                        {user.fullLegalName || 'Nicht angegeben'}
+                        {user.fullLegalName || t('profile.notSpecified')}
                       </p>
                     )}
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
-                      E-Mail
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">(Nur lesbar)</span>}
+                      {t('profile.email')}
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
                     </label>
                     {canEditField('email') ? (
                       <input
@@ -200,7 +202,7 @@ export default function Profile() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Telefon</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.phone')}</label>
                     {isEditing ? (
                       <input
                         type="tel"
@@ -209,12 +211,12 @@ export default function Profile() {
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.phoneNumber || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.phoneNumber || t('profile.notSpecified')}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Geburtsdatum</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.dateOfBirth')}</label>
                     {isEditing ? (
                       <input
                         type="date"
@@ -229,8 +231,8 @@ export default function Profile() {
 
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
-                      Steuernummer
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">(Nur lesbar)</span>}
+                      {t('profile.taxId')}
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
                     </label>
                     {canEditField('taxId') ? (
                       <input
@@ -241,7 +243,7 @@ export default function Profile() {
                       />
                     ) : (
                       <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
-                        {user.taxId || 'Nicht angegeben'}
+                        {user.taxId || t('profile.notSpecified')}
                       </p>
                     )}
                   </div>
@@ -249,11 +251,11 @@ export default function Profile() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">Adresse</h3>
+                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">{t('profile.addressInfo')}</h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Straße</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.address')}</label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -262,12 +264,12 @@ export default function Profile() {
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.address || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.address || t('profile.notSpecified')}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Stadt</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.city')}</label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -276,12 +278,12 @@ export default function Profile() {
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.city || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.city || t('profile.notSpecified')}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Postleitzahl</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.postalCode')}</label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -290,12 +292,12 @@ export default function Profile() {
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.postalCode || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.postalCode || t('profile.notSpecified')}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Land</label>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.country')}</label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -304,7 +306,7 @@ export default function Profile() {
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.country || 'Nicht angegeben'}</p>
+                      <p className="text-textPrimary dark:text-gray-200 mt-1">{user.country || t('profile.notSpecified')}</p>
                     )}
                   </div>
 
