@@ -4,40 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
-
-// German Steuer-ID checksum validation (ISO 7064, MOD 11, 10)
-function validateSteuerID(steuerID: string): boolean {
-  if (!/^\d{11}$/.test(steuerID)) return false;
-  
-  const digits = steuerID.split('').map(Number);
-  let product = 10;
-  
-  for (let i = 0; i < 10; i++) {
-    let sum = (digits[i] + product) % 10;
-    if (sum === 0) sum = 10;
-    product = (sum * 2) % 11;
-  }
-  
-  const checksum = (11 - product) % 10;
-  return checksum === digits[10];
-}
-
-// Password strength calculator
-function calculatePasswordStrength(password: string): { strength: number; label: string; color: string } {
-  let strength = 0;
-  
-  if (password.length >= 12) strength++;
-  if (password.length >= 16) strength++;
-  if (/[a-z]/.test(password)) strength++;
-  if (/[A-Z]/.test(password)) strength++;
-  if (/[0-9]/.test(password)) strength++;
-  if (/[^a-zA-Z0-9]/.test(password)) strength++;
-  
-  if (strength <= 2) return { strength: 1, label: 'Schwach', color: 'bg-red-500' };
-  if (strength <= 4) return { strength: 2, label: 'Mittel', color: 'bg-yellow-500' };
-  if (strength <= 5) return { strength: 3, label: 'Stark', color: 'bg-blue-500' };
-  return { strength: 4, label: 'Sehr stark', color: 'bg-green-500' };
-}
+import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
+import { validateSteuerID } from '../../utils/taxValidation';
 
 // Zod validation schema
 const registrationSchema = z.object({
@@ -50,11 +18,11 @@ const registrationSchema = z.object({
     ,
   password: z
     .string()
-    .min(12, 'Passwort muss mindestens 12 Zeichen lang sein')
-    .regex(/[a-z]/, 'Passwort muss mindestens einen Kleinbuchstaben enthalten')
-    .regex(/[A-Z]/, 'Passwort muss mindestens einen Großbuchstaben enthalten')
-    .regex(/[0-9]/, 'Passwort muss mindestens eine Ziffer enthalten')
-    .regex(/[^a-zA-Z0-9]/, 'Passwort muss mindestens ein Sonderzeichen enthalten'),
+    .min(PASSWORD_MIN_LENGTH, `Passwort muss mindestens ${PASSWORD_MIN_LENGTH} Zeichen lang sein`)
+    .regex(PASSWORD_PATTERNS.lowercase, 'Passwort muss mindestens einen Kleinbuchstaben enthalten')
+    .regex(PASSWORD_PATTERNS.uppercase, 'Passwort muss mindestens einen Großbuchstaben enthalten')
+    .regex(PASSWORD_PATTERNS.number, 'Passwort muss mindestens eine Ziffer enthalten')
+    .regex(PASSWORD_PATTERNS.specialChar, 'Passwort muss mindestens ein Sonderzeichen enthalten'),
   confirmPassword: z.string().min(1, 'Passwort-Bestätigung ist erforderlich'),
   
   // Section 2: Client Master Data

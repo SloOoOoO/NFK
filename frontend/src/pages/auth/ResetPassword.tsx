@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -24,19 +25,19 @@ export default function ResetPassword() {
   }, [searchParams]);
 
   const validatePassword = (pwd: string): string | null => {
-    if (pwd.length < 12) {
-      return 'Passwort muss mindestens 12 Zeichen lang sein';
+    if (pwd.length < PASSWORD_MIN_LENGTH) {
+      return `Passwort muss mindestens ${PASSWORD_MIN_LENGTH} Zeichen lang sein`;
     }
-    if (!/[A-Z]/.test(pwd)) {
+    if (!PASSWORD_PATTERNS.uppercase.test(pwd)) {
       return 'Passwort muss mindestens einen Großbuchstaben enthalten';
     }
-    if (!/[a-z]/.test(pwd)) {
+    if (!PASSWORD_PATTERNS.lowercase.test(pwd)) {
       return 'Passwort muss mindestens einen Kleinbuchstaben enthalten';
     }
-    if (!/[0-9]/.test(pwd)) {
+    if (!PASSWORD_PATTERNS.number.test(pwd)) {
       return 'Passwort muss mindestens eine Ziffer enthalten';
     }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
+    if (!PASSWORD_PATTERNS.specialChar.test(pwd)) {
       return 'Passwort muss mindestens ein Sonderzeichen enthalten';
     }
     return null;
