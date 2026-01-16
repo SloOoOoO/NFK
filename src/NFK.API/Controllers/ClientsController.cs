@@ -205,7 +205,7 @@ public class ClientsController : ControllerBase
                 client.PostalCode,
                 client.CreatedAt,
                 client.UpdatedAt,
-                "healthy",
+                CalculateHealthStatus(new List<Case>()),
                 null,
                 null,
                 new List<OpenCaseDto>(),
