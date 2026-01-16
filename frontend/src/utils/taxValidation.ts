@@ -22,7 +22,7 @@ export function validateVatID(vatId: string): boolean {
 
 // Validate Commercial Register number (Handelsregister)
 export function validateCommercialRegister(register: string): boolean {
-  return /^HR[AB]\s*\d+/.test(register);
+  return /^HR[AB]\s*\d+$/.test(register);
 }
 
 // Validate German postal code (PLZ)

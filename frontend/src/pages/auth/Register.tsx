@@ -81,7 +81,7 @@ const registrationSchema = z.object({
 }).refine((data) => {
   // Commercial register is required for companies
   if (data.clientType !== 'Privatperson') {
-    return data.commercialRegister && /^HR[AB]\s*\d+/.test(data.commercialRegister);
+    return data.commercialRegister && /^HR[AB]\s*\d+$/.test(data.commercialRegister);
   }
   return true;
 }, {
@@ -144,6 +144,8 @@ export default function Register() {
     
     try {
       // Backend API integration point: POST /api/v1/auth/register
+      // Expected payload: all form fields as JSON
+      // Response: success message (user will receive email verification)
       const payload = {
         email: data.email,
         password: data.password,
