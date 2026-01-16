@@ -133,6 +133,7 @@ export const messagesAPI = {
 // Events/Calendar API
 export const eventsAPI = {
   getAll: () => apiClient.get('/events'),
+  create: (data: any) => apiClient.post('/events', data),
 };
 
 // Admin API
