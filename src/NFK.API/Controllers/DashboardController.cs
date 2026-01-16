@@ -150,7 +150,8 @@ public class DashboardController : ControllerBase
 
             // Get recent documents
             var recentDocs = await _context.Documents
-                .Include(d => d.Client)
+                .Include(d => d.Case)
+                .ThenInclude(c => c!.Client)
                 .ThenInclude(c => c.User)
                 .OrderByDescending(d => d.CreatedAt)
                 .Take(3)
@@ -158,12 +159,15 @@ public class DashboardController : ControllerBase
 
             foreach (var doc in recentDocs)
             {
+                var clientName = doc.Case?.Client?.CompanyName ?? "Unknown";
+                var actorName = doc.Case?.Client?.User?.FirstName + " " + doc.Case?.Client?.User?.LastName ?? "System";
+                
                 activities.Add(new ActivityDto(
                     doc.Id,
                     "document",
-                    $"{doc.Client.CompanyName} uploaded {doc.FileName}",
+                    $"{clientName} uploaded {doc.FileName}",
                     doc.CreatedAt,
-                    doc.Client.User.FirstName + " " + doc.Client.User.LastName
+                    actorName
                 ));
             }
 
@@ -188,7 +192,7 @@ public class DashboardController : ControllerBase
 
             // Get recent messages
             var recentMessages = await _context.Messages
-                .Include(m => m.Sender)
+                .Include(m => m.SenderUser)
                 .OrderByDescending(m => m.CreatedAt)
                 .Take(2)
                 .ToListAsync();
@@ -198,9 +202,9 @@ public class DashboardController : ControllerBase
                 activities.Add(new ActivityDto(
                     msg.Id,
                     "message",
-                    $"New message from {msg.Sender.FirstName} {msg.Sender.LastName}",
+                    $"New message from {msg.SenderUser.FirstName} {msg.SenderUser.LastName}",
                     msg.CreatedAt,
-                    msg.Sender.FirstName + " " + msg.Sender.LastName
+                    msg.SenderUser.FirstName + " " + msg.SenderUser.LastName
                 ));
             }
 

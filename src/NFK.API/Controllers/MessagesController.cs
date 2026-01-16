@@ -124,7 +124,7 @@ public class MessagesController : ControllerBase
             {
                 var message = new Domain.Entities.Messaging.Message
                 {
-                    SenderUserId = null, // External email, no internal sender
+                    SenderUserId = 1, // Use a default user ID for external emails
                     RecipientUserId = user.Id,
                     Subject = $"[External] {request.Subject}",
                     Content = $"From: {request.From}\nTo: {request.To}\nDate: {DateTime.UtcNow:yyyy-MM-dd HH:mm}\n\n{request.Body}",
