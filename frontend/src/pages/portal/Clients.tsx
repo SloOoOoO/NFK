@@ -1,8 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import { clientsAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { X, Mail, Plus, Folder, ArrowUpDown } from 'lucide-react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  createColumnHelper,
+  type SortingState,
+  type ColumnFiltersState,
+} from '@tanstack/react-table';
+
+interface AssignedAdvisor {
+  id: number;
+  name: string;
+  avatar?: string;
+}
+
+interface OpenCase {
+  id: number;
+  title: string;
+  status: string;
+  dueDate?: string;
+  priority: number;
+}
 
 interface Client {
   id: number;
@@ -17,9 +43,17 @@ interface Client {
   address?: string;
   city?: string;
   postalCode?: string;
+  healthStatus: string;
+  entityType?: string;
+  assignedAdvisor?: AssignedAdvisor;
+  openCases?: OpenCase[];
+  notes?: string;
 }
 
+const columnHelper = createColumnHelper<Client>();
+
 export default function Clients() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [clients, setClients] = useState<Client[]>([]);
@@ -27,12 +61,17 @@ export default function Clients() {
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [editedNotes, setEditedNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
   const [newClient, setNewClient] = useState({
     name: '',
     email: '',
@@ -126,6 +165,282 @@ export default function Clients() {
     }
   };
 
+  const openQuickView = (client: Client) => {
+    setSelectedClient(client);
+    setEditedNotes(client.notes || '');
+    setShowQuickView(true);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedClient) return;
+    setSavingNotes(true);
+    try {
+      await clientsAPI.updateNotes(selectedClient.id, editedNotes);
+      setSuccessMessage('Notizen erfolgreich gespeichert');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      await fetchClients();
+      // Update selectedClient notes
+      if (selectedClient) {
+        setSelectedClient({ ...selectedClient, notes: editedNotes });
+      }
+    } catch (err: unknown) {
+      console.error('Error saving notes:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      alert('Fehler beim Speichern der Notizen: ' + errorMessage);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const getHealthStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return 'text-green-500';
+      case 'warning':
+        return 'text-yellow-500';
+      case 'critical':
+        return 'text-red-500';
+      default:
+        return 'text-gray-500';
+    }
+  };
+
+  const getHealthStatusTooltip = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return 'Client in good standing - all requirements met';
+      case 'warning':
+        return 'Attention needed - pending items or deadlines approaching';
+      case 'critical':
+        return 'Urgent attention required - overdue items or critical issues';
+      default:
+        return 'Status unknown';
+    }
+  };
+
+  // Define table columns
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor('name', {
+        header: ({ column }) => (
+          <button
+            onClick={() => column.toggleSorting()}
+            className="flex items-center gap-1 hover:text-primary dark:hover:text-primary-light"
+          >
+            Name
+            <ArrowUpDown size={14} />
+          </button>
+        ),
+        cell: (info) => (
+          <div>
+            <div className="font-medium text-textPrimary dark:text-white">{info.getValue()}</div>
+            <div className="text-sm text-textSecondary dark:text-gray-400">
+              {info.row.original.mandantNr || '-'}
+            </div>
+          </div>
+        ),
+        enableSorting: true,
+      }),
+      columnHelper.accessor('entityType', {
+        header: 'Entity Type',
+        cell: (info) => (
+          <span className="text-sm text-textPrimary dark:text-gray-300">
+            {info.getValue() || 'N/A'}
+          </span>
+        ),
+        enableSorting: false,
+      }),
+      columnHelper.accessor('healthStatus', {
+        header: 'Health Status',
+        cell: (info) => {
+          const status = info.getValue();
+          return (
+            <Tooltip.Provider>
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <div className="flex items-center gap-2 cursor-help">
+                    <span className={`text-2xl ${getHealthStatusColor(status)}`}>●</span>
+                    <span className="text-sm text-textPrimary dark:text-gray-300 capitalize">
+                      {status}
+                    </span>
+                  </div>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    className="bg-gray-900 dark:bg-gray-700 text-white px-3 py-2 rounded-md text-sm max-w-xs z-50"
+                    sideOffset={5}
+                  >
+                    {getHealthStatusTooltip(status)}
+                    <Tooltip.Arrow className="fill-gray-900 dark:fill-gray-700" />
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            </Tooltip.Provider>
+          );
+        },
+        enableSorting: false,
+      }),
+      columnHelper.accessor('lastContact', {
+        header: ({ column }) => (
+          <button
+            onClick={() => column.toggleSorting()}
+            className="flex items-center gap-1 hover:text-primary dark:hover:text-primary-light"
+          >
+            Last Contact
+            <ArrowUpDown size={14} />
+          </button>
+        ),
+        cell: (info) => (
+          <span className="text-sm text-textSecondary dark:text-gray-400">
+            {info.getValue() || '-'}
+          </span>
+        ),
+        enableSorting: true,
+      }),
+      columnHelper.accessor('assignedAdvisor', {
+        header: 'Assigned Advisor',
+        cell: (info) => {
+          const advisor = info.getValue();
+          return advisor ? (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                {advisor.name.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-sm text-textPrimary dark:text-gray-300">{advisor.name}</span>
+            </div>
+          ) : (
+            <span className="text-sm text-textSecondary dark:text-gray-400">Unassigned</span>
+          );
+        },
+        enableSorting: false,
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: 'Actions',
+        cell: (info) => {
+          const client = info.row.original;
+          const isHovered = hoveredRow === client.id;
+          
+          return (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => openQuickView(client)}
+                className="text-primary hover:underline text-sm"
+              >
+                View
+              </button>
+              {isHovered && (
+                <div className="flex items-center gap-1 ml-2 animate-fade-in">
+                  <Tooltip.Provider>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            alert('Email action - placeholder');
+                          }}
+                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                        >
+                          <Mail size={16} className="text-gray-600 dark:text-gray-400" />
+                        </button>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className="bg-gray-900 dark:bg-gray-700 text-white px-2 py-1 rounded text-xs z-50"
+                          sideOffset={5}
+                        >
+                          Email
+                          <Tooltip.Arrow className="fill-gray-900 dark:fill-gray-700" />
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  </Tooltip.Provider>
+
+                  <Tooltip.Provider>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/portal/cases?clientId=${client.id}`);
+                          }}
+                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                        >
+                          <Plus size={16} className="text-gray-600 dark:text-gray-400" />
+                        </button>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className="bg-gray-900 dark:bg-gray-700 text-white px-2 py-1 rounded text-xs z-50"
+                          sideOffset={5}
+                        >
+                          Create Case
+                          <Tooltip.Arrow className="fill-gray-900 dark:fill-gray-700" />
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  </Tooltip.Provider>
+
+                  <Tooltip.Provider>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            alert('View files - placeholder');
+                          }}
+                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                        >
+                          <Folder size={16} className="text-gray-600 dark:text-gray-400" />
+                        </button>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className="bg-gray-900 dark:bg-gray-700 text-white px-2 py-1 rounded text-xs z-50"
+                          sideOffset={5}
+                        >
+                          View Files
+                          <Tooltip.Arrow className="fill-gray-900 dark:fill-gray-700" />
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  </Tooltip.Provider>
+                </div>
+              )}
+            </div>
+          );
+        },
+      }),
+    ],
+    [hoveredRow, navigate]
+  );
+
+  // Filter clients based on search and status
+  const filteredData = useMemo(() => {
+    return clients.filter(client => {
+      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (client.mandantNr?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === 'all' || client.status === filterStatus;
+      return matchesSearch && matchesFilter;
+    });
+  }, [clients, searchTerm, filterStatus]);
+
+  // Initialize table
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
   const openEditModal = (client: Client) => {
     setSelectedClient(client);
     setEditClient({
@@ -140,35 +455,9 @@ export default function Clients() {
     setShowEditModal(true);
   };
 
-  const openDetailsModal = (client: Client) => {
-    setSelectedClient(client);
-    setShowDetailsModal(true);
-  };
-
   const openDeleteModal = (client: Client) => {
     setSelectedClient(client);
     setShowDeleteModal(true);
-  };
-
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (client.mandantNr?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || client.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Aktiv':
-        return 'bg-green-100 text-green-800';
-      case 'Inaktiv':
-        return 'bg-gray-100 text-gray-800';
-      case 'Ausstehend':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
   };
 
   const statusCounts = {
@@ -286,69 +575,41 @@ export default function Clients() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-secondary dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary dark:text-gray-300 uppercase tracking-wider">
-                      Mandant
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary dark:text-gray-300 uppercase tracking-wider">
-                      Ansprechpartner
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary dark:text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary dark:text-gray-300 uppercase tracking-wider">
-                      Letzte Änderung
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-textSecondary dark:text-gray-300 uppercase tracking-wider">
-                      Aktionen
-                    </th>
-                  </tr>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-6 py-3 text-left text-xs font-medium text-textSecondary dark:text-gray-300 uppercase tracking-wider"
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredClients.length > 0 ? (
-                    filteredClients.map((client) => (
-                      <tr key={client.id} className="hover:bg-secondary dark:hover:bg-gray-700 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-textPrimary dark:text-white">{client.name}</div>
-                          <div className="text-sm text-textSecondary dark:text-gray-400">{client.mandantNr || '-'}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-textPrimary dark:text-white">{client.contact}</div>
-                          <div className="text-sm text-textSecondary dark:text-gray-400">{client.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
-                            {client.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-textSecondary dark:text-gray-400">
-                          {client.lastContact || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button 
-                            onClick={() => openDetailsModal(client)}
-                            className="text-primary hover:underline mr-3"
-                          >
-                            Details
-                          </button>
-                          <button 
-                            onClick={() => openEditModal(client)}
-                            className="text-primary hover:underline mr-3"
-                          >
-                            Bearbeiten
-                          </button>
-                          <button 
-                            onClick={() => openDeleteModal(client)}
-                            className="text-red-600 dark:text-red-400 hover:underline"
-                          >
-                            Löschen
-                          </button>
-                        </td>
+                  {table.getRowModel().rows.length > 0 ? (
+                    table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="hover:bg-secondary dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                        onClick={() => openQuickView(row.original)}
+                        onMouseEnter={() => setHoveredRow(row.original.id)}
+                        onMouseLeave={() => setHoveredRow(null)}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
+                      <td colSpan={columns.length} className="px-6 py-12 text-center">
                         <div className="text-4xl mb-2">🔍</div>
                         <p className="text-textSecondary dark:text-gray-400">Keine Mandanten gefunden</p>
                         <p className="text-sm text-textSecondary dark:text-gray-500 mt-2">
@@ -563,14 +824,14 @@ export default function Clients() {
           </Dialog.Portal>
         </Dialog.Root>
 
-        {/* Details Client Modal */}
-        <Dialog.Root open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        {/* Quick View Drawer */}
+        <Dialog.Root open={showQuickView} onOpenChange={setShowQuickView}>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto z-50">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <Dialog.Content className="fixed top-0 right-0 bottom-0 w-full md:w-[500px] bg-white dark:bg-gray-800 shadow-xl z-50 overflow-y-auto animate-slide-in-right">
+              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 flex justify-between items-center z-10">
                 <Dialog.Title className="text-xl font-semibold text-textPrimary dark:text-white">
-                  Mandant Details
+                  Client Details
                 </Dialog.Title>
                 <Dialog.Close asChild>
                   <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -579,66 +840,150 @@ export default function Clients() {
                 </Dialog.Close>
               </div>
               
-              <div className="p-6 space-y-4">
-                {selectedClient && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Firmenname</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.name}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Telefon</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.phone || 'Nicht angegeben'}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">E-Mail</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.email}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Ansprechpartner</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.contact}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Steuernummer / Mandantennummer</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.mandantNr || 'Nicht angegeben'}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Adresse</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.address || 'Nicht angegeben'}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Stadt</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.city || 'Nicht angegeben'}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Postleitzahl</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.postalCode || 'Nicht angegeben'}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Status</label>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedClient.status)}`}>
-                        {selectedClient.status}
-                      </span>
+              {selectedClient && (
+                <div className="p-6 space-y-6">
+                  {/* Contact Info */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-textPrimary dark:text-white mb-4">
+                      Contact Information
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">
+                          Name
+                        </label>
+                        <p className="text-textPrimary dark:text-white">{selectedClient.name}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">
+                          Email
+                        </label>
+                        <p className="text-textPrimary dark:text-white">{selectedClient.email}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">
+                          Phone
+                        </label>
+                        <p className="text-textPrimary dark:text-white">
+                          {selectedClient.phone || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">
+                          Address
+                        </label>
+                        <p className="text-textPrimary dark:text-white">
+                          {selectedClient.address || 'Not provided'}
+                          {selectedClient.city && `, ${selectedClient.city}`}
+                          {selectedClient.postalCode && ` ${selectedClient.postalCode}`}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                )}
-                
-                <div className="flex gap-3 pt-4">
-                  <Dialog.Close asChild>
-                    <button className="flex-1 btn-secondary">
-                      Schließen
+
+                  {/* Open Cases */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-textPrimary dark:text-white mb-4">
+                      Open Cases ({selectedClient.openCases?.length || 0})
+                    </h3>
+                    {selectedClient.openCases && selectedClient.openCases.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedClient.openCases.map((caseItem) => (
+                          <div
+                            key={caseItem.id}
+                            className="p-3 border border-gray-200 dark:border-gray-700 rounded-md"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-medium text-textPrimary dark:text-white">
+                                {caseItem.title}
+                              </h4>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  caseItem.status === 'Open'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                    : caseItem.status === 'In Progress'
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                    : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                }`}
+                              >
+                                {caseItem.status}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm text-textSecondary dark:text-gray-400">
+                              <span>
+                                Due: {caseItem.dueDate ? new Date(caseItem.dueDate).toLocaleDateString() : 'N/A'}
+                              </span>
+                              <span>Priority: {caseItem.priority}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-textSecondary dark:text-gray-400">No open cases</p>
+                    )}
+                  </div>
+
+                  {/* Internal Notes */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-textPrimary dark:text-white mb-4">
+                      Internal Notes
+                    </h3>
+                    <textarea
+                      value={editedNotes}
+                      onChange={(e) => setEditedNotes(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[120px]"
+                      placeholder="Add internal notes about this client..."
+                      disabled={savingNotes}
+                    />
+                    <button
+                      onClick={handleSaveNotes}
+                      className="mt-2 btn-primary w-full"
+                      disabled={savingNotes}
+                    >
+                      {savingNotes ? 'Saving...' : 'Save Notes'}
                     </button>
-                  </Dialog.Close>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-textPrimary dark:text-white mb-4">
+                      Quick Actions
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowQuickView(false);
+                          openEditModal(selectedClient);
+                        }}
+                        className="btn-secondary text-left"
+                      >
+                        ✏️ Edit Client
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowQuickView(false);
+                          navigate(`/portal/cases?clientId=${selectedClient.id}`);
+                        }}
+                        className="btn-secondary text-left"
+                      >
+                        ➕ Create Case
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowQuickView(false);
+                          openDeleteModal(selectedClient);
+                        }}
+                        className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-2 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 text-left"
+                      >
+                        🗑️ Delete Client
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>

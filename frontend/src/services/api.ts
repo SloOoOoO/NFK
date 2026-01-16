@@ -90,6 +90,7 @@ export const clientsAPI = {
   create: (data: any) => apiClient.post('/clients', data),
   update: (id: number, data: any) => apiClient.put(`/clients/${id}`, data),
   delete: (id: number) => apiClient.delete(`/clients/${id}`),
+  updateNotes: (id: number, notes: string) => apiClient.put(`/clients/${id}/notes`, { notes }),
 };
 
 // Cases API
