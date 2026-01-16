@@ -137,6 +137,13 @@ export const eventsAPI = {
   create: (data: any) => apiClient.post('/events', data),
 };
 
+// Deadlines API (for traffic light calendar)
+export const deadlinesAPI = {
+  getCalendarData: (month: string) => apiClient.get(`/deadlines/calendar?month=${month}`),
+  // Future: getCalendarData returns array of:
+  // { date: "2025-01-15", load: "low"|"medium"|"high", deadlines: [...] }
+};
+
 // Admin API
 export const adminAPI = {
   getAllUsers: () => apiClient.get('/admin/users'),

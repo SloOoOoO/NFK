@@ -23,6 +23,25 @@ interface Client {
   };
 }
 
+type DeadlineLoad = 'low' | 'medium' | 'high';
+type DeadlineStatus = 'overdue' | 'today' | 'upcoming';
+
+interface Deadline {
+  id: number;
+  clientName: string;
+  type: string;
+  hardDeadline: string; // ISO datetime string
+  softDeadline: string; // ISO datetime string
+  status: DeadlineStatus;
+  description?: string;
+}
+
+interface DayDeadlines {
+  date: string; // YYYY-MM-DD format
+  load: DeadlineLoad;
+  deadlines: Deadline[];
+}
+
 export default function Calendar() {
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
@@ -40,11 +59,18 @@ export default function Calendar() {
     description: '',
     location: '',
   });
+  
+  // New state for traffic light calendar
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [deadlineData, setDeadlineData] = useState<Map<string, DayDeadlines>>(new Map());
 
   useEffect(() => {
     fetchEvents();
     fetchClients();
-  }, []);
+    fetchDeadlineData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth]);
 
   const fetchClients = async () => {
     try {
@@ -53,6 +79,75 @@ export default function Calendar() {
     } catch (err) {
       console.error('Error fetching clients:', err);
     }
+  };
+
+  // Mock function to simulate deadline data fetching
+  // TODO: Replace with real API call when backend is ready:
+  // const response = await deadlinesAPI.getCalendarData(
+  //   `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`
+  // );
+  // const deadlineMap = new Map<string, DayDeadlines>();
+  // response.data.forEach((day: DayDeadlines) => deadlineMap.set(day.date, day));
+  // setDeadlineData(deadlineMap);
+  const fetchDeadlineData = async () => {
+    try {
+      // Simulate API call
+      const mockDeadlines = generateMockDeadlineData(currentMonth);
+      const deadlineMap = new Map<string, DayDeadlines>();
+      
+      mockDeadlines.forEach(day => {
+        deadlineMap.set(day.date, day);
+      });
+      
+      setDeadlineData(deadlineMap);
+    } catch (err) {
+      console.error('Error fetching deadline data:', err);
+    }
+  };
+
+  // Generate mock deadline data for a given month
+  const generateMockDeadlineData = (month: Date): DayDeadlines[] => {
+    const year = month.getFullYear();
+    const monthNum = month.getMonth();
+    const daysInMonth = new Date(year, monthNum + 1, 0).getDate();
+    const mockData: DayDeadlines[] = [];
+
+    // Generate realistic deadline data
+    const clientNames = ['Schmidt GmbH', 'Müller & Partner', 'Koch Consulting', 'Becker Handels AG', 'Weber Industries'];
+    const deadlineTypes = ['Umsatzsteuervoranmeldung', 'Jahresabschluss', 'Lohnsteueranmeldung', 'Quartalsabschluss', 'Betriebsprüfung'];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const numDeadlines = Math.floor(Math.random() * 8); // 0-7 deadlines per day
+      
+      const deadlines: Deadline[] = [];
+      for (let i = 0; i < numDeadlines; i++) {
+        const isOverdue = day < new Date().getDate() && monthNum === new Date().getMonth();
+        const isToday = day === new Date().getDate() && monthNum === new Date().getMonth();
+        
+        deadlines.push({
+          id: day * 100 + i,
+          clientName: clientNames[Math.floor(Math.random() * clientNames.length)],
+          type: deadlineTypes[Math.floor(Math.random() * deadlineTypes.length)],
+          hardDeadline: `${dateStr}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:00:00`,
+          softDeadline: `${dateStr}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:00:00`,
+          status: isOverdue ? 'overdue' : isToday ? 'today' : 'upcoming',
+          description: 'Frist einhalten',
+        });
+      }
+
+      // Determine load based on number of deadlines
+      let load: DeadlineLoad;
+      if (numDeadlines > 5) load = 'high';
+      else if (numDeadlines >= 3) load = 'medium';
+      else load = 'low';
+
+      if (numDeadlines > 0) {
+        mockData.push({ date: dateStr, load, deadlines });
+      }
+    }
+
+    return mockData;
   };
 
   const fetchEvents = async () => {
@@ -177,22 +272,78 @@ export default function Calendar() {
     return icons[type] || '📌';
   };
 
+  // Get traffic light background color based on deadline load
+  const getTrafficLightColor = (load: DeadlineLoad): string => {
+    const colors = {
+      low: 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30',
+      medium: 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30',
+      high: 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30',
+    };
+    return colors[load];
+  };
+
+  // Get deadline status color
+  const getDeadlineStatusColor = (status: DeadlineStatus): string => {
+    const colors = {
+      overdue: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+      today: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+      upcoming: 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+    };
+    return colors[status];
+  };
+
+  // Navigate to previous month
+  const handlePreviousMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    setSelectedDate(null);
+  };
+
+  // Navigate to next month
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    setSelectedDate(null);
+  };
+
+  // Handle day click
+  const handleDayClick = (dateStr: string) => {
+    setSelectedDate(dateStr);
+  };
+
+  // Format date for display
+  const formatMonthYear = (date: Date): string => {
+    const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                        'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  // Format time for display
+  const formatTime = (isoDateTime: string): string => {
+    const date = new Date(isoDateTime);
+    return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  };
+
   // Simple calendar grid for January 2025
-  const daysInMonth = 31;
-  const firstDayOfWeek = 3; // Wednesday (0 = Sunday)
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
   const calendarDays = [];
   
   // Add empty cells for days before the 1st
   for (let i = 0; i < firstDayOfWeek; i++) {
-    calendarDays.push({ day: null, events: [] });
+    calendarDays.push({ day: null, events: [], dateStr: '' });
   }
   
   // Add days of the month
   for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${day.toString().padStart(2, '0')}.01.2025`;
-    const dayEvents = upcomingEvents.filter(e => e.date === dateStr);
-    calendarDays.push({ day, events: dayEvents });
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const displayDateStr = `${day.toString().padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
+    const dayEvents = upcomingEvents.filter(e => e.date === displayDateStr);
+    calendarDays.push({ day, events: dayEvents, dateStr });
   }
+
+  // Get selected day's deadlines
+  const selectedDayDeadlines = selectedDate ? deadlineData.get(selectedDate) : null;
 
   return (
     <div className="flex min-h-screen bg-secondary">
@@ -250,9 +401,9 @@ export default function Calendar() {
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="btn-secondary">← Zurück</button>
-              <span className="font-semibold text-lg dark:text-gray-200">Januar 2025</span>
-              <button className="btn-secondary">Weiter →</button>
+              <button onClick={handlePreviousMonth} className="btn-secondary">← Zurück</button>
+              <span className="font-semibold text-lg dark:text-gray-200">{formatMonthYear(currentMonth)}</span>
+              <button onClick={handleNextMonth} className="btn-secondary">Weiter →</button>
             </div>
             
             <Dialog.Root open={showAppointmentModal} onOpenChange={setShowAppointmentModal}>
@@ -403,9 +554,26 @@ export default function Calendar() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Calendar View */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className={`${selectedDate ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6`}>
             {viewMode === 'month' ? (
               <div>
+                {/* Traffic light legend */}
+                <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
+                  <span className="font-semibold text-textPrimary dark:text-gray-200">Fristenlast:</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-green-200 dark:bg-green-800"></div>
+                    <span className="text-textSecondary dark:text-gray-400">0-2 Fristen</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-orange-200 dark:bg-orange-800"></div>
+                    <span className="text-textSecondary dark:text-gray-400">3-5 Fristen</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-red-200 dark:bg-red-800"></div>
+                    <span className="text-textSecondary dark:text-gray-400">&gt;5 Fristen</span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-7 gap-2 mb-2">
                   {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
                     <div key={day} className="text-center font-semibold text-textSecondary dark:text-gray-400 text-sm py-2">
@@ -415,40 +583,66 @@ export default function Calendar() {
                 </div>
                 
                 <div className="grid grid-cols-7 gap-2">
-                  {calendarDays.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`min-h-24 p-2 border rounded ${
-                        item.day ? 'bg-white dark:bg-gray-800 hover:bg-secondary dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
-                      } ${item.day === 11 ? 'border-primary border-2' : 'border-gray-200 dark:border-gray-700'}`}
-                    >
-                      {item.day && (
-                        <>
-                          <div className={`text-sm font-medium mb-1 ${
-                            item.day === 11 ? 'text-primary' : 'text-textPrimary dark:text-gray-200'
-                          }`}>
-                            {item.day}
-                          </div>
-                          <div className="space-y-1">
-                            {item.events.slice(0, 2).map((event) => (
-                              <div
-                                key={event.id}
-                                className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)}`}
-                                title={event.title}
-                              >
-                                {getEventIcon(event.type)} {event.title.substring(0, 10)}...
+                  {calendarDays.map((item, index) => {
+                    const dayDeadlines = item.dateStr ? deadlineData.get(item.dateStr) : null;
+                    const load = dayDeadlines?.load || 'low';
+                    const trafficLightColor = dayDeadlines ? getTrafficLightColor(load) : '';
+                    const today = new Date();
+                    const isToday = item.day === today.getDate() && 
+                                   month === today.getMonth() && 
+                                   year === today.getFullYear();
+                    const isSelected = item.dateStr === selectedDate;
+                    
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => item.dateStr && handleDayClick(item.dateStr)}
+                        className={`min-h-24 p-2 border rounded transition-all ${
+                          item.day 
+                            ? `${trafficLightColor || 'bg-white dark:bg-gray-800 hover:bg-secondary dark:hover:bg-gray-700'} cursor-pointer` 
+                            : 'bg-gray-50 dark:bg-gray-900'
+                        } ${isToday ? 'border-primary border-2 ring-2 ring-primary/20' : 'border-gray-200 dark:border-gray-700'}
+                          ${isSelected ? 'ring-2 ring-blue-400' : ''}`}
+                      >
+                        {item.day && (
+                          <>
+                            <div className="flex justify-between items-start mb-1">
+                              <div className={`text-sm font-medium ${
+                                isToday ? 'text-primary font-bold' : 'text-textPrimary dark:text-gray-200'
+                              }`}>
+                                {item.day}
                               </div>
-                            ))}
-                            {item.events.length > 2 && (
-                              <div className="text-xs text-textSecondary dark:text-gray-400">
-                                +{item.events.length - 2} mehr
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                              {dayDeadlines && dayDeadlines.deadlines.length > 0 && (
+                                <div className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
+                                  load === 'high' ? 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200' :
+                                  load === 'medium' ? 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200' :
+                                  'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
+                                }`}>
+                                  {dayDeadlines.deadlines.length}
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              {item.events.slice(0, 2).map((event) => (
+                                <div
+                                  key={event.id}
+                                  className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)}`}
+                                  title={event.title}
+                                >
+                                  {getEventIcon(event.type)} {event.title.substring(0, 10)}...
+                                </div>
+                              ))}
+                              {item.events.length > 2 && (
+                                <div className="text-xs text-textSecondary dark:text-gray-400">
+                                  +{item.events.length - 2} mehr
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -460,36 +654,130 @@ export default function Calendar() {
             )}
           </div>
 
-          {/* Upcoming Events */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-textPrimary dark:text-gray-200 mb-4">Anstehende Ereignisse</h2>
-            
-            <div className="space-y-3">
-              {upcomingEvents.slice(0, 6).map((event) => (
-                <div key={event.id} className={`p-3 rounded-lg border-l-4 ${getEventTypeColor(event.color)}`}>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xl">{getEventIcon(event.type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm text-textPrimary dark:text-gray-200 truncate">
-                        {event.title}
-                      </h4>
-                      <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">
-                        {event.mandant}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-textSecondary dark:text-gray-400">
-                        <span>📅 {event.date}</span>
-                        <span>🕐 {event.time}</span>
+          {/* Upcoming Events / Selected Day Deadlines */}
+          {selectedDate ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-textPrimary dark:text-gray-200">
+                  Fristen am {new Date(selectedDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </h2>
+                <button
+                  onClick={() => setSelectedDate(null)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  title="Schließen"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {selectedDayDeadlines && selectedDayDeadlines.deadlines.length > 0 ? (
+                <>
+                  {/* Load indicator */}
+                  <div className={`mb-4 p-3 rounded-lg border ${
+                    selectedDayDeadlines.load === 'high' 
+                      ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+                      : selectedDayDeadlines.load === 'medium'
+                      ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200'
+                      : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+                  }`}>
+                    <div className="font-semibold text-sm">
+                      {selectedDayDeadlines.load === 'high' && '🔴 Hohe Auslastung'}
+                      {selectedDayDeadlines.load === 'medium' && '🟠 Mittlere Auslastung'}
+                      {selectedDayDeadlines.load === 'low' && '🟢 Geringe Auslastung'}
+                    </div>
+                    <div className="text-xs mt-1">
+                      {selectedDayDeadlines.deadlines.length} Fristen
+                      {selectedDayDeadlines.load === 'high' && ' - Keine neuen Termine empfohlen'}
+                      {selectedDayDeadlines.load === 'medium' && ' - Begrenzte Kapazität'}
+                      {selectedDayDeadlines.load === 'low' && ' - Kapazität verfügbar'}
+                    </div>
+                  </div>
+
+                  {/* Deadline list */}
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                    {selectedDayDeadlines.deadlines.map((deadline) => (
+                      <div
+                        key={deadline.id}
+                        className={`p-3 rounded-lg border ${getDeadlineStatusColor(deadline.status)}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">⏰</span>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm truncate">
+                              {deadline.type}
+                            </h4>
+                            <p className="text-xs mt-1 font-semibold">
+                              {deadline.clientName}
+                            </p>
+                            
+                            <div className="mt-2 space-y-1 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold">Hard Deadline:</span>
+                                <span>{formatTime(deadline.hardDeadline)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold">Soft Deadline:</span>
+                                <span>{formatTime(deadline.softDeadline)}</span>
+                              </div>
+                            </div>
+
+                            <div className="mt-2">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                deadline.status === 'overdue' 
+                                  ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200'
+                                  : deadline.status === 'today'
+                                  ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                              }`}>
+                                {deadline.status === 'overdue' && '❗ Überfällig'}
+                                {deadline.status === 'today' && '⚠️ Heute fällig'}
+                                {deadline.status === 'upcoming' && '📅 Bevorstehend'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-10">
+                  <div className="text-4xl mb-2">📅</div>
+                  <p className="text-textSecondary dark:text-gray-400">Keine Fristen an diesem Tag</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 lg:col-span-1">
+              <h2 className="text-lg font-semibold text-textPrimary dark:text-gray-200 mb-4">Anstehende Ereignisse</h2>
+              
+              <div className="space-y-3">
+                {upcomingEvents.slice(0, 6).map((event) => (
+                  <div key={event.id} className={`p-3 rounded-lg border-l-4 ${getEventTypeColor(event.color)}`}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl">{getEventIcon(event.type)}</span>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm text-textPrimary dark:text-gray-200 truncate">
+                          {event.title}
+                        </h4>
+                        <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">
+                          {event.mandant}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-textSecondary dark:text-gray-400">
+                          <span>📅 {event.date}</span>
+                          <span>🕐 {event.time}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <button className="w-full mt-4 btn-secondary text-sm">
-              Alle Ereignisse anzeigen
-            </button>
-          </div>
+              <button className="w-full mt-4 btn-secondary text-sm">
+                Alle Ereignisse anzeigen
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>
