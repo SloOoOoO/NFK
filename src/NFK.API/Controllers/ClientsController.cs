@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Clients;
 using NFK.Domain.Entities.Clients;
+using NFK.Domain.Enums;
 using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
@@ -21,6 +22,52 @@ public class ClientsController : ControllerBase
         _logger = logger;
     }
 
+    private static string CalculateHealthStatus(IEnumerable<Case> cases)
+    {
+        var now = DateTime.UtcNow;
+        var activeCases = cases.Where(c => c.Status != CaseStatus.Completed && c.Status != CaseStatus.Cancelled).ToList();
+
+        if (activeCases.Any(c => c.DueDate.HasValue && c.DueDate.Value < now))
+        {
+            return "critical";
+        }
+
+        if (activeCases.Any(c => c.DueDate.HasValue && c.DueDate.Value < now.AddDays(7)))
+        {
+            return "warning";
+        }
+
+        return "healthy";
+    }
+
+    private static List<OpenCaseDto> GetOpenCaseDtos(IEnumerable<Case> cases)
+    {
+        return cases
+            .Where(c => c.Status != CaseStatus.Completed && c.Status != CaseStatus.Cancelled)
+            .Select(c => new OpenCaseDto(
+                c.Id,
+                c.Title,
+                c.Status.ToString(),
+                c.DueDate,
+                c.Priority
+            ))
+            .ToList();
+    }
+
+    private static AssignedAdvisorDto? GetAssignedAdvisorDto(Case? assignedCase)
+    {
+        if (assignedCase?.AssignedToUser == null)
+        {
+            return null;
+        }
+
+        return new AssignedAdvisorDto(
+            assignedCase.AssignedToUser.Id,
+            $"{assignedCase.AssignedToUser.FirstName} {assignedCase.AssignedToUser.LastName}",
+            null
+        );
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -28,24 +75,38 @@ public class ClientsController : ControllerBase
         {
             var clients = await _context.Clients
                 .Include(c => c.User)
+                .Include(c => c.Cases)
+                    .ThenInclude(cs => cs.AssignedToUser)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
-            var clientDtos = clients.Select(c => new ClientDto(
-                c.Id,
-                c.CompanyName,
-                c.User.Email,
-                c.User.FirstName + " " + c.User.LastName,
-                c.IsActive ? "Aktiv" : "Inaktiv",
-                c.PhoneNumber,
-                c.TaxNumber,
-                c.UpdatedAt?.ToString("dd.MM.yyyy") ?? c.CreatedAt.ToString("dd.MM.yyyy"),
-                c.Address,
-                c.City,
-                c.PostalCode,
-                c.CreatedAt,
-                c.UpdatedAt
-            )).ToList();
+            var clientDtos = clients.Select(c => {
+                var healthStatus = CalculateHealthStatus(c.Cases);
+                var openCases = GetOpenCaseDtos(c.Cases);
+                var assignedCase = c.Cases.FirstOrDefault(cs => cs.AssignedToUserId.HasValue);
+                var assignedAdvisor = GetAssignedAdvisorDto(assignedCase);
+
+                return new ClientDto(
+                    c.Id,
+                    c.CompanyName,
+                    c.User.Email,
+                    c.User.FirstName + " " + c.User.LastName,
+                    c.IsActive ? "Aktiv" : "Inaktiv",
+                    c.PhoneNumber,
+                    c.TaxNumber,
+                    c.UpdatedAt?.ToString("dd.MM.yyyy") ?? c.CreatedAt.ToString("dd.MM.yyyy"),
+                    c.Address,
+                    c.City,
+                    c.PostalCode,
+                    c.CreatedAt,
+                    c.UpdatedAt,
+                    healthStatus,
+                    null,
+                    assignedAdvisor,
+                    openCases,
+                    c.Notes
+                );
+            }).ToList();
 
             return Ok(clientDtos);
         }
@@ -63,12 +124,19 @@ public class ClientsController : ControllerBase
         {
             var client = await _context.Clients
                 .Include(c => c.User)
+                .Include(c => c.Cases)
+                    .ThenInclude(cs => cs.AssignedToUser)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (client == null)
             {
                 return NotFound(new { error = "not_found", message = $"Client {id} not found" });
             }
+
+            var healthStatus = CalculateHealthStatus(client.Cases);
+            var openCases = GetOpenCaseDtos(client.Cases);
+            var assignedCase = client.Cases.FirstOrDefault(cs => cs.AssignedToUserId.HasValue);
+            var assignedAdvisor = GetAssignedAdvisorDto(assignedCase);
 
             var clientDto = new ClientDto(
                 client.Id,
@@ -83,7 +151,12 @@ public class ClientsController : ControllerBase
                 client.City,
                 client.PostalCode,
                 client.CreatedAt,
-                client.UpdatedAt
+                client.UpdatedAt,
+                healthStatus,
+                null,
+                assignedAdvisor,
+                openCases,
+                client.Notes
             );
 
             return Ok(clientDto);
@@ -131,7 +204,12 @@ public class ClientsController : ControllerBase
                 client.City,
                 client.PostalCode,
                 client.CreatedAt,
-                client.UpdatedAt
+                client.UpdatedAt,
+                "healthy",
+                null,
+                null,
+                new List<OpenCaseDto>(),
+                client.Notes
             );
 
             return CreatedAtAction(nameof(GetById), new { id = client.Id }, clientDto);
@@ -150,6 +228,8 @@ public class ClientsController : ControllerBase
         {
             var client = await _context.Clients
                 .Include(c => c.User)
+                .Include(c => c.Cases)
+                    .ThenInclude(cs => cs.AssignedToUser)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (client == null)
@@ -169,6 +249,11 @@ public class ClientsController : ControllerBase
 
             await _context.SaveChangesAsync();
 
+            var healthStatus = CalculateHealthStatus(client.Cases);
+            var openCases = GetOpenCaseDtos(client.Cases);
+            var assignedCase = client.Cases.FirstOrDefault(cs => cs.AssignedToUserId.HasValue);
+            var assignedAdvisor = GetAssignedAdvisorDto(assignedCase);
+
             var clientDto = new ClientDto(
                 client.Id,
                 client.CompanyName,
@@ -182,7 +267,12 @@ public class ClientsController : ControllerBase
                 client.City,
                 client.PostalCode,
                 client.CreatedAt,
-                client.UpdatedAt
+                client.UpdatedAt,
+                healthStatus,
+                null,
+                assignedAdvisor,
+                openCases,
+                client.Notes
             );
 
             return Ok(clientDto);
@@ -191,6 +281,30 @@ public class ClientsController : ControllerBase
         {
             _logger.LogError(ex, "Error updating client {ClientId}", id);
             return StatusCode(500, new { error = "internal_error", message = "Error updating client" });
+        }
+    }
+
+    [HttpPut("{id}/notes")]
+    public async Task<IActionResult> UpdateNotes(int id, [FromBody] UpdateClientNotesRequest request)
+    {
+        try
+        {
+            var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == id);
+
+            if (client == null)
+            {
+                return NotFound(new { error = "not_found", message = $"Client {id} not found" });
+            }
+
+            client.Notes = request.Notes;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Notes updated successfully", notes = client.Notes });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating notes for client {ClientId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error updating notes" });
         }
     }
 

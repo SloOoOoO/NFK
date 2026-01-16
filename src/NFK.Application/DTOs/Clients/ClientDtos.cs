@@ -1,5 +1,19 @@
 namespace NFK.Application.DTOs.Clients;
 
+public record AssignedAdvisorDto(
+    int Id,
+    string Name,
+    string? Avatar
+);
+
+public record OpenCaseDto(
+    int Id,
+    string Title,
+    string Status,
+    DateTime? DueDate,
+    int Priority
+);
+
 public record ClientDto(
     int Id,
     string Name,
@@ -13,7 +27,12 @@ public record ClientDto(
     string? City,
     string? PostalCode,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    string HealthStatus,
+    string? EntityType,
+    AssignedAdvisorDto? AssignedAdvisor,
+    List<OpenCaseDto>? OpenCases,
+    string? Notes
 );
 
 public record CreateClientRequest(
@@ -32,4 +51,8 @@ public record UpdateClientRequest(
     string? Address,
     string? City,
     string? PostalCode
+);
+
+public record UpdateClientNotesRequest(
+    string Notes
 );
