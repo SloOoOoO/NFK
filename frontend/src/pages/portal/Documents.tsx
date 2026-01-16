@@ -10,6 +10,10 @@ interface Document {
   clientId?: number;
   createdAt: string;
   updatedAt?: string;
+  type?: string;
+  icon?: string;
+  mandant?: string;
+  updated?: string;
 }
 
 export default function Documents() {
@@ -265,8 +269,8 @@ export default function Documents() {
                     </td>
                     <td className="px-6 py-4 text-sm text-textSecondary">{doc.mandant}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(doc.type)}`}>
-                        {doc.type}
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(doc.type || '')}`}>
+                        {doc.type || 'Unbekannt'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-textSecondary">{doc.size}</td>
