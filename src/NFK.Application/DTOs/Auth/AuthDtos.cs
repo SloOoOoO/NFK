@@ -79,3 +79,12 @@ public record UserResponse(
     string? FirmTaxId = null,
     string? FirmChamberRegistration = null
 );
+
+public record ForgotPasswordRequest(
+    string Email
+);
+
+public record ResetPasswordRequest(
+    string Token,
+    string NewPassword
+);

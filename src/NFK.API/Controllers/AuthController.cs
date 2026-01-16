@@ -114,6 +114,49 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Failed to get current user" });
         }
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        try
+        {
+            await _authService.RequestPasswordResetAsync(request.Email);
+            // Always return success to prevent email enumeration
+            return Ok(new { message = "If an account with that email exists, a password reset link has been sent." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = "invalid_request", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Forgot password failed");
+            return StatusCode(500, new { error = "internal_error", message = "Failed to process password reset request" });
+        }
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        try
+        {
+            await _authService.ResetPasswordAsync(request.Token, request.NewPassword);
+            return Ok(new { message = "Password has been reset successfully" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = "invalid_request", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return BadRequest(new { error = "invalid_token", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Reset password failed");
+            return StatusCode(500, new { error = "internal_error", message = "Failed to reset password" });
+        }
+    }
 }
 
 public record RefreshTokenRequest(string RefreshToken);

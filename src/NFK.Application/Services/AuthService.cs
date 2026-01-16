@@ -344,6 +344,109 @@ public class AuthService : IAuthService
         );
     }
 
+    public async Task<string> RequestPasswordResetAsync(string email)
+    {
+        var ipAddress = GetClientIpAddress();
+        _logger.LogInformation("Password reset request for email: {Email} from IP: {IP}", email, ipAddress);
+
+        // Find user by email
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null)
+        {
+            _logger.LogWarning("Password reset request failed - user not found: {Email} from IP: {IP}", email, ipAddress);
+            // Return success even if user not found to prevent email enumeration
+            // But don't create a token
+            return string.Empty;
+        }
+
+        // Check if user is active
+        if (!user.IsActive)
+        {
+            _logger.LogWarning("Password reset request failed - account inactive: {Email} from IP: {IP}", email, ipAddress);
+            throw new InvalidOperationException("Account is not active.");
+        }
+
+        // Generate secure random token
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+
+        // Create password reset token
+        var resetToken = new PasswordResetToken
+        {
+            UserId = user.Id,
+            Token = token,
+            ExpiresAt = DateTime.UtcNow.AddHours(1), // Token expires in 1 hour
+            IsUsed = false
+        };
+
+        _context.PasswordResetTokens.Add(resetToken);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Password reset token created for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
+
+        // TODO: Send email with reset link
+        // For now, log the token to console (placeholder for email functionality)
+        Console.WriteLine($"Password reset token for {email}: {token}");
+        Console.WriteLine($"Reset link: /reset-password?token={token}");
+
+        return token;
+    }
+
+    public async Task ResetPasswordAsync(string token, string newPassword)
+    {
+        var ipAddress = GetClientIpAddress();
+        _logger.LogInformation("Password reset attempt from IP: {IP}", ipAddress);
+
+        // Validate password requirements
+        if (!ValidatePassword(newPassword))
+        {
+            _logger.LogWarning("Password reset failed - weak password from IP: {IP}", ipAddress);
+            throw new ArgumentException("Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number.");
+        }
+
+        // Find reset token
+        var resetToken = await _context.PasswordResetTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.Token == token);
+
+        if (resetToken == null)
+        {
+            _logger.LogWarning("Password reset failed - invalid token from IP: {IP}", ipAddress);
+            throw new UnauthorizedAccessException("Invalid or expired reset token.");
+        }
+
+        // Check if token has expired
+        if (resetToken.ExpiresAt < DateTime.UtcNow)
+        {
+            _logger.LogWarning("Password reset failed - token expired for user: {UserId} from IP: {IP}", resetToken.UserId, ipAddress);
+            throw new UnauthorizedAccessException("Invalid or expired reset token.");
+        }
+
+        // Check if token has already been used
+        if (resetToken.IsUsed)
+        {
+            _logger.LogWarning("Password reset failed - token already used for user: {UserId} from IP: {IP}", resetToken.UserId, ipAddress);
+            throw new UnauthorizedAccessException("Invalid or expired reset token.");
+        }
+
+        // Update password
+        var user = resetToken.User;
+        user.PasswordHash = _passwordHasher.HashPassword(newPassword);
+
+        // Mark token as used
+        resetToken.IsUsed = true;
+
+        // Reset failed login attempts and unlock account if locked
+        user.FailedLoginAttempts = 0;
+        user.IsLocked = false;
+        user.LockedUntil = null;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Password reset successful for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
+    }
+
     private bool ValidatePassword(string password)
     {
         if (password.Length < 8)

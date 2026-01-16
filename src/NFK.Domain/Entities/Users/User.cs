@@ -42,4 +42,5 @@ public class User : BaseEntity
     public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
+    public virtual ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = new List<PasswordResetToken>();
 }
