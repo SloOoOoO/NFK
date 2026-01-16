@@ -44,7 +44,6 @@ export default function Clients() {
     email: '',
     contact: '',
     phone: '',
-    taxNumber: '',
     address: '',
     city: '',
     postalCode: '',
@@ -134,7 +133,6 @@ export default function Clients() {
       email: client.email,
       contact: client.contact,
       phone: client.phone || '',
-      taxNumber: client.taxNumber || '',
       address: client.address || '',
       city: client.city || '',
       postalCode: client.postalCode || '',
@@ -509,17 +507,6 @@ export default function Clients() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-300">Steuernummer</label>
-                    <input
-                      type="text"
-                      value={editClient.taxNumber}
-                      onChange={(e) => setEditClient({ ...editClient, taxNumber: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      disabled={editLoading}
-                    />
-                  </div>
-                  
-                  <div>
                     <label className="block text-sm font-medium mb-2 dark:text-gray-300">Adresse</label>
                     <input
                       type="text"
@@ -616,12 +603,7 @@ export default function Clients() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Steuernummer</label>
-                      <p className="text-textPrimary dark:text-white">{selectedClient.taxNumber || 'Nicht angegeben'}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Mandantennummer</label>
+                      <label className="block text-sm font-medium text-textSecondary dark:text-gray-400 mb-1">Steuernummer / Mandantennummer</label>
                       <p className="text-textPrimary dark:text-white">{selectedClient.mandantNr || 'Nicht angegeben'}</p>
                     </div>
 
