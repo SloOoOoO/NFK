@@ -1,83 +1,201 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 
+// German Steuer-ID checksum validation (ISO 7064, MOD 11, 10)
+function validateSteuerID(steuerID: string): boolean {
+  if (!/^\d{11}$/.test(steuerID)) return false;
+  
+  const digits = steuerID.split('').map(Number);
+  let product = 10;
+  
+  for (let i = 0; i < 10; i++) {
+    let sum = (digits[i] + product) % 10;
+    if (sum === 0) sum = 10;
+    product = (sum * 2) % 11;
+  }
+  
+  const checksum = (11 - product) % 10;
+  return checksum === digits[10];
+}
+
+// Password strength calculator
+function calculatePasswordStrength(password: string): { strength: number; label: string; color: string } {
+  let strength = 0;
+  
+  if (password.length >= 12) strength++;
+  if (password.length >= 16) strength++;
+  if (/[a-z]/.test(password)) strength++;
+  if (/[A-Z]/.test(password)) strength++;
+  if (/[0-9]/.test(password)) strength++;
+  if (/[^a-zA-Z0-9]/.test(password)) strength++;
+  
+  if (strength <= 2) return { strength: 1, label: 'Schwach', color: 'bg-red-500' };
+  if (strength <= 4) return { strength: 2, label: 'Mittel', color: 'bg-yellow-500' };
+  if (strength <= 5) return { strength: 3, label: 'Stark', color: 'bg-blue-500' };
+  return { strength: 4, label: 'Sehr stark', color: 'bg-green-500' };
+}
+
+// Zod validation schema
+const registrationSchema = z.object({
+  // Section 1: Account Credentials
+  email: z
+    .string()
+    .min(1, 'E-Mail ist erforderlich')
+    .email('Ungültige E-Mail-Adresse')
+    // TODO: Add disposable email blocklist validation
+    ,
+  password: z
+    .string()
+    .min(12, 'Passwort muss mindestens 12 Zeichen lang sein')
+    .regex(/[a-z]/, 'Passwort muss mindestens einen Kleinbuchstaben enthalten')
+    .regex(/[A-Z]/, 'Passwort muss mindestens einen Großbuchstaben enthalten')
+    .regex(/[0-9]/, 'Passwort muss mindestens eine Ziffer enthalten')
+    .regex(/[^a-zA-Z0-9]/, 'Passwort muss mindestens ein Sonderzeichen enthalten'),
+  confirmPassword: z.string().min(1, 'Passwort-Bestätigung ist erforderlich'),
+  
+  // Section 2: Client Master Data
+  clientType: z.enum(['Privatperson', 'Einzelunternehmen', 'GmbH', 'UG', 'GbR'], {
+    message: 'Mandantenart ist erforderlich',
+  }),
+  companyName: z.string().optional(),
+  salutation: z.enum(['Herr', 'Frau', 'Divers'], {
+    message: 'Anrede ist erforderlich',
+  }),
+  firstName: z
+    .string()
+    .min(2, 'Vorname muss mindestens 2 Zeichen lang sein')
+    .regex(/^[^0-9]+$/, 'Vorname darf keine Zahlen enthalten'),
+  lastName: z
+    .string()
+    .min(2, 'Nachname muss mindestens 2 Zeichen lang sein')
+    .regex(/^[^0-9]+$/, 'Nachname darf keine Zahlen enthalten'),
+  street: z.string().min(3, 'Straße und Hausnummer müssen mindestens 3 Zeichen lang sein'),
+  postalCode: z
+    .string()
+    .regex(/^\d{5}$/, 'PLZ muss genau 5 Ziffern enthalten'),
+  city: z.string().min(2, 'Stadt muss mindestens 2 Zeichen lang sein'),
+  
+  // Section 3: Tax Data
+  taxId: z
+    .string()
+    .regex(/^\d{11}$/, 'Steuer-ID muss genau 11 Ziffern enthalten')
+    .refine(validateSteuerID, 'Ungültige Steuer-ID (Prüfsumme fehlgeschlagen)'),
+  taxNumber: z.string().optional(),
+  vatId: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^DE\d{9}$/.test(val), 'USt-IdNr. muss mit "DE" beginnen, gefolgt von 9 Ziffern'),
+  commercialRegister: z.string().optional(),
+  
+  // Section 4: Legal & Compliance
+  privacyConsent: z.boolean().refine((val) => val === true, {
+    message: 'Sie müssen der Datenschutzerklärung zustimmen',
+  }),
+  termsConsent: z.boolean().refine((val) => val === true, {
+    message: 'Sie müssen die AGB akzeptieren',
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwörter stimmen nicht überein',
+  path: ['confirmPassword'],
+}).refine((data) => {
+  // Company name is required if NOT Privatperson
+  if (data.clientType !== 'Privatperson') {
+    return data.companyName && data.companyName.length >= 2;
+  }
+  return true;
+}, {
+  message: 'Firmenname ist erforderlich und muss mindestens 2 Zeichen lang sein',
+  path: ['companyName'],
+}).refine((data) => {
+  // Commercial register is required for companies
+  if (data.clientType !== 'Privatperson') {
+    return data.commercialRegister && /^HR[AB]\s*\d+/.test(data.commercialRegister);
+  }
+  return true;
+}, {
+  message: 'Handelsregister ist erforderlich (Format: HRA/HRB + Nummer)',
+  path: ['commercialRegister'],
+});
+
+type RegistrationFormData = z.infer<typeof registrationSchema>;
+
+function PasswordStrengthMeter({ password }: { password: string }) {
+  if (!password) return null;
+  
+  const { strength, label, color } = calculatePasswordStrength(password);
+  const widthPercentage = (strength / 4) * 100;
+  
+  return (
+    <div className="mt-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-gray-600 dark:text-gray-400">Passwortstärke:</span>
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
+      </div>
+      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${color} transition-all duration-300`}
+          style={{ width: `${widthPercentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Register() {
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [passwordValue, setPasswordValue] = useState('');
   const navigate = useNavigate();
-
-  // Personal Information
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [fullLegalName, setFullLegalName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('Germany');
-  const [taxId, setTaxId] = useState('');
-
-  // Firm Information (optional)
-  const [hasFirm, setHasFirm] = useState(false);
-  const [firmLegalName, setFirmLegalName] = useState('');
-  const [firmTaxId, setFirmTaxId] = useState('');
-  const [firmChamberRegistration, setFirmChamberRegistration] = useState('');
-  const [firmAddress, setFirmAddress] = useState('');
-  const [firmCity, setFirmCity] = useState('');
-  const [firmPostalCode, setFirmPostalCode] = useState('');
-  const [firmCountry, setFirmCountry] = useState('Germany');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      setError('Passwörter stimmen nicht überein');
-      return;
-    }
-
-    // Validate password strength
-    if (password.length < 8) {
-      setError('Passwort muss mindestens 8 Zeichen lang sein');
-      return;
-    }
-
+  
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<RegistrationFormData>({
+    resolver: zodResolver(registrationSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      clientType: 'Privatperson',
+      privacyConsent: false,
+      termsConsent: false,
+    },
+  });
+  
+  const clientType = watch('clientType');
+  const password = watch('password');
+  
+  const onSubmit = async (data: RegistrationFormData) => {
+    setApiError('');
     setLoading(true);
-
+    
     try {
-      const registrationData = {
-        email,
-        password,
-        firstName,
-        lastName,
-        fullLegalName: fullLegalName || `${firstName} ${lastName}`,
-        phoneNumber: phone,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : undefined,
-        address,
-        city,
-        postalCode,
-        country,
-        taxId,
-        ...(hasFirm && {
-          firmLegalName,
-          firmTaxId,
-          firmChamberRegistration,
-          firmAddress,
-          firmCity,
-          firmPostalCode,
-          firmCountry,
-        }),
+      // Backend API integration point: POST /api/v1/auth/register
+      const payload = {
+        email: data.email,
+        password: data.password,
+        clientType: data.clientType,
+        companyName: data.clientType !== 'Privatperson' ? data.companyName : undefined,
+        salutation: data.salutation,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        street: data.street,
+        postalCode: data.postalCode,
+        city: data.city,
+        taxId: data.taxId,
+        taxNumber: data.taxNumber || undefined,
+        vatId: data.vatId || undefined,
+        commercialRegister: data.clientType !== 'Privatperson' ? data.commercialRegister : undefined,
+        privacyConsent: data.privacyConsent,
+        termsConsent: data.termsConsent,
       };
-
-      await authAPI.register(registrationData);
+      
+      await authAPI.register(payload);
       setSuccess(true);
       
       // Redirect to login after 2 seconds
@@ -86,7 +204,7 @@ export default function Register() {
       }, 2000);
     } catch (err: any) {
       console.error('Registration failed:', err);
-      setError(
+      setApiError(
         err.response?.data?.message || 
         'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
       );
@@ -94,480 +212,431 @@ export default function Register() {
       setLoading(false);
     }
   };
-
-  const handleGoogleSSO = () => {
-    // TODO: Implement Google OAuth flow
-    alert('Google SSO wird in Kürze verfügbar sein');
-  };
-
-  const handleDATEVSSO = () => {
-    // Placeholder for DATEV SSO
-    alert('DATEV SSO ist in Entwicklung. Diese Funktion wird bald verfügbar sein.');
-  };
-
+  
+  // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-secondary flex items-center justify-center px-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md text-center">
+      <div className="min-h-screen bg-secondary dark:bg-gray-900 flex items-center justify-center px-4">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md text-center">
           <div className="text-6xl mb-4">✅</div>
-          <h1 className="text-2xl font-bold text-primary mb-4">Erfolgreich registriert!</h1>
-          <p className="text-textSecondary mb-6">
+          <h1 className="text-2xl font-bold text-primary dark:text-blue-400 mb-4">
+            Erfolgreich registriert!
+          </h1>
+          <p className="text-textSecondary dark:text-gray-300 mb-6">
             Sie werden in Kürze zur Anmeldeseite weitergeleitet...
           </p>
         </div>
       </div>
     );
   }
-
+  
   return (
-    <div className="min-h-screen bg-secondary py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+    <div className="min-h-screen bg-secondary dark:bg-gray-900 py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+          {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-primary mb-2">Registrierung</h1>
-            <p className="text-textSecondary">
+            <h1 className="text-3xl font-bold text-primary dark:text-blue-400 mb-2">
+              Registrierung
+            </h1>
+            <p className="text-textSecondary dark:text-gray-300">
               Erstellen Sie Ihr Konto für das NFK Steuerberatungsportal
             </p>
           </div>
-
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex items-center gap-4">
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                step >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
-                1
-              </div>
-              <div className={`w-16 h-1 ${step >= 2 ? 'bg-primary' : 'bg-gray-200'}`} />
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                step >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
-                2
-              </div>
-              <div className={`w-16 h-1 ${step >= 3 ? 'bg-primary' : 'bg-gray-200'}`} />
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                step >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
-                3
-              </div>
-            </div>
-          </div>
-
-          {/* SSO Options (Step 1) */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold mb-4">Wählen Sie Ihre Registrierungsmethode</h2>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <button
-                  onClick={handleGoogleSSO}
-                  className="flex items-center justify-center gap-3 px-6 py-4 border-2 border-gray-300 rounded-lg hover:border-primary hover:bg-secondary transition-colors"
-                >
-                  <span className="text-2xl">🔐</span>
-                  <div className="text-left">
-                    <div className="font-semibold">Mit Google anmelden</div>
-                    <div className="text-sm text-textSecondary">Schnelle Registrierung</div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={handleDATEVSSO}
-                  className="flex items-center justify-center gap-3 px-6 py-4 border-2 border-gray-300 rounded-lg hover:border-primary hover:bg-secondary transition-colors"
-                >
-                  <span className="text-2xl">🔄</span>
-                  <div className="text-left">
-                    <div className="font-semibold">Mit DATEV anmelden</div>
-                    <div className="text-sm text-textSecondary">Für DATEV-Kunden</div>
-                  </div>
-                </button>
-              </div>
-
-              <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-textSecondary">Oder</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setStep(2)}
-                className="w-full btn-primary"
-              >
-                Mit E-Mail registrieren
-              </button>
-
-              <div className="text-center text-sm text-textSecondary">
-                Haben Sie bereits ein Konto?{' '}
-                <Link to="/auth/login" className="text-primary hover:underline">
-                  Hier anmelden
-                </Link>
-              </div>
+          
+          {/* API Error */}
+          {apiError && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+              <p className="text-sm text-red-800 dark:text-red-300">{apiError}</p>
             </div>
           )}
-
-          {/* Personal Information (Step 2) */}
-          {step === 2 && (
-            <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} className="space-y-6">
-              <h2 className="text-xl font-semibold mb-4">Persönliche Informationen</h2>
-
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              )}
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
-                    Vorname <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
-                    Nachname <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {/* Section 1: Account Credentials */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                1. Zugangsdaten
+              </h2>
+              
               <div>
-                <label className="block text-sm font-medium text-textSecondary mb-2">
-                  Vollständiger rechtlicher Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={fullLegalName}
-                  onChange={(e) => setFullLegalName(e.target.value)}
-                  placeholder={`${firstName} ${lastName}`}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textSecondary mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   E-Mail <span className="text-red-500">*</span>
                 </label>
                 <input
+                  {...register('email')}
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  id="email"
+                  aria-label="E-Mail-Adresse"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  disabled={loading}
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
+                )}
               </div>
-
+              
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Passwort <span className="text-red-500">*</span>
                   </label>
                   <input
+                    {...register('password', {
+                      onChange: (e) => setPasswordValue(e.target.value),
+                    })}
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={8}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    id="password"
+                    aria-label="Passwort"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
                   />
+                  <PasswordStrengthMeter password={password || passwordValue} />
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
+                  )}
                 </div>
-
+                
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Passwort bestätigen <span className="text-red-500">*</span>
                   </label>
                   <input
+                    {...register('confirmPassword')}
                     type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    id="confirmPassword"
+                    aria-label="Passwort bestätigen"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
                   />
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
+                  )}
                 </div>
               </div>
-
+            </div>
+            
+            {/* Section 2: Client Master Data */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                2. Stammdaten
+              </h2>
+              
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
-                    Telefon <span className="text-red-500">*</span>
+                  <label htmlFor="clientType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Mandantenart <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                    placeholder="+49 xxx xxxxxxx"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                  <select
+                    {...register('clientType')}
+                    id="clientType"
+                    aria-label="Mandantenart"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  >
+                    <option value="Privatperson">Privatperson</option>
+                    <option value="Einzelunternehmen">Einzelunternehmen</option>
+                    <option value="GmbH">GmbH</option>
+                    <option value="UG">UG (haftungsbeschränkt)</option>
+                    <option value="GbR">GbR</option>
+                  </select>
+                  {errors.clientType && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.clientType.message}</p>
+                  )}
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
-                    Geburtsdatum <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
+                
+                {clientType !== 'Privatperson' && (
+                  <div>
+                    <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Firmenname <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      {...register('companyName')}
+                      type="text"
+                      id="companyName"
+                      aria-label="Firmenname"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      disabled={loading}
+                    />
+                    {errors.companyName && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.companyName.message}</p>
+                    )}
+                  </div>
+                )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textSecondary mb-2">
-                  Adresse <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  required
-                  placeholder="Straße und Hausnummer"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
+              
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                  <label htmlFor="salutation" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Anrede <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    {...register('salutation')}
+                    id="salutation"
+                    aria-label="Anrede"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  >
+                    <option value="">Bitte wählen</option>
+                    <option value="Herr">Herr</option>
+                    <option value="Frau">Frau</option>
+                    <option value="Divers">Divers</option>
+                  </select>
+                  {errors.salutation && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.salutation.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Vorname <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register('firstName')}
+                    type="text"
+                    id="firstName"
+                    aria-label="Vorname"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  {errors.firstName && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nachname <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register('lastName')}
+                    type="text"
+                    id="lastName"
+                    aria-label="Nachname"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  {errors.lastName && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName.message}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="street" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Straße und Hausnummer <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register('street')}
+                  type="text"
+                  id="street"
+                  aria-label="Straße und Hausnummer"
+                  placeholder="z.B. Hauptstraße 123"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  disabled={loading}
+                />
+                {errors.street && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.street.message}</p>
+                )}
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     PLZ <span className="text-red-500">*</span>
                   </label>
                   <input
+                    {...register('postalCode')}
                     type="text"
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    id="postalCode"
+                    aria-label="Postleitzahl"
+                    placeholder="z.B. 12345"
+                    maxLength={5}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
                   />
+                  {errors.postalCode && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.postalCode.message}</p>
+                  )}
                 </div>
-
+                
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Stadt <span className="text-red-500">*</span>
                   </label>
                   <input
+                    {...register('city')}
                     type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    id="city"
+                    aria-label="Stadt"
+                    placeholder="z.B. Berlin"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
                   />
+                  {errors.city && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.city.message}</p>
+                  )}
                 </div>
-
+              </div>
+            </div>
+            
+            {/* Section 3: Tax Data */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                3. Steuerdaten
+              </h2>
+              
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-textSecondary mb-2">
-                    Land <span className="text-red-500">*</span>
+                  <label htmlFor="taxId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Steuer-ID <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="Germany">Deutschland</option>
-                    <option value="Austria">Österreich</option>
-                    <option value="Switzerland">Schweiz</option>
-                  </select>
+                  <input
+                    {...register('taxId')}
+                    type="text"
+                    id="taxId"
+                    aria-label="Steueridentifikationsnummer"
+                    placeholder="z.B. 12345678901"
+                    maxLength={11}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  {errors.taxId && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.taxId.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="taxNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Steuernummer
+                  </label>
+                  <input
+                    {...register('taxNumber')}
+                    type="text"
+                    id="taxNumber"
+                    aria-label="Steuernummer"
+                    placeholder="z.B. 12/345/67890"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  {errors.taxNumber && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.taxNumber.message}</p>
+                  )}
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textSecondary mb-2">
-                  Steuernummer <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={taxId}
-                  onChange={(e) => setTaxId(e.target.value)}
-                  required
-                  placeholder="12/345/67890"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="btn-secondary"
-                >
-                  Zurück
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 btn-primary"
-                >
-                  Weiter
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Firm Information (Step 3 - Optional) */}
-          {step === 3 && (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <h2 className="text-xl font-semibold mb-4">Unternehmensinformationen (Optional)</h2>
-
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-800">{error}</p>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="vatId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    USt-IdNr.
+                  </label>
+                  <input
+                    {...register('vatId')}
+                    type="text"
+                    id="vatId"
+                    aria-label="Umsatzsteuer-Identifikationsnummer"
+                    placeholder="z.B. DE123456789"
+                    maxLength={11}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  {errors.vatId && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.vatId.message}</p>
+                  )}
                 </div>
-              )}
-
-              <div className="bg-blue-50 border-l-4 border-primary p-4 rounded-lg mb-6">
-                <p className="text-sm text-textSecondary">
-                  Wenn Sie ein Unternehmen vertreten, können Sie hier die Firmendaten angeben.
-                  Andernfalls können Sie diesen Schritt überspringen.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 mb-4">
-                <input
-                  type="checkbox"
-                  id="hasFirm"
-                  checked={hasFirm}
-                  onChange={(e) => setHasFirm(e.target.checked)}
-                  className="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="hasFirm" className="text-sm font-medium text-textSecondary">
-                  Ich vertrete ein Unternehmen
-                </label>
-              </div>
-
-              {hasFirm && (
-                <>
+                
+                {clientType !== 'Privatperson' && (
                   <div>
-                    <label className="block text-sm font-medium text-textSecondary mb-2">
-                      Firmenname
+                    <label htmlFor="commercialRegister" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Handelsregister <span className="text-red-500">*</span>
                     </label>
                     <input
+                      {...register('commercialRegister')}
                       type="text"
-                      value={firmLegalName}
-                      onChange={(e) => setFirmLegalName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      id="commercialRegister"
+                      aria-label="Handelsregisternummer"
+                      placeholder="z.B. HRB 12345"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      disabled={loading}
                     />
+                    {errors.commercialRegister && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.commercialRegister.message}</p>
+                    )}
                   </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary mb-2">
-                        Firmensteuernummer
-                      </label>
-                      <input
-                        type="text"
-                        value={firmTaxId}
-                        onChange={(e) => setFirmTaxId(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary mb-2">
-                        Kammernummer
-                      </label>
-                      <input
-                        type="text"
-                        value={firmChamberRegistration}
-                        onChange={(e) => setFirmChamberRegistration(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-textSecondary mb-2">
-                      Firmenadresse
-                    </label>
-                    <input
-                      type="text"
-                      value={firmAddress}
-                      onChange={(e) => setFirmAddress(e.target.value)}
-                      placeholder="Straße und Hausnummer"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary mb-2">
-                        PLZ
-                      </label>
-                      <input
-                        type="text"
-                        value={firmPostalCode}
-                        onChange={(e) => setFirmPostalCode(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary mb-2">
-                        Stadt
-                      </label>
-                      <input
-                        type="text"
-                        value={firmCity}
-                        onChange={(e) => setFirmCity(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-textSecondary mb-2">
-                        Land
-                      </label>
-                      <select
-                        value={firmCountry}
-                        onChange={(e) => setFirmCountry(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="Germany">Deutschland</option>
-                        <option value="Austria">Österreich</option>
-                        <option value="Switzerland">Schweiz</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="btn-secondary"
-                  disabled={loading}
-                >
-                  Zurück
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 btn-primary"
-                  disabled={loading}
-                >
-                  {loading ? 'Wird registriert...' : 'Registrierung abschließen'}
-                </button>
+                )}
               </div>
-            </form>
-          )}
+            </div>
+            
+            {/* Section 4: Legal & Compliance */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                4. Rechtliches
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      {...register('privacyConsent')}
+                      type="checkbox"
+                      aria-label="Datenschutzerklärung Zustimmung"
+                      className="mt-1 w-4 h-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded"
+                      disabled={loading}
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Ich habe die Datenschutzerklärung gelesen und stimme zu <span className="text-red-500">*</span>
+                    </span>
+                  </label>
+                  {errors.privacyConsent && (
+                    <p className="mt-1 ml-7 text-sm text-red-600 dark:text-red-400">{errors.privacyConsent.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      {...register('termsConsent')}
+                      type="checkbox"
+                      aria-label="AGB Zustimmung"
+                      className="mt-1 w-4 h-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded"
+                      disabled={loading}
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Ich akzeptiere die Allgemeinen Geschäftsbedingungen <span className="text-red-500">*</span>
+                    </span>
+                  </label>
+                  {errors.termsConsent && (
+                    <p className="mt-1 ml-7 text-sm text-red-600 dark:text-red-400">{errors.termsConsent.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Submit Button */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="submit"
+                className="w-full btn-primary flex items-center justify-center gap-2"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="inline-block animate-spin">⏳</span>
+                    <span>Wird registriert...</span>
+                  </>
+                ) : (
+                  'Registrierung abschließen'
+                )}
+              </button>
+            </div>
+          </form>
+          
+          {/* Login Link */}
+          <div className="mt-6 text-center text-sm text-textSecondary dark:text-gray-400">
+            Haben Sie bereits ein Konto?{' '}
+            <Link to="/auth/login" className="text-primary dark:text-blue-400 hover:underline font-medium">
+              Hier anmelden
+            </Link>
+          </div>
         </div>
       </div>
     </div>
