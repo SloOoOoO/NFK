@@ -3,6 +3,17 @@ import Sidebar from '../../components/Sidebar';
 import { casesAPI, clientsAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Case {
   id: number;
@@ -17,13 +28,26 @@ interface Case {
   updatedAt?: string;
 }
 
+type KanbanColumn = {
+  id: string;
+  title: string;
+  status: string;
+};
+
 interface Client {
   id: number;
   name: string;
 }
 
+const KANBAN_COLUMNS: KanbanColumn[] = [
+  { id: 'new', title: 'Inbox/New', status: 'New' },
+  { id: 'pendinginfo', title: 'Waiting for Client', status: 'PendingInfo' },
+  { id: 'inprogress', title: 'In Progress', status: 'InProgress' },
+  { id: 'underreview', title: 'Internal Review', status: 'UnderReview' },
+  { id: 'completed', title: 'Filed/Done', status: 'Completed' },
+];
+
 export default function Cases() {
-  const [filterStatus, setFilterStatus] = useState('all');
   const [cases, setCases] = useState<Case[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +56,11 @@ export default function Cases() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPendingInfoModal, setShowPendingInfoModal] = useState(false);
+  const [pendingDocument, setPendingDocument] = useState('');
+  const [pendingCaseId, setPendingCaseId] = useState<number | null>(null);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -51,6 +79,14 @@ export default function Cases() {
     dueDate: '',
   });
   const [successMessage, setSuccessMessage] = useState('');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     fetchCases();
@@ -160,7 +196,34 @@ export default function Cases() {
     setShowDeleteModal(true);
   };
 
-  const handleStatusChange = async (caseId: number, newStatus: string) => {
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as number);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over) return;
+
+    const caseId = active.id as number;
+    const targetColumnId = over.id as string;
+    const targetColumn = KANBAN_COLUMNS.find(col => col.id === targetColumnId);
+
+    if (!targetColumn) return;
+
+    const targetCase = cases.find(c => c.id === caseId);
+    if (!targetCase || targetCase.status === targetColumn.status) return;
+
+    if (targetColumn.status === 'PendingInfo') {
+      setPendingCaseId(caseId);
+      setShowPendingInfoModal(true);
+    } else {
+      await updateCaseStatus(caseId, targetColumn.status);
+    }
+  };
+
+  const updateCaseStatus = async (caseId: number, newStatus: string) => {
     try {
       await casesAPI.updateStatus(caseId, { status: newStatus });
       await fetchCases();
@@ -170,8 +233,20 @@ export default function Cases() {
     }
   };
 
-  // Suppress unused warning - function ready for future use
-  void handleStatusChange;
+  const handlePendingInfoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingCaseId || !pendingDocument.trim()) return;
+
+    console.log(`Email would be sent to client about "${pendingDocument}"`);
+    
+    await updateCaseStatus(pendingCaseId, 'PendingInfo');
+    
+    setShowPendingInfoModal(false);
+    setPendingDocument('');
+    setPendingCaseId(null);
+    setSuccessMessage(`Fall verschoben zu "Waiting for Client" - ${pendingDocument}`);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -191,25 +266,50 @@ export default function Cases() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'Hoch':
-        return 'text-red-600';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       case 'Mittel':
-        return 'text-yellow-600';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
       case 'Niedrig':
-        return 'text-green-600';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       default:
-        return 'text-gray-600';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 
-  const filteredCases = filterStatus === 'all' 
-    ? cases 
-    : cases.filter(c => c.status === filterStatus);
+  const getTypeColor = (title: string) => {
+    if (title.toLowerCase().includes('vat') || title.toLowerCase().includes('ust')) {
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+    } else if (title.toLowerCase().includes('income') || title.toLowerCase().includes('einkommensteuer')) {
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+    } else if (title.toLowerCase().includes('audit') || title.toLowerCase().includes('prüfung')) {
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+    }
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  };
 
-  const statusCounts = {
-    all: cases.length,
-    neu: cases.filter(c => c.status === 'Neu').length,
-    inBearbeitung: cases.filter(c => c.status === 'In Bearbeitung').length,
-    abgeschlossen: cases.filter(c => c.status === 'Abgeschlossen').length,
+  const getDeadlineBadgeColor = (dueDate?: string) => {
+    if (!dueDate) return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
+    
+    const now = new Date();
+    const deadline = new Date(dueDate);
+    const hoursRemaining = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursRemaining < 24) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    if (hoursRemaining < 48) return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+    return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getCasesByStatus = (status: string) => {
+    return cases.filter(c => c.status === status);
   };
 
   return (
@@ -218,9 +318,9 @@ export default function Cases() {
       
       <main className="flex-1 p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-textPrimary dark:text-white mb-2">Fälle</h1>
-          <p className="text-textSecondary dark:text-gray-400">Verwalten Sie alle laufenden und abgeschlossenen Fälle</p>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-textPrimary dark:text-white mb-2">Fälle - Kanban Board</h1>
+          <p className="text-textSecondary dark:text-gray-400">Drag & Drop zum Ändern des Status</p>
         </div>
 
         {/* Success Message */}
@@ -239,65 +339,20 @@ export default function Cases() {
 
         {/* Actions Bar */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex gap-2 overflow-x-auto w-full">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-md whitespace-nowrap ${
-                  filterStatus === 'all'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Alle ({statusCounts.all})
-              </button>
-              <button
-                onClick={() => setFilterStatus('Neu')}
-                className={`px-4 py-2 rounded-md whitespace-nowrap ${
-                  filterStatus === 'Neu'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Neu ({statusCounts.neu})
-              </button>
-              <button
-                onClick={() => setFilterStatus('In Bearbeitung')}
-                className={`px-4 py-2 rounded-md whitespace-nowrap ${
-                  filterStatus === 'In Bearbeitung'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                In Bearbeitung ({statusCounts.inBearbeitung})
-              </button>
-              <button
-                onClick={() => setFilterStatus('Abgeschlossen')}
-                className={`px-4 py-2 rounded-md whitespace-nowrap ${
-                  filterStatus === 'Abgeschlossen'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Abgeschlossen ({statusCounts.abgeschlossen})
-              </button>
-            </div>
-            
-            <div className="flex gap-2 w-full md:w-auto">
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary whitespace-nowrap"
-              >
-                + Neuer Fall
-              </button>
-              <button className="btn-secondary whitespace-nowrap">
-                📥 Export
-              </button>
-            </div>
+          <div className="flex gap-2 justify-end">
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary whitespace-nowrap"
+            >
+              + Neuer Fall
+            </button>
+            <button className="btn-secondary whitespace-nowrap">
+              📥 Export
+            </button>
           </div>
         </div>
 
-        {/* Cases List */}
+        {/* Kanban Board */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
@@ -306,75 +361,43 @@ export default function Cases() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredCases.length > 0 ? (
-              filteredCases.map((caseItem) => (
-                <div key={caseItem.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-primary">#{caseItem.id}</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(caseItem.status)}`}>
-                          {caseItem.status}
-                        </span>
-                        <span className={`text-sm font-medium ${getPriorityColor(caseItem.priority)}`}>
-                          ● {caseItem.priority}
-                        </span>
-                      </div>
-                      
-                      <h4 className="text-lg font-medium text-textPrimary dark:text-white mb-2">{caseItem.title}</h4>
-                      
-                      <div className="flex flex-wrap gap-4 text-sm text-textSecondary dark:text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <span>👥</span>
-                          <span>{caseItem.clientName}</span>
-                        </div>
-                        {caseItem.dueDate && (
-                          <div className="flex items-center gap-1">
-                            <span>📅</span>
-                            <span>Frist: {new Date(caseItem.dueDate).toLocaleDateString('de-DE')}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => openDetailsModal(caseItem)}
-                        className="btn-secondary"
-                      >
-                        Details
-                      </button>
-                      <button 
-                        onClick={() => openEditModal(caseItem)}
-                        className="btn-primary"
-                      >
-                        Bearbeiten
-                      </button>
-                      <button 
-                        onClick={() => openDeleteModal(caseItem)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                      >
-                        Löschen
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm text-center">
-                <div className="text-6xl mb-4">📁</div>
-                <h3 className="text-xl font-semibold text-textPrimary dark:text-white mb-2">Keine Fälle gefunden</h3>
-                <p className="text-textSecondary dark:text-gray-400 mb-4">Es gibt keine Fälle mit diesem Status.</p>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn-primary"
-                >
-                  + Neuer Fall erstellen
-                </button>
-              </div>
-            )}
-          </div>
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+              {KANBAN_COLUMNS.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  cases={getCasesByStatus(column.status)}
+                  onEdit={openEditModal}
+                  onDelete={openDeleteModal}
+                  onDetails={openDetailsModal}
+                  getTypeColor={getTypeColor}
+                  getPriorityColor={getPriorityColor}
+                  getDeadlineBadgeColor={getDeadlineBadgeColor}
+                  getInitials={getInitials}
+                />
+              ))}
+            </div>
+            <DragOverlay>
+              {activeDragId ? (
+                <CaseCard
+                  caseItem={cases.find(c => c.id === activeDragId)!}
+                  isDragging
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  onDetails={() => {}}
+                  getTypeColor={getTypeColor}
+                  getPriorityColor={getPriorityColor}
+                  getDeadlineBadgeColor={getDeadlineBadgeColor}
+                  getInitials={getInitials}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         )}
 
         {/* Create Case Modal */}
@@ -705,7 +728,256 @@ export default function Cases() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
+
+        {/* Pending Info Modal */}
+        <Dialog.Root open={showPendingInfoModal} onOpenChange={setShowPendingInfoModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <Dialog.Title className="text-xl font-semibold text-textPrimary dark:text-white">
+                  Waiting for Client
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <X size={24} />
+                  </button>
+                </Dialog.Close>
+              </div>
+              
+              <form onSubmit={handlePendingInfoSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                    What document are we waiting for? *
+                  </label>
+                  <input
+                    type="text"
+                    value={pendingDocument}
+                    onChange={(e) => setPendingDocument(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="e.g., Tax documents, Invoice receipts..."
+                    required
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <Dialog.Close asChild>
+                    <button type="button" className="flex-1 btn-secondary">
+                      Cancel
+                    </button>
+                  </Dialog.Close>
+                  <button type="submit" className="flex-1 btn-primary">
+                    Submit
+                  </button>
+                </div>
+              </form>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </main>
+    </div>
+  );
+}
+
+interface KanbanColumnProps {
+  column: KanbanColumn;
+  cases: Case[];
+  onEdit: (caseItem: Case) => void;
+  onDelete: (caseItem: Case) => void;
+  onDetails: (caseItem: Case) => void;
+  getTypeColor: (title: string) => string;
+  getPriorityColor: (priority: string) => string;
+  getDeadlineBadgeColor: (dueDate?: string) => string;
+  getInitials: (name: string) => string;
+}
+
+function KanbanColumn({
+  column,
+  cases,
+  onEdit,
+  onDelete,
+  onDetails,
+  getTypeColor,
+  getPriorityColor,
+  getDeadlineBadgeColor,
+  getInitials,
+}: KanbanColumnProps) {
+  const { setNodeRef } = useSortable({
+    id: column.id,
+    data: { type: 'column' },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 min-h-[600px] flex flex-col"
+    >
+      <div className="mb-4">
+        <h3 className="font-semibold text-textPrimary dark:text-white mb-1">
+          {column.title}
+        </h3>
+        <span className="text-sm text-textSecondary dark:text-gray-400">
+          {cases.length} {cases.length === 1 ? 'case' : 'cases'}
+        </span>
+      </div>
+      
+      <SortableContext items={cases.map(c => c.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3 flex-1">
+          {cases.map((caseItem) => (
+            <SortableCaseCard
+              key={caseItem.id}
+              caseItem={caseItem}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onDetails={onDetails}
+              getTypeColor={getTypeColor}
+              getPriorityColor={getPriorityColor}
+              getDeadlineBadgeColor={getDeadlineBadgeColor}
+              getInitials={getInitials}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
+interface SortableCaseCardProps {
+  caseItem: Case;
+  onEdit: (caseItem: Case) => void;
+  onDelete: (caseItem: Case) => void;
+  onDetails: (caseItem: Case) => void;
+  getTypeColor: (title: string) => string;
+  getPriorityColor: (priority: string) => string;
+  getDeadlineBadgeColor: (dueDate?: string) => string;
+  getInitials: (name: string) => string;
+}
+
+function SortableCaseCard(props: SortableCaseCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.caseItem.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <CaseCard {...props} />
+    </div>
+  );
+}
+
+interface CaseCardProps {
+  caseItem: Case;
+  isDragging?: boolean;
+  onEdit: (caseItem: Case) => void;
+  onDelete: (caseItem: Case) => void;
+  onDetails: (caseItem: Case) => void;
+  getTypeColor: (title: string) => string;
+  getPriorityColor: (priority: string) => string;
+  getDeadlineBadgeColor: (dueDate?: string) => string;
+  getInitials: (name: string) => string;
+}
+
+function CaseCard({
+  caseItem,
+  isDragging,
+  onEdit,
+  onDelete,
+  onDetails,
+  getTypeColor,
+  getPriorityColor,
+  getDeadlineBadgeColor,
+  getInitials,
+}: CaseCardProps) {
+  const getTypeBadgeText = (title: string) => {
+    if (title.toLowerCase().includes('vat') || title.toLowerCase().includes('ust')) {
+      return 'VAT';
+    } else if (title.toLowerCase().includes('income') || title.toLowerCase().includes('einkommensteuer')) {
+      return 'Income Tax';
+    } else if (title.toLowerCase().includes('audit') || title.toLowerCase().includes('prüfung')) {
+      return 'Audit';
+    }
+    return 'General';
+  };
+
+  return (
+    <div
+      className={`bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
+        isDragging ? 'shadow-xl' : ''
+      }`}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        onDetails(caseItem);
+      }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-xs text-textSecondary dark:text-gray-400">
+          #{caseItem.id}
+        </span>
+        <div className="flex gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(caseItem);
+            }}
+            className="text-xs px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+            title="Edit"
+          >
+            ✏️
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(caseItem);
+            }}
+            className="text-xs px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+            title="Delete"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <h4 className="font-semibold text-textPrimary dark:text-white mb-2 text-sm line-clamp-2">
+        {caseItem.title}
+      </h4>
+
+      <p className="text-xs text-textSecondary dark:text-gray-400 mb-3">
+        {caseItem.clientName}
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        {caseItem.dueDate && (
+          <span className={`text-xs px-2 py-1 rounded-full font-medium ${getDeadlineBadgeColor(caseItem.dueDate)}`}>
+            📅 {new Date(caseItem.dueDate).toLocaleDateString('de-DE')}
+          </span>
+        )}
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${getTypeColor(caseItem.title)}`}>
+          {getTypeBadgeText(caseItem.title)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className={`text-xs px-2 py-1 rounded-full font-medium ${getPriorityColor(caseItem.priority)}`}>
+          {caseItem.priority}
+        </span>
+        <div
+          className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold"
+          title={caseItem.clientName}
+        >
+          {getInitials(caseItem.clientName)}
+        </div>
+      </div>
     </div>
   );
 }
