@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [token, setToken] = useState('');
@@ -26,19 +28,19 @@ export default function ResetPassword() {
 
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < PASSWORD_MIN_LENGTH) {
-      return `Passwort muss mindestens ${PASSWORD_MIN_LENGTH} Zeichen lang sein`;
+      return t('auth.errors.passwordMin');
     }
     if (!PASSWORD_PATTERNS.uppercase.test(pwd)) {
-      return 'Passwort muss mindestens einen Großbuchstaben enthalten';
+      return t('auth.errors.passwordMin');
     }
     if (!PASSWORD_PATTERNS.lowercase.test(pwd)) {
-      return 'Passwort muss mindestens einen Kleinbuchstaben enthalten';
+      return t('auth.errors.passwordMin');
     }
     if (!PASSWORD_PATTERNS.number.test(pwd)) {
-      return 'Passwort muss mindestens eine Ziffer enthalten';
+      return t('auth.errors.passwordMin');
     }
     if (!PASSWORD_PATTERNS.specialChar.test(pwd)) {
-      return 'Passwort muss mindestens ein Sonderzeichen enthalten';
+      return t('auth.errors.passwordMin');
     }
     return null;
   };
@@ -49,7 +51,7 @@ export default function ResetPassword() {
 
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError('Passwörter stimmen nicht überein');
+      setError(t('auth.errors.passwordMin'));
       return;
     }
 

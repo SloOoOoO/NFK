@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../../services/api';
 
 export default function Login() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +30,7 @@ export default function Login() {
       console.error('Login failed:', err);
       setError(
         err.response?.data?.message || 
-        'Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.'
+        t('auth.errors.loginFailed')
       );
     } finally {
       setLoading(false);
@@ -38,7 +40,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-secondary flex items-center justify-center px-4">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-8">Anmelden</h1>
+        <h1 className="text-3xl font-bold text-center mb-8">{t('common.login')}</h1>
         
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -49,7 +51,7 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-2">
-              E-Mail
+              {t('auth.emailLabel')}
             </label>
             <input
               type="email"
@@ -65,10 +67,10 @@ export default function Login() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label htmlFor="password" className="block text-sm font-medium">
-                Passwort
+                {t('auth.passwordLabel')}
               </label>
               <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                Passwort vergessen?
+                {t('auth.forgotPassword')}
               </Link>
             </div>
             <input
@@ -90,17 +92,17 @@ export default function Login() {
             {loading ? (
               <>
                 <span className="inline-block animate-spin">⏳</span>
-                <span>Wird angemeldet...</span>
+                <span>{t('common.loading')}</span>
               </>
             ) : (
-              'Anmelden'
+              t('auth.loginButton')
             )}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <Link to="/auth/register" className="text-primary hover:underline">
-            Noch kein Konto? Registrieren
+            {t('auth.noAccount')} {t('auth.registerHere')}
           </Link>
         </div>
       </div>
