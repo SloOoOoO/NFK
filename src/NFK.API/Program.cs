@@ -201,7 +201,13 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
     context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
-    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' http://localhost:8080 https://api.nfk-buchhaltung.de";
+    
+    // CSP - allow localhost connections only in development
+    var cspConnectSrc = app.Environment.IsDevelopment() 
+        ? "'self' http://localhost:8080 https://api.nfk-buchhaltung.de" 
+        : "'self' https://api.nfk-buchhaltung.de";
+    context.Response.Headers["Content-Security-Policy"] = $"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src {cspConnectSrc}";
+    
     await next();
 });
 
