@@ -24,6 +24,7 @@ public class DATEVController : ControllerBase
     public async Task<IActionResult> Export([FromBody] object request)
     {
         // Placeholder for future implementation
+        await Task.CompletedTask;
         return Ok(new { message = "DATEV export - to be implemented" });
     }
 

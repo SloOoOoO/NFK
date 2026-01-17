@@ -64,6 +64,7 @@ public class DATEVSftpService : IDisposable
             client.Connect();
             var isConnected = client.IsConnected;
             client.Disconnect();
+            await Task.CompletedTask;
             return isConnected;
         }
         catch
