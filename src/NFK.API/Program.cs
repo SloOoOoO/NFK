@@ -7,6 +7,7 @@ using NFK.Application.Interfaces;
 using NFK.Application.Services;
 using NFK.API.Swagger;
 using Hangfire;
+using Hangfire.Dashboard;
 using Hangfire.SqlServer;
 using System.Security.Cryptography;
 using System.Text;
@@ -60,8 +61,10 @@ builder.Services.AddStackExchangeRedisCache(options =>
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "NFK.API";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "NFK.Client";
 var jwtSecret = builder.Configuration["Jwt:Secret"];
-var jwtPublicKey = builder.Configuration["Jwt:PublicKey"];
-var accessTokenExpiration = int.Parse(builder.Configuration["Jwt:AccessTokenExpirationMinutes"] ?? "15");
+// Load JWT keys from environment variables first, fall back to configuration
+var jwtPublicKey = Environment.GetEnvironmentVariable("JWT_PUBLIC_KEY") ?? builder.Configuration["Jwt:PublicKey"];
+var jwtPrivateKey = Environment.GetEnvironmentVariable("JWT_PRIVATE_KEY") ?? builder.Configuration["Jwt:PrivateKey"];
+var accessTokenExpiration = int.Parse(builder.Configuration["Jwt:AccessTokenExpirationMinutes"] ?? "5");
 var refreshTokenExpiration = int.Parse(builder.Configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
 
 // Register JWT Service - use symmetric key if Secret is provided, otherwise use RSA
@@ -89,7 +92,11 @@ if (!string.IsNullOrEmpty(jwtSecret))
 }
 else if (!string.IsNullOrEmpty(jwtPublicKey))
 {
-    var jwtPrivateKey = builder.Configuration["Jwt:PrivateKey"] ?? GenerateTempRsaKey();
+    if (string.IsNullOrEmpty(jwtPrivateKey))
+    {
+        throw new InvalidOperationException("JWT_PRIVATE_KEY environment variable or Jwt:PrivateKey configuration must be set when using asymmetric key authentication");
+    }
+    
     builder.Services.AddSingleton(sp => 
         new JwtService(jwtIssuer, jwtAudience, jwtPrivateKey, jwtPublicKey, accessTokenExpiration, refreshTokenExpiration));
     
@@ -190,11 +197,17 @@ if (app.Environment.IsDevelopment())
 // Security headers
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.Add("X-Frame-Options", "DENY");
-    context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
-    context.Response.Headers.Add("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-    context.Response.Headers.Add("Content-Security-Policy", "default-src 'self'");
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+    
+    // CSP - allow localhost connections only in development
+    var cspConnectSrc = app.Environment.IsDevelopment() 
+        ? "'self' http://localhost:8080 https://api.nfk-buchhaltung.de" 
+        : "'self' https://api.nfk-buchhaltung.de";
+    context.Response.Headers["Content-Security-Policy"] = $"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src {cspConnectSrc}";
+    
     await next();
 });
 
@@ -217,27 +230,14 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 
 await app.RunAsync();
 
-static string GenerateTempRsaKey()
-{
-    using var rsa = RSA.Create(2048);
-    return rsa.ExportRSAPublicKeyPem();
-}
-
 public class HangfireAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthorizationFilter
 {
     public bool Authorize(Hangfire.Dashboard.DashboardContext context)
     {
-        // WARNING: This allows unrestricted access to Hangfire dashboard in development
-        // In production, implement proper authentication:
-        // 1. Check if user is authenticated
-        // 2. Verify user has SuperAdmin or DATEVManager role
-        // 3. Use context properties to access request information
-        // Example for ASP.NET Core:
-        // var httpContext = context.GetHttpContext();
-        // return httpContext.User.Identity?.IsAuthenticated == true &&
-        //        (httpContext.User.IsInRole("SuperAdmin") || httpContext.User.IsInRole("DATEVManager"));
+        var httpContext = context.GetHttpContext();
         
-        // TODO: Implement proper role-based authorization before deploying to production
-        return false; // Deny access by default for security
+        // Require authentication and SuperAdmin or DATEVManager role
+        return httpContext.User?.Identity?.IsAuthenticated == true &&
+               (httpContext.User.IsInRole("SuperAdmin") || httpContext.User.IsInRole("DATEVManager"));
     }
 }

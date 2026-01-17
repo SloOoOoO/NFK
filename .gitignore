@@ -78,3 +78,8 @@ datev-exports/
 tmp/
 temp/
 *.tmp
+
+# Security - RSA keys
+*.pem
+private.key
+public.key

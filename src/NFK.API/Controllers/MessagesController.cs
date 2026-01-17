@@ -39,7 +39,7 @@ public class MessagesController : ControllerBase
 
             var messageDtos = messages.Select(m => new MessageDto(
                 m.Id,
-                m.SenderUser.FirstName + " " + m.SenderUser.LastName,
+                (m.SenderUser?.FirstName ?? "") + " " + (m.SenderUser?.LastName ?? ""),
                 m.Subject,
                 m.Content.Length > 100 ? m.Content.Substring(0, 100) + "..." : m.Content,
                 m.Content,

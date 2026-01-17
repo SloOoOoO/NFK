@@ -16,6 +16,7 @@ public class DATEVExportService
         // Sample data - in real implementation, this would query the database
         // csv.AppendLine($"{DateTime.Now:yyyyMMdd};100.00;S;1000;4000;Sample Transaction;BEL001");
         
+        await Task.CompletedTask;
         return csv.ToString();
     }
 
@@ -35,6 +36,7 @@ public class DATEVExportService
         
         // Sample data - in real implementation, this would query the database
         
+        await Task.CompletedTask;
         return doc.ToString();
     }
 
@@ -46,6 +48,7 @@ public class DATEVExportService
             
         // Add more validation as needed
         
+        await Task.CompletedTask;
         return true;
     }
 }
