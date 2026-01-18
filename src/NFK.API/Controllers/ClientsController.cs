@@ -27,6 +27,7 @@ public class ClientsController : ControllerBase
         try
         {
             var clients = await _context.Clients
+                .AsNoTracking() // Performance: Read-only query
                 .Include(c => c.User)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
@@ -62,6 +63,7 @@ public class ClientsController : ControllerBase
         try
         {
             var client = await _context.Clients
+                .AsNoTracking() // Performance: Read-only query
                 .Include(c => c.User)
                 .FirstOrDefaultAsync(c => c.Id == id);
 

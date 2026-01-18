@@ -284,6 +284,8 @@ public class AuthService : IAuthService
         // Revoke old token
         tokenEntity.IsRevoked = true;
         tokenEntity.RevokedAt = DateTime.UtcNow;
+        tokenEntity.ReplacedByToken = newRefreshToken;
+        tokenEntity.ReasonRevoked = "Replaced by refresh";
         
         // Create new refresh token
         var newTokenEntity = new RefreshToken
@@ -322,6 +324,7 @@ public class AuthService : IAuthService
         {
             tokenEntity.IsRevoked = true;
             tokenEntity.RevokedAt = DateTime.UtcNow;
+            tokenEntity.ReasonRevoked = "User logout";
             await _context.SaveChangesAsync();
             _logger.LogInformation("User logged out successfully: {UserId} from IP: {IP}", tokenEntity.UserId, ipAddress);
         }
