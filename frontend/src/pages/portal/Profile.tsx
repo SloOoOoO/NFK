@@ -67,12 +67,13 @@ export default function Profile() {
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Fehler beim Aktualisieren');
-      }
+      // Check if response has content before parsing JSON
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Fehler beim Aktualisieren');
+      }
 
       // Update local user state
       if (data.user) {

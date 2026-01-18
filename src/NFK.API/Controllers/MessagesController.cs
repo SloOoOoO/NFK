@@ -229,6 +229,7 @@ public class MessagesController : ControllerBase
                 currentUserId.Value, request.RecipientUserId);
 
             return Ok(new { 
+                success = true,
                 message = "Message sent successfully", 
                 messageId = message.Id 
             });
@@ -236,7 +237,7 @@ public class MessagesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending message");
-            return StatusCode(500, new { error = "internal_error", message = "Error sending message" });
+            return StatusCode(500, new { success = false, error = "internal_error", message = "Error sending message" });
         }
     }
 

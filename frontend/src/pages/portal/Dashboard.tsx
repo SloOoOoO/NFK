@@ -16,6 +16,7 @@ export default function Dashboard() {
   });
   const [deadlines, setDeadlines] = useState<any[]>([]);
   const [datevStatus, setDatevStatus] = useState<any>(null);
+  const [datevExportsCount, setDatevExportsCount] = useState<number>(0);
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
@@ -106,16 +107,42 @@ export default function Dashboard() {
   const fetchDatevStatus = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8080/api/v1/datev/status', {
+      
+      // Fetch DATEV status
+      const statusResponse = await fetch('http://localhost:8080/api/v1/datev/status', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (response.ok) {
-        const data = await response.json();
-        setDatevStatus(data);
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json();
+        setDatevStatus(statusData);
+      }
+      
+      // Fetch DATEV jobs for the last 24 hours
+      const jobsResponse = await fetch('http://localhost:8080/api/v1/datev/jobs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (jobsResponse.ok) {
+        const jobsData = await jobsResponse.json();
+        const now = new Date();
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        
+        // Count jobs completed in the last 24 hours
+        const recentExports = Array.isArray(jobsData) 
+          ? jobsData.filter((job: any) => {
+              if (job.completedAt) {
+                const completedDate = new Date(job.completedAt);
+                return completedDate >= yesterday;
+              }
+              return false;
+            }).length
+          : 0;
+        
+        setDatevExportsCount(recentExports);
       }
     } catch (error) {
       console.error('Error fetching DATEV status:', error);
       setDatevStatus({ connected: false, lastSync: null });
+      setDatevExportsCount(0);
     }
   };
 
@@ -246,7 +273,7 @@ export default function Dashboard() {
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">{t('dashboard.stats.active')}</span>
               </div>
               <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.datevExports')}</h3>
-              <p className="text-3xl font-bold text-primary dark:text-blue-400">2</p>
+              <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : datevExportsCount}</p>
               <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.last24Hours')}</p>
             </div>
           </Link>
