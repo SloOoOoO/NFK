@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { eventsAPI, clientsAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 
 interface Event {
