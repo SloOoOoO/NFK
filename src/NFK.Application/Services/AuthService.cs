@@ -99,8 +99,7 @@ public class AuthService : IAuthService
             FailedLoginAttempts = 0,
             // Security fields
             PasswordChangedAt = DateTime.UtcNow,
-            PasswordExpiresAt = passwordExpiresAt,
-            MfaEnabled = false
+            PasswordExpiresAt = passwordExpiresAt
         };
 
         _context.Users.Add(user);

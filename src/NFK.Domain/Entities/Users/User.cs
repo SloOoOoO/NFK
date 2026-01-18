@@ -41,7 +41,6 @@ public class User : BaseEntity
     // Security enhancements
     public DateTime? PasswordChangedAt { get; set; }
     public DateTime? PasswordExpiresAt { get; set; }
-    public bool MfaEnabled { get; set; }
 
     // Navigation properties
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
@@ -50,5 +49,4 @@ public class User : BaseEntity
     public virtual ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
     public virtual ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = new List<PasswordResetToken>();
     public virtual ICollection<PasswordHistory> PasswordHistories { get; set; } = new List<PasswordHistory>();
-    public virtual MfaSecret? MfaSecret { get; set; }
 }
