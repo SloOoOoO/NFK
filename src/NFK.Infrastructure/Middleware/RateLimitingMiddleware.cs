@@ -120,9 +120,11 @@ public class RateLimitingMiddleware
             
             return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // If cache fails, allow the request (fail open)
+            // Log cache failure but allow request (fail open for availability)
+            // In production: _logger.LogWarning(ex, "Rate limit cache failure for key: {Key}", key)
+            Console.Error.WriteLine($"Rate limit cache error for {key}: {ex.Message}");
             return true;
         }
     }

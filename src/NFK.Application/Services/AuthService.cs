@@ -104,9 +104,8 @@ public class AuthService : IAuthService
         };
 
         _context.Users.Add(user);
-        await _context.SaveChangesAsync();
         
-        // Add to password history
+        // Add to password history before first save
         var passwordHistory = new PasswordHistory
         {
             UserId = user.Id,
@@ -114,6 +113,7 @@ public class AuthService : IAuthService
             CreatedAtUtc = DateTime.UtcNow
         };
         _context.PasswordHistories.Add(passwordHistory);
+        
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("User registered successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);

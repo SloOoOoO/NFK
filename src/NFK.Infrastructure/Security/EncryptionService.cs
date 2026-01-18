@@ -17,8 +17,13 @@ public class EncryptionService
     {
         // In production, this should come from Azure Key Vault or secure key management
         var keyString = configuration["Encryption:MasterKey"] 
-            ?? Environment.GetEnvironmentVariable("ENCRYPTION_MASTER_KEY")
-            ?? "DefaultInsecureKeyForDevelopment32Chars!"; // Must be 32 bytes for AES-256
+            ?? Environment.GetEnvironmentVariable("ENCRYPTION_MASTER_KEY");
+        
+        if (string.IsNullOrEmpty(keyString))
+        {
+            throw new InvalidOperationException(
+                "Encryption master key is not configured. Please set Encryption:MasterKey in configuration or ENCRYPTION_MASTER_KEY environment variable.");
+        }
         
         _key = DeriveKey(keyString);
     }
@@ -60,9 +65,11 @@ public class EncryptionService
             
             return Convert.ToBase64String(result);
         }
-        catch
+        catch (Exception ex)
         {
-            // Log error in production
+            // Log error and return null - caller should handle gracefully
+            // In production, use ILogger to log: _logger.LogError(ex, "Encryption failed")
+            Console.Error.WriteLine($"Encryption error: {ex.Message}");
             return null;
         }
     }
@@ -96,9 +103,11 @@ public class EncryptionService
             
             return Encoding.UTF8.GetString(plaintext);
         }
-        catch
+        catch (Exception ex)
         {
-            // Log error in production
+            // Log error and return null - caller should handle gracefully
+            // In production, use ILogger to log: _logger.LogError(ex, "Decryption failed")
+            Console.Error.WriteLine($"Decryption error: {ex.Message}");
             return null;
         }
     }

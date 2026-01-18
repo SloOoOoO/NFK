@@ -63,6 +63,8 @@ public class TotpService
     
     /// <summary>
     /// Generates backup codes for account recovery
+    /// NOTE: Caller must hash these codes using PasswordHasher before storing in database
+    /// Return plaintext codes to user once, then store only hashed versions
     /// </summary>
     public string[] GenerateBackupCodes(int count = 10)
     {
@@ -143,7 +145,9 @@ public class TotpService
         {
             var value = alphabet.IndexOf(c);
             if (value < 0)
-                continue;
+            {
+                throw new ArgumentException($"Invalid Base32 character: {c}", nameof(input));
+            }
             
             buffer = (buffer << 5) | value;
             bitsLeft += 5;

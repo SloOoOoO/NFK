@@ -44,7 +44,7 @@ public class PasswordPolicy
         };
     }
     
-    public static bool IsPasswordInHistory(string newPasswordHash, List<string> passwordHistory)
+    public static bool IsPasswordInHistory(string newPasswordHash, HashSet<string> passwordHistory)
     {
         return passwordHistory.Contains(newPasswordHash);
     }
