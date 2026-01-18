@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import { adminAPI } from '../../services/api';
+import apiClient from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 
@@ -56,33 +57,21 @@ export default function AdminDashboard() {
 
   const fetchAuditLogs = async () => {
     try {
-      const response = await fetch('/api/v1/audit/logs', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAuditLogs(data);
-      }
+      const response = await apiClient.get('/audit/logs');
+      setAuditLogs(response.data);
     } catch (error) {
       console.error('Failed to fetch audit logs:', error);
+      setAuditLogs([]);
     }
   };
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch('/api/v1/analytics/page-visits', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAnalytics(data);
-      }
+      const response = await apiClient.get('/analytics/page-visits');
+      setAnalytics(response.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
+      setAnalytics(null);
     }
   };
 
