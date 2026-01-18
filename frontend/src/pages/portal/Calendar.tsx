@@ -498,7 +498,7 @@ export default function Calendar() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Termine</p>
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{upcomingEvents.filter(e => e.type === 'Termin').length}</p>
@@ -510,10 +510,6 @@ export default function Calendar() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Aufgaben</p>
             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{upcomingEvents.filter(e => e.type === 'Aufgabe').length}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Diese Woche</p>
-            <p className="text-2xl font-bold text-primary dark:text-blue-400">3</p>
           </div>
         </div>
 

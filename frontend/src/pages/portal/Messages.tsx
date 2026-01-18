@@ -233,7 +233,7 @@ export default function Messages() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Gesamt</p>
             <p className="text-2xl font-bold text-primary dark:text-blue-400">{messages.length}</p>
@@ -245,10 +245,6 @@ export default function Messages() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Pool E-Mails</p>
             <p className="text-2xl font-bold text-primary dark:text-blue-400">{messages.filter(m => m.isPoolEmail).length}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Diese Woche</p>
-            <p className="text-2xl font-bold text-primary dark:text-blue-400">5</p>
           </div>
         </div>
 
