@@ -17,6 +17,15 @@ interface Document {
   updated?: string;
 }
 
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  fullName?: string;
+}
+
 interface StorageStats {
   documentCount: number;
   totalStorageMB: number;
@@ -44,7 +53,7 @@ export default function Documents() {
   
   // Client filtering for employees
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
 

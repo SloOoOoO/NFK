@@ -6,6 +6,14 @@ import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { clientsAPI, casesAPI, documentsAPI, authAPI } from '../../services/api';
 import apiClient from '../../services/api';
 
+interface DATEVJob {
+  id: number;
+  jobName: string;
+  status: string;
+  completedAt?: string;
+  startedAt?: string;
+}
+
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -116,20 +124,18 @@ export default function Dashboard() {
       // Fetch DATEV jobs for the last 24 hours
       const jobsResponse = await apiClient.get('/datev/jobs');
       if (jobsResponse.data) {
-        const jobsData = jobsResponse.data;
+        const jobsData: DATEVJob[] = jobsResponse.data;
         const now = new Date();
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         
         // Count jobs completed in the last 24 hours
-        const recentExports = Array.isArray(jobsData) 
-          ? jobsData.filter((job: any) => {
-              if (job.completedAt) {
-                const completedDate = new Date(job.completedAt);
-                return completedDate >= yesterday;
-              }
-              return false;
-            }).length
-          : 0;
+        const recentExports = jobsData.filter((job) => {
+          if (job.completedAt) {
+            const completedDate = new Date(job.completedAt);
+            return completedDate >= yesterday;
+          }
+          return false;
+        }).length;
         
         setDatevExportsCount(recentExports);
       }
