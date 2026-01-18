@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Combobox, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { messagesAPI, authAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
+import apiClient from '../../services/api';
 
 interface Message {
   id: number;
@@ -20,6 +23,8 @@ interface User {
   lastName: string;
   email: string;
   role: string;
+  gender?: string;
+  fullName?: string;
 }
 
 export default function Messages() {
@@ -30,6 +35,9 @@ export default function Messages() {
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [composeForm, setComposeForm] = useState({ recipientUserId: 0, subject: '', content: '' });
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userQuery, setUserQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [replyContent, setReplyContent] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -37,6 +45,24 @@ export default function Messages() {
     fetchCurrentUser();
     fetchMessages();
   }, []);
+
+  useEffect(() => {
+    // Search users as user types
+    if (userQuery.length > 1) {
+      const searchUsers = async () => {
+        try {
+          const response = await apiClient.get(`/users/search?query=${encodeURIComponent(userQuery)}`);
+          setSearchResults(response.data);
+        } catch (error) {
+          console.error('Error searching users:', error);
+          setSearchResults([]);
+        }
+      };
+      searchUsers();
+    } else {
+      setSearchResults([]);
+    }
+  }, [userQuery]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -100,11 +126,21 @@ export default function Messages() {
 
   const handleCompose = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedUser) {
+      alert('Bitte wählen Sie einen Empfänger aus');
+      return;
+    }
     setSending(true);
     try {
-      await messagesAPI.send(composeForm);
+      await messagesAPI.send({
+        recipientUserId: selectedUser.id,
+        subject: composeForm.subject,
+        content: composeForm.content,
+      });
       setShowComposeModal(false);
       setComposeForm({ recipientUserId: 0, subject: '', content: '' });
+      setSelectedUser(null);
+      setUserQuery('');
       await fetchMessages();
     } catch (error: any) {
       console.error('Error sending message:', error);
@@ -113,6 +149,12 @@ export default function Messages() {
     } finally {
       setSending(false);
     }
+  };
+
+  const getProfileIcon = (gender?: string) => {
+    if (gender === 'male') return '👨';
+    if (gender === 'female') return '👩';
+    return '🧑'; // diverse
   };
 
   const handleReply = async (e: React.FormEvent) => {
@@ -348,16 +390,57 @@ export default function Messages() {
               
               <form onSubmit={handleCompose} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">An (Benutzer-ID) *</label>
-                  <input
-                    type="number"
-                    value={composeForm.recipientUserId || ''}
-                    onChange={(e) => setComposeForm({ ...composeForm, recipientUserId: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                    required
-                    disabled={sending}
-                    placeholder="Benutzer-ID eingeben"
-                  />
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">An *</label>
+                  <Combobox value={selectedUser} onChange={setSelectedUser}>
+                    <div className="relative">
+                      <Combobox.Input
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Name oder E-Mail eingeben..."
+                        displayValue={(user: User | null) => user?.fullName || user ? `${user.firstName} ${user.lastName}` : ''}
+                        onChange={(event) => setUserQuery(event.target.value)}
+                        disabled={sending}
+                      />
+                      <Transition
+                        as={Fragment}
+                        leave="transition ease-in duration-100"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                        afterLeave={() => setUserQuery('')}
+                      >
+                        <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-600">
+                          {searchResults.length === 0 && userQuery !== '' ? (
+                            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Keine Benutzer gefunden</div>
+                          ) : (
+                            searchResults.map((user) => (
+                              <Combobox.Option
+                                key={user.id}
+                                value={user}
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-2 px-4 ${
+                                    active ? 'bg-primary text-white' : 'text-gray-900 dark:text-gray-100'
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xl">{getProfileIcon(user.gender)}</span>
+                                    <div className="flex-1">
+                                      <div className={`font-medium ${selected ? 'font-bold' : ''}`}>
+                                        {user.fullName || `${user.firstName} ${user.lastName}`}
+                                      </div>
+                                      <div className={`text-xs ${active ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        {user.email}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </Combobox.Option>
+                            ))
+                          )}
+                        </Combobox.Options>
+                      </Transition>
+                    </div>
+                  </Combobox>
                 </div>
                 
                 <div>
