@@ -253,7 +253,9 @@ export default function AdminDashboard() {
                             {new Date(log.timestamp).toLocaleString('de-DE')}
                           </td>
                           <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">
-                            {log.user || 'System'}
+                            {typeof log.user === 'object' 
+                              ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || 'System'
+                              : log.user || 'System'}
                           </td>
                           <td className="px-4 py-3 text-sm dark:text-gray-300">
                             <span className={`px-2 py-1 rounded text-xs ${
@@ -355,7 +357,7 @@ export default function AdminDashboard() {
                               <tr key={index} className="border-b dark:border-gray-700">
                                 <td className="px-4 py-2 text-sm dark:text-gray-300">{month.month}</td>
                                 <td className="px-4 py-2 text-sm text-right font-medium dark:text-gray-200">
-                                  {month.count.toLocaleString('de-DE')}
+                                  {month.count?.toLocaleString('de-DE') || 0}
                                 </td>
                               </tr>
                             ))}

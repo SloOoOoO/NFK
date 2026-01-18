@@ -55,25 +55,29 @@ export default function Profile() {
         body: JSON.stringify({
           firstName: user.firstName,
           lastName: user.lastName,
+          phone: editForm.phoneNumber,
           phoneNumber: editForm.phoneNumber,
           address: editForm.address,
           city: editForm.city,
           postalCode: editForm.postalCode,
           country: editForm.country,
           dateOfBirth: editForm.dateOfBirth,
+          taxNumber: editForm.taxId,
           taxId: editForm.taxId
         })
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Fehler beim Aktualisieren');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Fehler beim Aktualisieren');
       }
+
+      const data = await response.json();
 
       // Update local user state
       if (data.user) {
-        const updatedUser = { ...user, ...data.user };
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedUser = { ...currentUser, ...data.user };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         setUser(updatedUser);
       }
@@ -81,9 +85,9 @@ export default function Profile() {
       await fetchUserProfile();
       setIsEditing(false);
       alert(t('profile.successUpdate'));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
-      alert(t('profile.errorUpdate'));
+      alert(error.message || t('profile.errorUpdate'));
     } finally {
       setSaving(false);
     }

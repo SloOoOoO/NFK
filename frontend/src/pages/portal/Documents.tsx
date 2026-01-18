@@ -180,14 +180,30 @@ export default function Documents() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const handleDownload = async (id: number) => {
+  const handleDownload = async (documentId: number, fileName: string) => {
     try {
-      await documentsAPI.download(id);
-      // Download functionality not fully implemented in backend
-      alert('Download-Funktion wird bald verfügbar sein');
-    } catch (err: any) {
-      console.error('Error downloading document:', err);
-      alert('Download noch nicht verfügbar');
+      const response = await fetch(`http://localhost:8080/api/v1/documents/${documentId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Download fehlgeschlagen');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Fehler beim Herunterladen der Datei');
     }
   };
 
@@ -389,7 +405,7 @@ export default function Documents() {
                 
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex gap-2">
                   <button 
-                    onClick={() => handleDownload(doc.id)}
+                    onClick={() => handleDownload(doc.id, doc.fileName || doc.name)}
                     className="flex-1 text-sm text-primary dark:text-blue-400 hover:underline"
                   >
                     📥 Download
@@ -431,7 +447,7 @@ export default function Documents() {
                     <td className="px-6 py-4 text-sm text-textSecondary dark:text-gray-400">{doc.updated}</td>
                     <td className="px-6 py-4 text-sm">
                       <button 
-                        onClick={() => handleDownload(doc.id)}
+                        onClick={() => handleDownload(doc.id, doc.fileName || doc.name)}
                         className="text-primary dark:text-blue-400 hover:underline mr-3"
                       >
                         Download

@@ -15,9 +15,13 @@ export default function Dashboard() {
     cases: { total: 0, high_priority: 0 },
   });
   const [deadlines, setDeadlines] = useState<any[]>([]);
+  const [datevStatus, setDatevStatus] = useState<any>(null);
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchDatevStatus();
+    fetchActivities();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -97,6 +101,67 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchDatevStatus = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('http://localhost:8080/api/v1/datev/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDatevStatus(data);
+      }
+    } catch (error) {
+      console.error('Error fetching DATEV status:', error);
+      setDatevStatus({ connected: false, lastSync: null });
+    }
+  };
+
+  const fetchActivities = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('http://localhost:8080/api/v1/audit/recent', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      setActivities([]);
+    }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'Upload':
+      case 'CREATE':
+        return '📄';
+      case 'Download':
+        return '📥';
+      case 'UPDATE':
+        return '✏️';
+      case 'DELETE':
+        return '🗑️';
+      default:
+        return '📋';
+    }
+  };
+
+  const formatRelativeTime = (timestamp: string) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    return `${diffDays}d`;
   };
 
   return (
@@ -259,88 +324,66 @@ export default function Dashboard() {
 
         {/* Bottom Grid - DATEV_ and Recent Activity */}
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* DATEV_ Recent Activity */}
+          {/* DATEV_ Status */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">🔄 {t('dashboard.sections.datevActivity')}</h2>
               <Link to="/portal/datev" className="text-primary dark:text-blue-400 hover:underline text-sm">{t('dashboard.sections.details')} →</Link>
             </div>
             
-            <div className="space-y-3">
-              <div className="flex items-start justify-between border-b dark:border-gray-700 pb-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full mt-2 bg-green-500 dark:bg-green-400"></div>
-                  <div>
-                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.exportCompleted')}</p>
-                    <p className="text-sm text-textSecondary dark:text-gray-400">Schmidt GmbH</p>
-                  </div>
+            {datevStatus ? (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className={`w-3 h-3 rounded-full ${datevStatus.connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  <span className="font-medium text-textPrimary dark:text-gray-100">
+                    {datevStatus.connected ? 'Verbunden' : 'Nicht verbunden'}
+                  </span>
                 </div>
-                <span className="text-xs text-textSecondary dark:text-gray-400 whitespace-nowrap">{t('dashboard.sections.hoursAgo', { hours: 2 })}</span>
+                
+                {datevStatus.lastSync && (
+                  <p className="text-sm text-textSecondary dark:text-gray-400 mb-4">
+                    Letzte Synchronisation: {new Date(datevStatus.lastSync).toLocaleString('de-DE')}
+                  </p>
+                )}
+                
+                {!datevStatus.connected && (
+                  <Link to="/portal/datev">
+                    <button className="mt-3 px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700">
+                      DATEV einrichten
+                    </button>
+                  </Link>
+                )}
               </div>
-              <div className="flex items-start justify-between border-b dark:border-gray-700 pb-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full mt-2 bg-yellow-500 dark:bg-yellow-400"></div>
-                  <div>
-                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.syncStarted')}</p>
-                    <p className="text-sm text-textSecondary dark:text-gray-400">Becker AG</p>
-                  </div>
-                </div>
-                <span className="text-xs text-textSecondary dark:text-gray-400 whitespace-nowrap">{t('dashboard.sections.hoursAgo', { hours: 5 })}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-textSecondary dark:text-gray-400">{t('dashboard.sections.elsterSubmissions')}</span>
-                <span className="font-semibold text-primary dark:text-blue-400">3 {t('dashboard.sections.pending')}</span>
-              </div>
-            </div>
+            ) : (
+              <p className="text-textSecondary dark:text-gray-400">Laden...</p>
+            )}
           </div>
 
           {/* Recent System Activity */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100 mb-4">📋 {t('dashboard.sections.recentActivity')}</h2>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b dark:border-gray-700 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    📄
+            {activities.length > 0 ? (
+              <div className="space-y-4">
+                {activities.map((activity, index) => (
+                  <div key={activity.id || index} className="flex items-center justify-between border-b dark:border-gray-700 pb-4 last:border-b-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                        {getActivityIcon(activity.type)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-textPrimary dark:text-gray-100">{activity.description}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-textSecondary dark:text-gray-400">{formatRelativeTime(activity.timestamp)}</span>
                   </div>
-                  <div>
-                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.documentUploaded')}</p>
-                    <p className="text-sm text-textSecondary dark:text-gray-400">Jahresabschluss_2024.pdf</p>
-                  </div>
-                </div>
-                <span className="text-xs text-textSecondary dark:text-gray-400">2h</span>
+                ))}
               </div>
-              
-              <div className="flex items-center justify-between border-b dark:border-gray-700 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                    ✅
-                  </div>
-                  <div>
-                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.caseCompleted')}</p>
-                    <p className="text-sm text-textSecondary dark:text-gray-400">FALL-2025-003</p>
-                  </div>
-                </div>
-                <span className="text-xs text-textSecondary dark:text-gray-400">5h</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                    💬
-                  </div>
-                  <div>
-                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.newMessage')}</p>
-                    <p className="text-sm text-textSecondary dark:text-gray-400">Anna Schmidt</p>
-                  </div>
-                </div>
-                <span className="text-xs text-textSecondary dark:text-gray-400">1d</span>
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-textSecondary dark:text-gray-400 text-center py-8">
+                Noch keine Aktivitäten vorhanden
+              </p>
+            )}
           </div>
         </div>
       </main>

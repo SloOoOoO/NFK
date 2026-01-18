@@ -92,6 +92,39 @@ public class DATEVController : ControllerBase
         };
     }
 
+    [HttpGet("status")]
+    [Authorize]
+    public async Task<IActionResult> GetStatus()
+    {
+        try
+        {
+            // Check if DATEV is configured (this is a simplified check)
+            var hasJobs = await _context.DATEVJobs.AnyAsync();
+            var isConnected = hasJobs; // Simplified connection check
+            
+            var lastSync = await _context.AuditLogs
+                .Where(a => a.Action == "DATEVExport" || a.EntityType == "DATEVJob")
+                .OrderByDescending(a => a.CreatedAt)
+                .Select(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            return Ok(new
+            {
+                connected = isConnected,
+                lastSync = lastSync
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching DATEV status");
+            return Ok(new
+            {
+                connected = false,
+                lastSync = (DateTime?)null
+            });
+        }
+    }
+
     private string GetJobSummary(Domain.Entities.DATEV.DATEVJob job)
     {
         if (job.Status == "Completed")
