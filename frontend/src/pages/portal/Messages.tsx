@@ -48,7 +48,7 @@ export default function Messages() {
 
   useEffect(() => {
     // Search users as user types
-    if (userQuery.length > 1) {
+    if (userQuery.length >= 1) { // Changed from > 1 to >= 1
       const searchUsers = async () => {
         try {
           const response = await apiClient.get(`/users/search?query=${encodeURIComponent(userQuery)}`);

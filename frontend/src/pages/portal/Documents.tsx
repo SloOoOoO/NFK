@@ -106,7 +106,8 @@ export default function Documents() {
     const totalStorageMB = stats.totalStorageMB ?? 0;
     const maxStorageMB = stats.maxStorageMB ?? DEFAULT_MAX_STORAGE_MB;
     if (totalStorageMB + fileSizeMB > maxStorageMB) {
-      alert(`Speicherplatz überschritten. Verfügbar: ${(maxStorageMB - totalStorageMB).toFixed(2)} MB`);
+      const available = Math.max(0, maxStorageMB - totalStorageMB);
+      alert(`Speicherplatz überschritten. Verfügbar: ${available.toFixed(2)} MB`);
       e.target.value = '';
       return;
     }
