@@ -31,11 +31,8 @@ public class MessagesController : ControllerBase
                 return Unauthorized(new { error = "unauthorized", message = "User not found" });
             }
 
-            var userRole = User.FindFirst("role")?.Value;
-            if (string.IsNullOrEmpty(userRole))
-            {
-                return Unauthorized(new { error = "unauthorized", message = "User role not found" });
-            }
+            // Get user role from claims, default to empty if not found
+            var userRole = User.FindFirst("role")?.Value ?? "";
 
             var query = _context.Messages
                 .Include(m => m.SenderUser)
@@ -183,15 +180,16 @@ public class MessagesController : ControllerBase
                 return Unauthorized(new { error = "unauthorized", message = "User not found" });
             }
 
-            var userRole = User.FindFirst("role")?.Value;
-            if (string.IsNullOrEmpty(userRole))
-            {
-                return Unauthorized(new { error = "unauthorized", message = "User role not found" });
-            }
+            // Get user role from claims, default to empty if not found
+            var userRole = User.FindFirst("role")?.Value ?? "";
 
-            // Validate recipient exists
-            var recipientExists = await _context.Users.AnyAsync(u => u.Id == request.RecipientUserId && u.IsActive);
-            if (!recipientExists)
+            // Validate recipient exists and is active
+            var recipient = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == request.RecipientUserId && u.IsActive);
+            
+            if (recipient == null)
             {
                 return BadRequest(new { error = "invalid_recipient", message = "Recipient user not found or inactive" });
             }

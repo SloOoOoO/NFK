@@ -24,32 +24,35 @@ public class UsersController : ControllerBase
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            // Allow search with 1 character minimum
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 1)
             {
                 return Ok(new List<object>());
             }
 
-            var searchTerm = $"%{query}%";
+            var searchTerm = query.ToLower().Trim();
             
             var users = await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .Where(u => u.IsActive && !u.IsDeleted)
                 .Where(u => 
-                    EF.Functions.Like(u.FirstName, searchTerm) ||
-                    EF.Functions.Like(u.LastName, searchTerm) ||
-                    EF.Functions.Like(u.Email, searchTerm) ||
-                    EF.Functions.Like(u.FirstName + " " + u.LastName, searchTerm)
+                    u.FirstName.ToLower().Contains(searchTerm) ||
+                    u.LastName.ToLower().Contains(searchTerm) ||
+                    u.Email.ToLower().Contains(searchTerm) ||
+                    (u.FirstName + " " + u.LastName).ToLower().Contains(searchTerm)
                 )
                 .OrderBy(u => u.FirstName)
                 .ThenBy(u => u.LastName)
-                .Take(10)
+                .Take(20) // Show up to 20 results
                 .Select(u => new {
                     u.Id,
                     u.FirstName,
                     u.LastName,
                     u.Email,
-                    Role = u.UserRoles.Select(ur => ur.Role.Name).FirstOrDefault() ?? "Client",
+                    Role = u.UserRoles.FirstOrDefault() != null 
+                        ? u.UserRoles.FirstOrDefault()!.Role.Name 
+                        : "User",
                     FullName = u.FirstName + " " + u.LastName,
                     u.Gender
                 })

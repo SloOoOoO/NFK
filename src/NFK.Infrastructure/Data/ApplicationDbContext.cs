@@ -28,7 +28,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserSession> UserSessions { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<PasswordHistory> PasswordHistories { get; set; }
-    public DbSet<MfaSecret> MfaSecrets { get; set; }
 
     // Clients
     public DbSet<Client> Clients { get; set; }
@@ -84,12 +83,6 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<PasswordHistory>(entity =>
         {
             entity.HasIndex(e => new { e.UserId, e.CreatedAtUtc });
-        });
-        
-        // MfaSecret entity configuration
-        modelBuilder.Entity<MfaSecret>(entity =>
-        {
-            entity.HasIndex(e => e.UserId).IsUnique();
         });
         
         // Client entity configuration - Add indexes

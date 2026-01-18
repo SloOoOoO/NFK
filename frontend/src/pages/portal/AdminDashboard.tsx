@@ -10,9 +10,6 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
-  const [headerText, setHeaderText] = useState({ welcomeTitle: '', welcomeSubtitle: '' });
-  const [editingHeader, setEditingHeader] = useState(false);
-  const [savingHeader, setSavingHeader] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -28,18 +25,8 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [usersRes, headerRes] = await Promise.allSettled([
-        adminAPI.getAllUsers(),
-        adminAPI.getHeaderText(),
-      ]);
-
-      if (usersRes.status === 'fulfilled') {
-        setUsers(usersRes.value.data);
-      }
-
-      if (headerRes.status === 'fulfilled') {
-        setHeaderText(headerRes.value.data);
-      }
+      const usersRes = await adminAPI.getAllUsers();
+      setUsers(usersRes.data);
       
       // Fetch audit logs and analytics for tabs
       fetchAuditLogs();
@@ -124,20 +111,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleHeaderTextUpdate = async () => {
-    setSavingHeader(true);
-    try {
-      await adminAPI.updateHeaderText(headerText);
-      setEditingHeader(false);
-      alert('Header-Text erfolgreich aktualisiert');
-    } catch (error) {
-      console.error('Failed to update header text:', error);
-      alert('Fehler beim Aktualisieren des Header-Textes');
-    } finally {
-      setSavingHeader(false);
-    }
-  };
-
   const roles = ['SuperAdmin', 'Consultant', 'Receptionist', 'Client', 'DATEVManager'];
 
   return (
@@ -159,16 +132,6 @@ export default function AdminDashboard() {
               }`}
             >
               👥 Benutzerverwaltung
-            </button>
-            <button
-              onClick={() => setActiveTab('header')}
-              className={`pb-3 px-4 font-medium transition-colors ${
-                activeTab === 'header'
-                  ? 'border-b-2 border-primary text-primary dark:text-blue-400'
-                  : 'text-textSecondary dark:text-gray-400 hover:text-primary dark:hover:text-blue-400'
-              }`}
-            >
-              ✏️ Header-Text
             </button>
             <button
               onClick={() => setActiveTab('logs')}
@@ -256,80 +219,6 @@ export default function AdminDashboard() {
                   </table>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Header Text Tab */}
-          {activeTab === 'header' && (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold dark:text-white">Dashboard Header-Text</h2>
-                {!editingHeader ? (
-                  <button
-                    onClick={() => setEditingHeader(true)}
-                    className="btn-primary text-sm"
-                  >
-                    Bearbeiten
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleHeaderTextUpdate}
-                      className="btn-primary text-sm"
-                      disabled={savingHeader}
-                    >
-                      {savingHeader ? 'Speichert...' : 'Speichern'}
-                    </button>
-                    <button
-                      onClick={() => setEditingHeader(false)}
-                      className="btn-secondary text-sm"
-                      disabled={savingHeader}
-                    >
-                      Abbrechen
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary dark:text-gray-300 mb-2">
-                    Willkommenstitel
-                  </label>
-                  {editingHeader ? (
-                    <textarea
-                      value={headerText.welcomeTitle}
-                      onChange={(e) =>
-                        setHeaderText({ ...headerText, welcomeTitle: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
-                      placeholder="z.B. Willkommen zurück"
-                      rows={3}
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold dark:text-gray-200">{headerText.welcomeTitle}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-textSecondary dark:text-gray-300 mb-2">
-                    Untertitel
-                  </label>
-                  {editingHeader ? (
-                    <textarea
-                      value={headerText.welcomeSubtitle}
-                      onChange={(e) =>
-                        setHeaderText({ ...headerText, welcomeSubtitle: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
-                      placeholder="z.B. Ihr persönliches Steuerberatungsportal"
-                      rows={3}
-                    />
-                  ) : (
-                    <p className="text-textSecondary dark:text-gray-300">{headerText.welcomeSubtitle}</p>
-                  )}
-                </div>
-              </div>
             </div>
           )}
 

@@ -34,6 +34,7 @@ export default function Calendar() {
   const [creating, setCreating] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showAllEvents, setShowAllEvents] = useState(false);
   const [newAppointment, setNewAppointment] = useState({
     clientId: 0,
     title: '',
@@ -497,7 +498,7 @@ export default function Calendar() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Termine</p>
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{upcomingEvents.filter(e => e.type === 'Termin').length}</p>
@@ -509,10 +510,6 @@ export default function Calendar() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Aufgaben</p>
             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{upcomingEvents.filter(e => e.type === 'Aufgabe').length}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Diese Woche</p>
-            <p className="text-2xl font-bold text-primary dark:text-blue-400">3</p>
           </div>
         </div>
 
@@ -580,7 +577,7 @@ export default function Calendar() {
             <h2 className="text-lg font-semibold text-textPrimary dark:text-gray-200 mb-4">Anstehende Ereignisse</h2>
             
             <div className="space-y-3">
-              {upcomingEvents.slice(0, 6).map((event) => (
+              {(showAllEvents ? upcomingEvents : upcomingEvents.slice(0, 6)).map((event) => (
                 <div 
                   key={event.id} 
                   className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getEventTypeColor(event.color)}`}
@@ -605,9 +602,23 @@ export default function Calendar() {
               ))}
             </div>
 
-            <button className="w-full mt-4 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm">
-              Alle Ereignisse anzeigen
-            </button>
+            {!showAllEvents && upcomingEvents.length > 6 && (
+              <button 
+                onClick={() => setShowAllEvents(true)}
+                className="w-full mt-4 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm cursor-pointer"
+              >
+                Alle Ereignisse anzeigen ({upcomingEvents.length})
+              </button>
+            )}
+            
+            {showAllEvents && upcomingEvents.length > 6 && (
+              <button 
+                onClick={() => setShowAllEvents(false)}
+                className="w-full mt-4 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm cursor-pointer"
+              >
+                Weniger anzeigen
+              </button>
+            )}
           </div>
         </div>
 

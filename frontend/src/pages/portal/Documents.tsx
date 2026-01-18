@@ -106,7 +106,8 @@ export default function Documents() {
     const totalStorageMB = stats.totalStorageMB ?? 0;
     const maxStorageMB = stats.maxStorageMB ?? DEFAULT_MAX_STORAGE_MB;
     if (totalStorageMB + fileSizeMB > maxStorageMB) {
-      alert(`Speicherplatz überschritten. Verfügbar: ${(maxStorageMB - totalStorageMB).toFixed(2)} MB`);
+      const available = Math.max(0, maxStorageMB - totalStorageMB);
+      alert(`Speicherplatz überschritten. Verfügbar: ${available.toFixed(2)} MB`);
       e.target.value = '';
       return;
     }
@@ -257,7 +258,7 @@ export default function Documents() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Gesamt</p>
             <p className="text-2xl font-bold text-primary dark:text-blue-400">{documents.length}</p>
@@ -265,14 +266,6 @@ export default function Documents() {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Größe</p>
             <p className="text-2xl font-bold text-primary dark:text-blue-400">{(stats.totalStorageMB ?? 0).toFixed(1)} MB</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Heute</p>
-            <p className="text-2xl font-bold text-primary dark:text-blue-400">2</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Diese Woche</p>
-            <p className="text-2xl font-bold text-primary dark:text-blue-400">8</p>
           </div>
         </div>
 

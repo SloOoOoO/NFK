@@ -132,7 +132,6 @@ builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();
 builder.Services.AddScoped<NFK.Infrastructure.Caching.CacheService>();
-builder.Services.AddScoped<NFK.Infrastructure.Security.TotpService>();
 
 // Hangfire
 builder.Services.AddHangfire(configuration => configuration
