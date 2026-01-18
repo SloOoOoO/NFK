@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect, Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { useDarkMode } from '../../contexts/DarkModeContext';

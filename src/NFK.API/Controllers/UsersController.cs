@@ -49,7 +49,7 @@ public class UsersController : ControllerBase
                     u.FirstName,
                     u.LastName,
                     u.Email,
-                    Role = u.UserRoles.FirstOrDefault() != null ? u.UserRoles.FirstOrDefault()!.Role.Name : "Client",
+                    Role = u.UserRoles.Select(ur => ur.Role.Name).FirstOrDefault() ?? "Client",
                     FullName = u.FirstName + " " + u.LastName,
                     u.Gender
                 })
