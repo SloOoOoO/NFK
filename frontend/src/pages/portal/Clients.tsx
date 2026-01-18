@@ -66,6 +66,12 @@ export default function Clients() {
     fetchClientUsers();
   }, []);
 
+  useEffect(() => {
+    if (showCreateModal) {
+      fetchClientUsers();
+    }
+  }, [showCreateModal]);
+
   const fetchClients = async () => {
     setLoading(true);
     setError('');
@@ -87,9 +93,14 @@ export default function Clients() {
     try {
       const response = await apiClient.get('/users?role=Client');
       const usersData = Array.isArray(response.data) ? response.data : [];
-      setClientUsers(usersData);
+      
+      // Filter to ensure only Client role users
+      const clientsOnly = usersData.filter((u: any) => u.role === 'Client');
+      
+      setClientUsers(clientsOnly);
     } catch (err: any) {
       console.error('Error fetching client users:', err);
+      setClientUsers([]);
     }
   };
 
@@ -419,6 +430,9 @@ export default function Clients() {
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {clientUsers.length} Client(s) gefunden
+                  </p>
                 </div>
                 
                 <div>

@@ -46,6 +46,8 @@ public class UsersController : ControllerBase
                     u.FirstName,
                     u.LastName,
                     u.Email,
+                    u.Gender,
+                    FullName = u.FirstName + " " + u.LastName,
                     Role = u.UserRoles.FirstOrDefault() != null 
                         ? u.UserRoles.FirstOrDefault()!.Role.Name 
                         : "User"
@@ -154,6 +156,7 @@ public class UsersController : ControllerBase
             await _context.SaveChangesAsync();
 
             return Ok(new { 
+                success = true,
                 message = "Profil erfolgreich aktualisiert",
                 user = new {
                     user.Id,
@@ -168,14 +171,15 @@ public class UsersController : ControllerBase
                     user.Country,
                     user.DateOfBirth,
                     TaxNumber = user.TaxId,
-                    TaxId = user.TaxId
+                    TaxId = user.TaxId,
+                    user.Gender
                 }
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile");
-            return StatusCode(500, new { error = "internal_error", message = "Fehler beim Aktualisieren des Profils" });
+            return StatusCode(500, new { success = false, error = "internal_error", message = "Fehler beim Aktualisieren des Profils" });
         }
     }
 }

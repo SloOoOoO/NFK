@@ -4,6 +4,15 @@ import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { clientsAPI, casesAPI, documentsAPI, authAPI } from '../../services/api';
+import apiClient from '../../services/api';
+
+interface DATEVJob {
+  id: number;
+  jobName: string;
+  status: string;
+  completedAt?: string;
+  startedAt?: string;
+}
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
@@ -16,6 +25,7 @@ export default function Dashboard() {
   });
   const [deadlines, setDeadlines] = useState<any[]>([]);
   const [datevStatus, setDatevStatus] = useState<any>(null);
+  const [datevExportsCount, setDatevExportsCount] = useState<number>(0);
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
@@ -105,29 +115,42 @@ export default function Dashboard() {
 
   const fetchDatevStatus = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8080/api/v1/datev/status', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setDatevStatus(data);
+      // Fetch DATEV status
+      const statusResponse = await apiClient.get('/datev/status');
+      if (statusResponse.data) {
+        setDatevStatus(statusResponse.data);
+      }
+      
+      // Fetch DATEV jobs for the last 24 hours
+      const jobsResponse = await apiClient.get('/datev/jobs');
+      if (jobsResponse.data) {
+        const jobsData: DATEVJob[] = jobsResponse.data;
+        const now = new Date();
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        
+        // Count jobs completed in the last 24 hours
+        const recentExports = jobsData.filter((job) => {
+          if (job.completedAt) {
+            const completedDate = new Date(job.completedAt);
+            return completedDate >= yesterday;
+          }
+          return false;
+        }).length;
+        
+        setDatevExportsCount(recentExports);
       }
     } catch (error) {
       console.error('Error fetching DATEV status:', error);
       setDatevStatus({ connected: false, lastSync: null });
+      setDatevExportsCount(0);
     }
   };
 
   const fetchActivities = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8080/api/v1/audit/recent', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setActivities(Array.isArray(data) ? data : []);
+      const response = await apiClient.get('/audit/recent');
+      if (response.data) {
+        setActivities(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
@@ -246,7 +269,7 @@ export default function Dashboard() {
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">{t('dashboard.stats.active')}</span>
               </div>
               <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.datevExports')}</h3>
-              <p className="text-3xl font-bold text-primary dark:text-blue-400">2</p>
+              <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : datevExportsCount}</p>
               <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.last24Hours')}</p>
             </div>
           </Link>

@@ -7,7 +7,10 @@ public record DocumentDto(
     long Size,
     int? ClientId,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    string? ClientName = null,
+    int? UserId = null,
+    string? UserName = null
 );
 
 public record UploadDocumentResponse(
