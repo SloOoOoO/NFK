@@ -115,6 +115,77 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// DATEV OAuth Login - Redirects to DATEV authorization
+    /// </summary>
+    [HttpGet("datev/login")]
+    public IActionResult DATEVLogin()
+    {
+        // In production, this would use actual DATEV OAuth configuration
+        // For now, simulate the OAuth flow by redirecting to a placeholder
+        var redirectUri = "http://localhost:5173/auth/register";
+        var simulatedFirstName = "Max";
+        var simulatedLastName = "Mustermann";
+        
+        // Redirect to registration with DATEV data pre-filled
+        return Redirect($"{redirectUri}?source=datev&firstName={simulatedFirstName}&lastName={simulatedLastName}");
+    }
+
+    /// <summary>
+    /// DATEV OAuth Callback - Handles the OAuth callback from DATEV
+    /// </summary>
+    [HttpGet("datev/callback")]
+    public IActionResult DATEVCallback([FromQuery] string code)
+    {
+        try
+        {
+            // In production, exchange code for token and get user info from DATEV
+            // For now, redirect to registration
+            var redirectUri = "http://localhost:5173/auth/register";
+            return Redirect($"{redirectUri}?source=datev&firstName=Max&lastName=Mustermann");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "DATEV callback error");
+            return Redirect("http://localhost:5173/auth/login?error=datev_failed");
+        }
+    }
+
+    /// <summary>
+    /// Google OAuth Login - Redirects to Google authorization
+    /// </summary>
+    [HttpGet("google/login")]
+    public IActionResult GoogleLogin()
+    {
+        // In production, this would use actual Google OAuth configuration
+        // For now, simulate the OAuth flow
+        var redirectUri = "http://localhost:5173/auth/register";
+        var simulatedEmail = "user@example.com";
+        
+        // Redirect to registration with Google email pre-filled
+        return Redirect($"{redirectUri}?source=google&email={simulatedEmail}");
+    }
+
+    /// <summary>
+    /// Google OAuth Callback - Handles the OAuth callback from Google
+    /// </summary>
+    [HttpGet("google/callback")]
+    public IActionResult GoogleCallback([FromQuery] string code)
+    {
+        try
+        {
+            // In production, exchange code for token and get user info from Google
+            // For now, redirect to registration
+            var redirectUri = "http://localhost:5173/auth/register";
+            return Redirect($"{redirectUri}?source=google&email=user@example.com");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Google callback error");
+            return Redirect("http://localhost:5173/auth/login?error=google_failed");
+        }
+    }
+
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {

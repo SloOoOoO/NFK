@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 import { validateSteuerID } from '../../utils/taxValidation';
@@ -118,11 +118,14 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [passwordValue, setPasswordValue] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [disabledFields, setDisabledFields] = useState<{[key: string]: boolean}>({});
   
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
@@ -133,6 +136,34 @@ export default function Register() {
       termsConsent: false,
     },
   });
+
+  // Handle SSO pre-filled data
+  useEffect(() => {
+    const source = searchParams.get('source');
+    
+    if (source === 'datev') {
+      // DATEV pre-fills first and last name
+      const firstName = searchParams.get('firstName');
+      const lastName = searchParams.get('lastName');
+      
+      if (firstName) {
+        setValue('firstName', firstName);
+        setDisabledFields(prev => ({ ...prev, firstName: true }));
+      }
+      if (lastName) {
+        setValue('lastName', lastName);
+        setDisabledFields(prev => ({ ...prev, lastName: true }));
+      }
+    } else if (source === 'google') {
+      // Google pre-fills email
+      const email = searchParams.get('email');
+      
+      if (email) {
+        setValue('email', email);
+        setDisabledFields(prev => ({ ...prev, email: true }));
+      }
+    }
+  }, [searchParams, setValue]);
   
   const clientType = watch('clientType');
   const password = watch('password');
@@ -242,8 +273,10 @@ export default function Register() {
                   type="email"
                   id="email"
                   aria-label="E-Mail-Adresse"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  disabled={loading}
+                  className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    disabledFields.email ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75' : ''
+                  }`}
+                  disabled={loading || disabledFields.email}
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
@@ -370,8 +403,10 @@ export default function Register() {
                     type="text"
                     id="firstName"
                     aria-label="Vorname"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    disabled={loading}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                      disabledFields.firstName ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75' : ''
+                    }`}
+                    disabled={loading || disabledFields.firstName}
                   />
                   {errors.firstName && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName.message}</p>
@@ -387,8 +422,10 @@ export default function Register() {
                     type="text"
                     id="lastName"
                     aria-label="Nachname"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    disabled={loading}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                      disabledFields.lastName ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75' : ''
+                    }`}
+                    disabled={loading || disabledFields.lastName}
                   />
                   {errors.lastName && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName.message}</p>
