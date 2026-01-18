@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 interface DarkModeContextType {
   darkMode: boolean;
   toggleDarkMode: () => void;
+  setDarkMode: (value: boolean) => void;
 }
 
 const DarkModeContext = createContext<DarkModeContextType | undefined>(undefined);
@@ -31,7 +32,7 @@ export function DarkModeProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
+    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode, setDarkMode }}>
       {children}
     </DarkModeContext.Provider>
   );

@@ -146,12 +146,19 @@ export default function Register() {
       // Backend API integration point: POST /api/v1/auth/register
       // Expected payload: all form fields as JSON
       // Response: success message (user will receive email verification)
+      const genderMap: { [key: string]: string } = {
+        'Herr': 'male',
+        'Frau': 'female',
+        'Divers': 'diverse'
+      };
+      
       const payload = {
         email: data.email,
         password: data.password,
         clientType: data.clientType,
         companyName: data.clientType !== 'Privatperson' ? data.companyName : undefined,
         salutation: data.salutation,
+        gender: genderMap[data.salutation] || 'diverse',
         firstName: data.firstName,
         lastName: data.lastName,
         street: data.street,
