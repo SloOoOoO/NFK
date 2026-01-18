@@ -167,12 +167,12 @@ export default function Calendar() {
 
   const getEventTypeColor = (color: string) => {
     const colors: { [key: string]: string } = {
-      'blue': 'bg-blue-100 text-blue-800 border-blue-300',
-      'red': 'bg-red-100 text-red-800 border-red-300',
-      'yellow': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      'green': 'bg-green-100 text-green-800 border-green-300',
+      'blue': 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700',
+      'red': 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700',
+      'yellow': 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700',
+      'green': 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700',
     };
-    return colors[color] || 'bg-gray-100 text-gray-800 border-gray-300';
+    return colors[color] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600';
   };
 
   const getEventIcon = (type: string) => {

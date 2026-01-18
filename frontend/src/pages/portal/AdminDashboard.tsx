@@ -17,6 +17,8 @@ export default function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [newRole, setNewRole] = useState('');
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,6 +39,10 @@ export default function AdminDashboard() {
       if (headerRes.status === 'fulfilled') {
         setHeaderText(headerRes.value.data);
       }
+      
+      // Fetch audit logs and analytics for tabs
+      fetchAuditLogs();
+      fetchAnalytics();
     } catch (error: any) {
       console.error('Failed to fetch admin data:', error);
       if (error?.response?.status === 401 || error?.response?.status === 403) {
@@ -45,6 +51,38 @@ export default function AdminDashboard() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const response = await fetch('/api/v1/audit/logs', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAuditLogs(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await fetch('/api/v1/analytics/page-visits', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAnalytics(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
     }
   };
 
@@ -142,6 +180,26 @@ export default function AdminDashboard() {
               }`}
             >
               ✏️ Header-Text
+            </button>
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`pb-3 px-4 font-medium transition-colors ${
+                activeTab === 'logs'
+                  ? 'border-b-2 border-primary text-primary dark:text-blue-400'
+                  : 'text-textSecondary dark:text-gray-400 hover:text-primary dark:hover:text-blue-400'
+              }`}
+            >
+              📋 Logs
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`pb-3 px-4 font-medium transition-colors ${
+                activeTab === 'analytics'
+                  ? 'border-b-2 border-primary text-primary dark:text-blue-400'
+                  : 'text-textSecondary dark:text-gray-400 hover:text-primary dark:hover:text-blue-400'
+              }`}
+            >
+              📊 Statistiken
             </button>
           </div>
 
@@ -283,6 +341,139 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Audit Logs Tab */}
+          {activeTab === 'logs' && (
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4 dark:text-white">Audit Logs</h2>
+              
+              {loading || auditLogs.length === 0 ? (
+                <div className="text-center py-8 text-textSecondary dark:text-gray-400">
+                  {loading ? 'Lädt...' : 'Keine Logs gefunden'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-secondary dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Zeitstempel</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Benutzer</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Aktion</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Entität</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">IP-Adresse</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="border-b dark:border-gray-700 hover:bg-secondary/50 dark:hover:bg-gray-700/50">
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">
+                            {new Date(log.timestamp).toLocaleString('de-DE')}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium dark:text-gray-200">
+                            {log.user.firstName} {log.user.lastName}
+                          </td>
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              log.action === 'CREATE' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
+                              log.action === 'UPDATE' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' :
+                              log.action === 'DELETE' ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' :
+                              'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                            }`}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">
+                            {log.entityType} #{log.entityId}
+                          </td>
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">{log.ipAddress}</td>
+                          <td className="px-4 py-3 text-sm dark:text-gray-300">{log.details}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Analytics Tab */}
+          {activeTab === 'analytics' && (
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-6 dark:text-white">Statistiken</h2>
+              
+              {loading || !analytics ? (
+                <div className="text-center py-8 text-textSecondary dark:text-gray-400">
+                  {loading ? 'Lädt...' : 'Keine Statistiken verfügbar'}
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Total this year */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
+                      <div className="text-4xl font-bold mb-2">
+                        {analytics.yearly?.[0]?.visits?.toLocaleString('de-DE') || 0}
+                      </div>
+                      <div className="text-blue-100">Besuche dieses Jahr</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg shadow text-white">
+                      <div className="text-4xl font-bold mb-2">
+                        {analytics.monthly?.[analytics.monthly.length - 1]?.visits?.toLocaleString('de-DE') || 0}
+                      </div>
+                      <div className="text-green-100">Besuche diesen Monat</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-lg shadow text-white">
+                      <div className="text-4xl font-bold mb-2">
+                        {analytics.daily?.[analytics.daily.length - 1]?.visits || 0}
+                      </div>
+                      <div className="text-purple-100">Besuche heute</div>
+                    </div>
+                  </div>
+                  
+                  {/* Daily visits chart (last 30 days) - simplified table view */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Tägliche Besuche (letzte 30 Tage)</h3>
+                    <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                      <div className="grid grid-cols-7 gap-2">
+                        {analytics.daily?.slice(-7).map((day: any, index: number) => (
+                          <div key={index} className="text-center">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{day.date.split('.')[0]}.{day.date.split('.')[1]}</div>
+                            <div className="bg-blue-500 rounded" style={{ height: `${Math.max(20, (day.visits / 200) * 100)}px` }}></div>
+                            <div className="text-sm font-semibold mt-2 dark:text-gray-200">{day.visits}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Monthly visits (last 12 months) */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Monatliche Besuche (letzte 12 Monate)</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-secondary dark:bg-gray-700">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-sm font-semibold dark:text-gray-200">Monat</th>
+                            <th className="px-4 py-2 text-right text-sm font-semibold dark:text-gray-200">Besuche</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analytics.monthly?.map((month: any, index: number) => (
+                            <tr key={index} className="border-b dark:border-gray-700">
+                              <td className="px-4 py-2 text-sm dark:text-gray-300">{month.month}</td>
+                              <td className="px-4 py-2 text-sm text-right font-medium dark:text-gray-200">
+                                {month.visits.toLocaleString('de-DE')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

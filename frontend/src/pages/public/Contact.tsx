@@ -1,34 +1,50 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { useDarkMode } from '../../contexts/DarkModeContext';
 
 export default function Contact() {
   const { t } = useTranslation();
+  const { setDarkMode } = useDarkMode();
+
+  useEffect(() => {
+    // Force light mode on public pages
+    const previousMode = localStorage.getItem('darkMode');
+    setDarkMode(false);
+    
+    // Restore dark mode when leaving page
+    return () => {
+      if (previousMode === 'true') {
+        setDarkMode(true);
+      }
+    };
+  }, [setDarkMode]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white">
       {/* Navigation Header */}
-      <nav className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+      <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-primary dark:text-blue-400">NFK Buchhaltung</h2>
+            <h2 className="text-2xl font-bold text-primary">NFK Buchhaltung</h2>
             <div className="flex gap-4 items-center">
               <Link
                 to="/"
-                className="text-textPrimary dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 px-4 py-2"
+                className="text-textPrimary hover:text-primary px-4 py-2"
               >
                 {t('common.homepage')}
               </Link>
               <Link
                 to="/contact"
-                className="text-textPrimary dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 px-4 py-2"
+                className="text-textPrimary hover:text-primary px-4 py-2"
               >
                 {t('common.contact')}
               </Link>
               <LanguageSwitcher />
               <Link
                 to="/auth/register"
-                className="text-textPrimary dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 px-4 py-2"
+                className="text-textPrimary hover:text-primary px-4 py-2"
               >
                 {t('common.register')}
               </Link>
@@ -44,7 +60,7 @@ export default function Contact() {
       </nav>
 
       {/* Hero Section */}
-      <header className="bg-primary dark:bg-blue-900 text-white py-16">
+      <header className="bg-primary text-white py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-5xl font-bold mb-4">
@@ -58,20 +74,20 @@ export default function Contact() {
       </header>
 
       {/* Contact Section */}
-      <section className="py-20 bg-secondary dark:bg-gray-800">
+      <section className="py-20 bg-secondary">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Contact Information */}
             <div className="space-y-8">
               <div>
-                <h3 className="text-2xl font-semibold mb-6 text-primary dark:text-blue-400">
+                <h3 className="text-2xl font-semibold mb-6 text-primary">
                   {t('contact.info')}
                 </h3>
-                <div className="space-y-6 text-textSecondary dark:text-gray-300">
+                <div className="space-y-6 text-textSecondary">
                   <div className="flex items-start gap-4">
                     <span className="text-3xl">📍</span>
                     <div>
-                      <p className="font-medium text-textPrimary dark:text-white text-lg mb-1">
+                      <p className="font-medium text-textPrimary text-lg mb-1">
                         {t('contact.address')}
                       </p>
                       <p className="text-base">Bachemer Str. 10</p>
@@ -81,10 +97,10 @@ export default function Contact() {
                   <div className="flex items-start gap-4">
                     <span className="text-3xl">📧</span>
                     <div>
-                      <p className="font-medium text-textPrimary dark:text-white text-lg mb-1">
+                      <p className="font-medium text-textPrimary text-lg mb-1">
                         {t('contact.email')}
                       </p>
-                      <a href="mailto:info@nfk-buchhaltung.de" className="text-base hover:text-primary dark:hover:text-blue-400">
+                      <a href="mailto:info@nfk-buchhaltung.de" className="text-base hover:text-primary">
                         info@nfk-buchhaltung.de
                       </a>
                     </div>
@@ -92,10 +108,10 @@ export default function Contact() {
                   <div className="flex items-start gap-4">
                     <span className="text-3xl">📞</span>
                     <div>
-                      <p className="font-medium text-textPrimary dark:text-white text-lg mb-1">
+                      <p className="font-medium text-textPrimary text-lg mb-1">
                         {t('contact.phone')}
                       </p>
-                      <a href="tel:+492211234567" className="text-base hover:text-primary dark:hover:text-blue-400">
+                      <a href="tel:+492211234567" className="text-base hover:text-primary">
                         +49 (0) 221 1234567
                       </a>
                     </div>
@@ -103,7 +119,7 @@ export default function Contact() {
                   <div className="flex items-start gap-4">
                     <span className="text-3xl">🕐</span>
                     <div>
-                      <p className="font-medium text-textPrimary dark:text-white text-lg mb-1">
+                      <p className="font-medium text-textPrimary text-lg mb-1">
                         {t('contact.hours')}
                       </p>
                       <p className="text-base">{t('contact.hoursWeekdays')}</p>
@@ -114,49 +130,49 @@ export default function Contact() {
               </div>
 
               {/* Optional Contact Form */}
-              <div className="bg-white dark:bg-gray-700 p-6 rounded-lg shadow-md">
-                <h4 className="text-xl font-semibold mb-4 text-primary dark:text-blue-400">
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h4 className="text-xl font-semibold mb-4 text-primary">
                   {t('contact.form.title')}
                 </h4>
                 <form className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-textPrimary dark:text-gray-200">
+                    <label className="block text-sm font-medium mb-1 text-textPrimary">
                       {t('contact.form.name')}
                     </label>
                     <input
                       type="text"
                       placeholder={t('contact.form.namePlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-textPrimary dark:text-gray-200">
+                    <label className="block text-sm font-medium mb-1 text-textPrimary">
                       {t('contact.form.email')}
                     </label>
                     <input
                       type="email"
                       placeholder={t('contact.form.emailPlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-textPrimary dark:text-gray-200">
+                    <label className="block text-sm font-medium mb-1 text-textPrimary">
                       {t('contact.form.subject')}
                     </label>
                     <input
                       type="text"
                       placeholder={t('contact.form.subjectPlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-textPrimary dark:text-gray-200">
+                    <label className="block text-sm font-medium mb-1 text-textPrimary">
                       {t('contact.form.message')}
                     </label>
                     <textarea
                       rows={4}
                       placeholder={t('contact.form.messagePlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     ></textarea>
                   </div>
                   <button
@@ -187,7 +203,7 @@ export default function Contact() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-textPrimary dark:bg-gray-950 text-white py-8">
+      <footer className="bg-textPrimary text-white py-8">
         <div className="container mx-auto px-4 text-center">
           <p>&copy; 2024 NFK Buchhaltung - {t('landing.footer')}</p>
         </div>
