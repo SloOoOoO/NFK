@@ -367,7 +367,9 @@ export default function Calendar() {
             
             <div className="flex items-center gap-4">
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">← Zurück</button>
-              <span className="font-semibold text-lg dark:text-gray-200">Januar 2025</span>
+              <span className="font-semibold text-lg dark:text-gray-200">
+                {new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+              </span>
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">Weiter →</button>
             </div>
             
