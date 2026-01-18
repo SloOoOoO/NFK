@@ -106,8 +106,8 @@ export default function Contact() {
                       <p className="font-medium text-textPrimary dark:text-white text-lg mb-1">
                         {t('contact.hours')}
                       </p>
-                      <p className="text-base">Mo - Fr: 9:00 - 17:00 Uhr</p>
-                      <p className="text-base">Sa - So: Geschlossen</p>
+                      <p className="text-base">{t('contact.hoursWeekdays')}</p>
+                      <p className="text-base">{t('contact.hoursWeekend')}</p>
                     </div>
                   </div>
                 </div>

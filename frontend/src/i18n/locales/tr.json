@@ -50,7 +50,8 @@
     "email": "E-posta",
     "phone": "Telefon",
     "hours": "Çalışma Saatleri",
-    "hoursValue": "Pzt - Cuma: 09:00 - 17:00<br/>Cmt - Pzr: Kapalı",
+    "hoursWeekdays": "Pzt - Cum: 09:00 - 17:00",
+    "hoursWeekend": "Cmt - Paz: Kapalı",
     "form": {
       "title": "İletişim Formu",
       "name": "İsim",

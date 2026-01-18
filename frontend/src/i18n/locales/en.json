@@ -50,7 +50,8 @@
     "email": "Email",
     "phone": "Phone",
     "hours": "Business Hours",
-    "hoursValue": "Mon - Fri: 9:00 AM - 5:00 PM<br/>Sat - Sun: Closed",
+    "hoursWeekdays": "Mon - Fri: 9:00 AM - 5:00 PM",
+    "hoursWeekend": "Sat - Sun: Closed",
     "form": {
       "title": "Contact Form",
       "name": "Name",

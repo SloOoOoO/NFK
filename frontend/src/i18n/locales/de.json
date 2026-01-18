@@ -50,7 +50,8 @@
     "email": "E-Mail",
     "phone": "Telefon",
     "hours": "Öffnungszeiten",
-    "hoursValue": "Mo - Fr: 9:00 - 17:00 Uhr<br/>Sa - So: Geschlossen",
+    "hoursWeekdays": "Mo - Fr: 9:00 - 17:00 Uhr",
+    "hoursWeekend": "Sa - So: Geschlossen",
     "form": {
       "title": "Kontaktformular",
       "name": "Name",
