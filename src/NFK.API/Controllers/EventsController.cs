@@ -28,6 +28,7 @@ public class EventsController : ControllerBase
         {
             var appointments = await _context.Appointments
                 .Include(a => a.Client)
+                .Where(a => !a.IsDeleted)
                 .OrderBy(a => a.StartTime)
                 .ToListAsync();
 
@@ -47,6 +48,39 @@ public class EventsController : ControllerBase
         {
             _logger.LogError(ex, "Error fetching events");
             return StatusCode(500, new { error = "internal_error", message = "Error fetching events" });
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        try
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Client)
+                .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+
+            if (appointment == null)
+            {
+                return NotFound(new { error = "not_found", message = "Event not found" });
+            }
+
+            var eventDto = new EventDto(
+                appointment.Id,
+                appointment.Title,
+                appointment.Client.CompanyName,
+                appointment.StartTime,
+                appointment.StartTime.ToString("HH:mm"),
+                GetEventType(appointment.Status),
+                appointment.Notes
+            );
+
+            return Ok(eventDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching event {EventId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching event" });
         }
     }
 
@@ -109,6 +143,118 @@ public class EventsController : ControllerBase
         {
             _logger.LogError(ex, "Error creating event");
             return StatusCode(500, new { error = "internal_error", message = "Error creating event" });
+        }
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateEventDto dto)
+    {
+        try
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Client)
+                .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+
+            if (appointment == null)
+            {
+                return NotFound(new { error = "not_found", message = "Event not found" });
+            }
+
+            // Update fields
+            appointment.Title = dto.Title;
+            appointment.Description = dto.Description;
+            appointment.Notes = dto.Description;
+            appointment.Location = dto.Location;
+
+            if (dto.Date.HasValue && !string.IsNullOrEmpty(dto.Time))
+            {
+                var timeParts = dto.Time.Split(':');
+                if (timeParts.Length == 2 && int.TryParse(timeParts[0], out var hour) && int.TryParse(timeParts[1], out var minute))
+                {
+                    var startTime = dto.Date.Value.Date.AddHours(hour).AddMinutes(minute);
+                    appointment.StartTime = startTime;
+                    appointment.EndTime = startTime.AddHours(1);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(dto.Status))
+            {
+                appointment.Status = dto.Status;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var result = new EventDto(
+                appointment.Id,
+                appointment.Title,
+                appointment.Client.CompanyName,
+                appointment.StartTime,
+                appointment.StartTime.ToString("HH:mm"),
+                GetEventType(appointment.Status),
+                appointment.Notes
+            );
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating event {EventId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error updating event" });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        try
+        {
+            var appointment = await _context.Appointments
+                .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+
+            if (appointment == null)
+            {
+                return NotFound(new { error = "not_found", message = "Event not found" });
+            }
+
+            // Soft delete
+            appointment.IsDeleted = true;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Event {EventId} deleted", id);
+
+            return Ok(new { message = "Event deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting event {EventId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error deleting event" });
+        }
+    }
+
+    [HttpPut("{id}/complete")]
+    public async Task<IActionResult> Complete(int id)
+    {
+        try
+        {
+            var appointment = await _context.Appointments
+                .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+
+            if (appointment == null)
+            {
+                return NotFound(new { error = "not_found", message = "Event not found" });
+            }
+
+            appointment.Status = "Completed";
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Event {EventId} marked as completed", id);
+
+            return Ok(new { message = "Event marked as completed" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing event {EventId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error completing event" });
         }
     }
 

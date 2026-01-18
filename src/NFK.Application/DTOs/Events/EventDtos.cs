@@ -18,3 +18,12 @@ public record CreateEventDto(
     string Time,
     string? Location
 );
+
+public record UpdateEventDto(
+    string Title,
+    string? Description,
+    DateTime? Date,
+    string? Time,
+    string? Location,
+    string? Status
+);

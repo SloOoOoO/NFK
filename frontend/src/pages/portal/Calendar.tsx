@@ -11,6 +11,8 @@ interface Event {
   time: string;
   type: string;
   color: string;
+  description?: string;
+  location?: string;
   status?: 'pending' | 'accepted' | 'declined';
   targetUserId?: number;
 }
@@ -34,6 +36,17 @@ export default function Calendar() {
   const [successMessage, setSuccessMessage] = useState('');
   const [newAppointment, setNewAppointment] = useState({
     clientId: 0,
+    title: '',
+    date: '',
+    time: '',
+    description: '',
+    location: '',
+  });
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showEventDetailModal, setShowEventDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editForm, setEditForm] = useState({
     title: '',
     date: '',
     time: '',
@@ -70,6 +83,8 @@ export default function Calendar() {
         time: event.time,
         type: event.type,
         color: getColorForType(event.type),
+        description: event.description || '',
+        location: event.location || '',
         status: 'accepted' as const,
       }));
       
@@ -78,15 +93,7 @@ export default function Calendar() {
     } catch (err: any) {
       console.log('Events endpoint not available:', err);
       setEndpointAvailable(false);
-      // Use demo data
-      setUpcomingEvents([
-        { id: 1, title: 'Jahresabschluss Besprechung', mandant: 'Schmidt GmbH', date: '15.01.2025', time: '10:00', type: 'Termin', color: 'blue', status: 'accepted' },
-        { id: 2, title: 'Frist: Umsatzsteuervoranmeldung', mandant: 'Müller & Partner', date: '20.01.2025', time: '23:59', type: 'Frist', color: 'red' },
-        { id: 3, title: 'Beratungsgespräch Investition', mandant: 'Koch Consulting', date: '18.01.2025', time: '14:30', type: 'Termin', color: 'blue', status: 'pending' },
-        { id: 4, title: 'DATEV Export Deadline', mandant: 'System', date: '22.01.2025', time: '18:00', type: 'Aufgabe', color: 'yellow' },
-        { id: 5, title: 'Betriebsprüfung Vorbereitung', mandant: 'Becker Handels AG', date: '25.01.2025', time: '09:00', type: 'Termin', color: 'blue', status: 'accepted' },
-        { id: 6, title: 'Quartalsabschluss Deadline', mandant: 'Schmidt GmbH', date: '30.01.2025', time: '23:59', type: 'Frist', color: 'red' },
-      ]);
+      setUpcomingEvents([]);
     } finally {
       setLoading(false);
     }
@@ -175,6 +182,114 @@ export default function Calendar() {
       'Aufgabe': '✓',
     };
     return icons[type] || '📌';
+  };
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setShowEventDetailModal(true);
+  };
+
+  const handleEditClick = () => {
+    if (!selectedEvent) return;
+    
+    // Convert DD.MM.YYYY to YYYY-MM-DD for input[type="date"]
+    const dateParts = selectedEvent.date.split('.');
+    if (dateParts.length !== 3) {
+      console.error('Invalid date format:', selectedEvent.date);
+      alert('Ungültiges Datumsformat');
+      return;
+    }
+    const [day, month, year] = dateParts;
+    const isoDate = `${year}-${month}-${day}`;
+    
+    setEditForm({
+      title: selectedEvent.title,
+      date: isoDate,
+      time: selectedEvent.time,
+      description: selectedEvent.description || '',
+      location: selectedEvent.location || '',
+    });
+    setShowEventDetailModal(false);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) return;
+    
+    setCreating(true);
+    try {
+      await eventsAPI.update(selectedEvent.id, {
+        title: editForm.title,
+        date: editForm.date,
+        time: editForm.time,
+        description: editForm.description,
+        location: editForm.location,
+      });
+      
+      setSuccessMessage('Ereignis wurde erfolgreich aktualisiert!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      setShowEditModal(false);
+      setSelectedEvent(null);
+      await fetchEvents();
+    } catch (err: any) {
+      console.error('Error updating event:', err);
+      alert('Fehler beim Aktualisieren des Ereignisses');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowEventDetailModal(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedEvent) return;
+    
+    setCreating(true);
+    try {
+      await eventsAPI.delete(selectedEvent.id);
+      
+      setSuccessMessage('Ereignis wurde erfolgreich gelöscht!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      setShowDeleteConfirm(false);
+      setSelectedEvent(null);
+      await fetchEvents();
+    } catch (err: any) {
+      console.error('Error deleting event:', err);
+      alert('Fehler beim Löschen des Ereignisses');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCompleteEvent = async () => {
+    if (!selectedEvent) return;
+    
+    setCreating(true);
+    try {
+      await eventsAPI.complete(selectedEvent.id);
+      
+      setSuccessMessage('Ereignis wurde erfolgreich abgeschlossen!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      setShowEventDetailModal(false);
+      setSelectedEvent(null);
+      await fetchEvents();
+    } catch (err: any) {
+      console.error('Error completing event:', err);
+      alert('Fehler beim Abschließen des Ereignisses');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const formatDateTimeDisplay = (date: string, time: string) => {
+    return `${date} um ${time} Uhr`;
   };
 
   // Simple calendar grid for January 2025
@@ -466,7 +581,11 @@ export default function Calendar() {
             
             <div className="space-y-3">
               {upcomingEvents.slice(0, 6).map((event) => (
-                <div key={event.id} className={`p-3 rounded-lg border-l-4 ${getEventTypeColor(event.color)}`}>
+                <div 
+                  key={event.id} 
+                  className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getEventTypeColor(event.color)}`}
+                  onClick={() => handleEventClick(event)}
+                >
                   <div className="flex items-start gap-2">
                     <span className="text-xl">{getEventIcon(event.type)}</span>
                     <div className="flex-1 min-w-0">
@@ -491,6 +610,219 @@ export default function Calendar() {
             </button>
           </div>
         </div>
+
+        {/* Event Detail Modal */}
+        <Dialog.Root open={showEventDetailModal} onOpenChange={setShowEventDetailModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
+              <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Ereignis Details</h2>
+              </Dialog.Title>
+              
+              {selectedEvent && (
+                <div className="p-6 space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-textPrimary dark:text-gray-100 mb-2">
+                      {selectedEvent.title}
+                    </h3>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(selectedEvent.color)}`}>
+                      {getEventIcon(selectedEvent.type)} {selectedEvent.type}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-textSecondary dark:text-gray-300">
+                      <span className="font-medium">Mandant:</span>
+                      <span>{selectedEvent.mandant}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-textSecondary dark:text-gray-300">
+                      <span className="font-medium">Datum & Uhrzeit:</span>
+                      <span>{formatDateTimeDisplay(selectedEvent.date, selectedEvent.time)}</span>
+                    </div>
+                    
+                    {selectedEvent.location && (
+                      <div className="flex items-center gap-2 text-textSecondary dark:text-gray-300">
+                        <span className="font-medium">Ort:</span>
+                        <span>{selectedEvent.location}</span>
+                      </div>
+                    )}
+                    
+                    {selectedEvent.description && (
+                      <div className="pt-2">
+                        <span className="font-medium text-textSecondary dark:text-gray-300">Beschreibung:</span>
+                        <p className="mt-1 text-textSecondary dark:text-gray-300 whitespace-pre-wrap">
+                          {selectedEvent.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={handleEditClick}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                    >
+                      Bearbeiten
+                    </button>
+                    <button
+                      onClick={handleCompleteEvent}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+                      disabled={creating}
+                    >
+                      {creating ? 'Wird abgeschlossen...' : 'Abschließen'}
+                    </button>
+                    <button
+                      onClick={handleDeleteClick}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+
+        {/* Event Edit Modal */}
+        <Dialog.Root open={showEditModal} onOpenChange={setShowEditModal}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
+              <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Ereignis bearbeiten</h2>
+              </Dialog.Title>
+              
+              <form onSubmit={handleUpdateEvent} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Titel *</label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={creating}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Datum *</label>
+                    <input
+                      type="date"
+                      value={editForm.date}
+                      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                      disabled={creating}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Uhrzeit *</label>
+                    <input
+                      type="time"
+                      value={editForm.time}
+                      onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      required
+                      disabled={creating}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Beschreibung</label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    rows={3}
+                    disabled={creating}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ort (optional)</label>
+                  <input
+                    type="text"
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={creating}
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="flex-1 btn-secondary"
+                      disabled={creating}
+                    >
+                      Abbrechen
+                    </button>
+                  </Dialog.Close>
+                  <button
+                    type="submit"
+                    className="flex-1 btn-primary"
+                    disabled={creating}
+                  >
+                    {creating ? 'Wird gespeichert...' : 'Speichern'}
+                  </button>
+                </div>
+              </form>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog.Root open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50">
+              <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Ereignis löschen</h2>
+              </Dialog.Title>
+              
+              <div className="p-6">
+                <p className="text-textSecondary dark:text-gray-300 mb-6">
+                  Möchten Sie dieses Ereignis wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+                
+                {selectedEvent && (
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md mb-6">
+                    <p className="font-medium text-textPrimary dark:text-gray-100">{selectedEvent.title}</p>
+                    <p className="text-sm text-textSecondary dark:text-gray-300 mt-1">
+                      {selectedEvent.mandant} • {selectedEvent.date} • {selectedEvent.time}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex gap-3">
+                  <Dialog.Close asChild>
+                    <button
+                      className="flex-1 btn-secondary"
+                      disabled={creating}
+                    >
+                      Abbrechen
+                    </button>
+                  </Dialog.Close>
+                  <button
+                    onClick={handleConfirmDelete}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                    disabled={creating}
+                  >
+                    {creating ? 'Wird gelöscht...' : 'Löschen'}
+                  </button>
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </main>
     </div>
   );

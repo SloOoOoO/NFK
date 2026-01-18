@@ -21,3 +21,7 @@ public record SendMessageRequest(
     string Content,
     int? CaseId = null
 );
+
+public record ReplyMessageRequest(
+    string Content
+);

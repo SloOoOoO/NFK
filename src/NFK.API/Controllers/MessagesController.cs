@@ -44,16 +44,20 @@ public class MessagesController : ControllerBase
             // Role-based filtering
             if (userRole == "Client")
             {
-                // Clients can only see messages sent to them (not pool emails)
-                query = query.Where(m => m.RecipientUserId == currentUserId.Value && !m.IsPoolEmail);
+                // Clients can see messages sent to them OR messages they sent
+                query = query.Where(m => 
+                    (m.RecipientUserId == currentUserId.Value || m.SenderUserId == currentUserId.Value) 
+                    && !m.IsPoolEmail);
             }
             else
             {
                 // Employees (SuperAdmin, Consultant, Receptionist, DATEVManager) can see:
                 // 1. Messages sent to them
                 // 2. Pool emails
+                // 3. Messages they sent
                 query = query.Where(m => 
                     m.RecipientUserId == currentUserId.Value || 
+                    m.SenderUserId == currentUserId.Value ||
                     m.IsPoolEmail);
             }
 
@@ -78,6 +82,65 @@ public class MessagesController : ControllerBase
         {
             _logger.LogError(ex, "Error fetching messages");
             return StatusCode(500, new { error = "internal_error", message = "Error fetching messages" });
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var message = await _context.Messages
+                .Include(m => m.SenderUser)
+                .Include(m => m.RecipientUser)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (message == null)
+            {
+                return NotFound(new { error = "not_found", message = $"Message {id} not found" });
+            }
+
+            // Check if user has access to this message
+            if (message.RecipientUserId != currentUserId.Value && message.SenderUserId != currentUserId.Value)
+            {
+                var userRole = User.FindFirst("role")?.Value;
+                if (userRole != "SuperAdmin")
+                {
+                    return Forbid();
+                }
+            }
+
+            // Mark as read if current user is recipient
+            if (message.RecipientUserId == currentUserId.Value && !message.IsRead)
+            {
+                message.IsRead = true;
+                message.ReadAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
+            var messageDto = new MessageDto(
+                message.Id,
+                (message.SenderUser?.FirstName ?? "") + " " + (message.SenderUser?.LastName ?? ""),
+                message.Subject,
+                message.Content.Length > 100 ? message.Content.Substring(0, 100) + "..." : message.Content,
+                message.Content,
+                message.CreatedAt,
+                !message.IsRead,
+                message.IsPoolEmail
+            );
+
+            return Ok(messageDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching message {MessageId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching message" });
         }
     }
 
@@ -176,6 +239,119 @@ public class MessagesController : ControllerBase
         {
             _logger.LogError(ex, "Error sending message");
             return StatusCode(500, new { error = "internal_error", message = "Error sending message" });
+        }
+    }
+
+    /// <summary>
+    /// Reply to an existing message
+    /// </summary>
+    [HttpPost("{id}/reply")]
+    public async Task<IActionResult> ReplyToMessage(int id, [FromBody] ReplyMessageRequest request)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            // Get original message
+            var originalMessage = await _context.Messages
+                .Include(m => m.SenderUser)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (originalMessage == null)
+            {
+                return NotFound(new { error = "not_found", message = "Original message not found" });
+            }
+
+            // Determine recipient (reply to sender of original message)
+            var recipientUserId = originalMessage.SenderUserId ?? originalMessage.RecipientUserId;
+            if (recipientUserId == currentUserId.Value)
+            {
+                // If original sender is null or is current user, reply to recipient instead
+                recipientUserId = originalMessage.RecipientUserId;
+            }
+
+            // Create reply message
+            var replySubject = originalMessage.Subject.StartsWith("Re: ") 
+                ? originalMessage.Subject 
+                : $"Re: {originalMessage.Subject}";
+
+            var replyMessage = new Domain.Entities.Messaging.Message
+            {
+                SenderUserId = currentUserId.Value,
+                RecipientUserId = recipientUserId,
+                Subject = replySubject,
+                Content = request.Content,
+                CaseId = originalMessage.CaseId,
+                IsRead = false,
+                IsPoolEmail = false
+            };
+
+            _context.Messages.Add(replyMessage);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Reply sent from user {SenderId} to user {RecipientId} for message {OriginalMessageId}",
+                currentUserId.Value, recipientUserId, id);
+
+            return Ok(new { 
+                message = "Reply sent successfully", 
+                messageId = replyMessage.Id 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error replying to message {MessageId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error sending reply" });
+        }
+    }
+
+    /// <summary>
+    /// Delete a message (soft delete)
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteMessage(int id)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var userRole = User.FindFirst("role")?.Value;
+            
+            var message = await _context.Messages.FirstOrDefaultAsync(m => m.Id == id);
+
+            if (message == null)
+            {
+                return NotFound(new { error = "not_found", message = "Message not found" });
+            }
+
+            // Only allow deletion if user is sender, recipient, or SuperAdmin
+            if (message.SenderUserId != currentUserId.Value && 
+                message.RecipientUserId != currentUserId.Value && 
+                userRole != "SuperAdmin")
+            {
+                return Forbid();
+            }
+
+            // Soft delete
+            message.IsDeleted = true;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Message {MessageId} deleted by user {UserId}", id, currentUserId.Value);
+
+            return Ok(new { message = "Message deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting message {MessageId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error deleting message" });
         }
     }
 

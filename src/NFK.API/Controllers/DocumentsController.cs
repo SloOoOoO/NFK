@@ -99,41 +99,70 @@ public class DocumentsController : ControllerBase
                 return BadRequest(new { error = "invalid_request", message = "No file provided" });
             }
 
-            // Validate file size (max 10MB)
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            // 1. Validate file type (PDF only)
+            if (file.ContentType != "application/pdf")
+            {
+                return BadRequest(new { error = "invalid_file_type", message = "Nur PDF-Dateien sind erlaubt." });
+            }
+
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (fileExtension != ".pdf")
+            {
+                return BadRequest(new { error = "invalid_file_type", message = "Nur PDF-Dateien sind erlaubt." });
+            }
+
+            // 2. Validate file size (max 10 MB)
             const long maxFileSize = 10 * 1024 * 1024; // 10MB in bytes
             if (file.Length > maxFileSize)
             {
                 return BadRequest(new { 
                     error = "file_too_large", 
-                    message = $"File size exceeds the maximum limit of {maxFileSize / (1024 * 1024)}MB" 
+                    message = "Datei zu groß. Maximale Größe: 10 MB." 
                 });
             }
 
-            // Validate file type
-            var allowedExtensions = new[] { ".pdf", ".docx", ".xlsx", ".png", ".jpg", ".jpeg" };
-            var allowedMimeTypes = new[] { 
-                "application/pdf", 
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "image/png",
-                "image/jpeg"
-            };
+            // 3. Get user's client ID for document count and storage checks
+            var userRole = User.FindFirst("role")?.Value;
+            int? userClientId = clientId;
 
-            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!allowedExtensions.Contains(fileExtension))
+            if (userRole == "Client")
             {
-                return BadRequest(new { 
-                    error = "invalid_file_type", 
-                    message = $"File type '{fileExtension}' is not allowed. Allowed types: {string.Join(", ", allowedExtensions)}" 
-                });
+                // For clients, get their client record
+                var clientRecord = await _context.Clients
+                    .FirstOrDefaultAsync(c => c.UserId == currentUserId.Value);
+                if (clientRecord != null)
+                {
+                    userClientId = clientRecord.Id;
+                }
             }
 
-            if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
+            if (userClientId.HasValue)
             {
-                return BadRequest(new { 
-                    error = "invalid_mime_type", 
-                    message = $"MIME type '{file.ContentType}' is not allowed" 
-                });
+                // 4. Check user's document count (max 10)
+                var userDocCount = await _context.Documents
+                    .CountAsync(d => d.Case != null && d.Case.ClientId == userClientId.Value && !d.IsDeleted);
+
+                if (userDocCount >= 10)
+                {
+                    return BadRequest(new { error = "document_limit_reached", message = "Maximale Anzahl von 10 Dokumenten erreicht." });
+                }
+
+                // 5. Check total storage (max 100 MB)
+                var totalSize = await _context.Documents
+                    .Where(d => d.Case != null && d.Case.ClientId == userClientId.Value && !d.IsDeleted)
+                    .SumAsync(d => (long?)d.FileSize) ?? 0;
+
+                const long maxTotalSize = 100 * 1024 * 1024; // 100 MB
+                if (totalSize + file.Length > maxTotalSize)
+                {
+                    return BadRequest(new { error = "storage_limit_exceeded", message = "Speicherlimit von 100 MB überschritten." });
+                }
             }
 
             // For now, just store metadata (not actual file)
@@ -145,7 +174,7 @@ public class DocumentsController : ControllerBase
                 FileType = file.ContentType,
                 FileSize = file.Length,
                 CaseId = caseId,
-                UploadedByUserId = GetCurrentUserId()
+                UploadedByUserId = currentUserId
             };
 
             _context.Documents.Add(document);
@@ -164,6 +193,58 @@ public class DocumentsController : ControllerBase
         {
             _logger.LogError(ex, "Error uploading document");
             return StatusCode(500, new { error = "internal_error", message = "Error uploading document" });
+        }
+    }
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var userRole = User.FindFirst("role")?.Value;
+            int? userClientId = null;
+
+            if (userRole == "Client")
+            {
+                // For clients, get their client record
+                var clientRecord = await _context.Clients
+                    .FirstOrDefaultAsync(c => c.UserId == currentUserId.Value);
+                if (clientRecord != null)
+                {
+                    userClientId = clientRecord.Id;
+                }
+            }
+
+            int documentCount = 0;
+            long totalSize = 0;
+
+            if (userClientId.HasValue)
+            {
+                documentCount = await _context.Documents
+                    .CountAsync(d => d.Case != null && d.Case.ClientId == userClientId.Value && !d.IsDeleted);
+
+                totalSize = await _context.Documents
+                    .Where(d => d.Case != null && d.Case.ClientId == userClientId.Value && !d.IsDeleted)
+                    .SumAsync(d => (long?)d.FileSize) ?? 0;
+            }
+
+            return Ok(new { 
+                documentCount,
+                totalSize,
+                maxDocuments = 10,
+                maxTotalSize = 100 * 1024 * 1024 // 100 MB
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching document stats");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching document stats" });
         }
     }
 
