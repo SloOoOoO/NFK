@@ -27,6 +27,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<UserSession> UserSessions { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+    public DbSet<PasswordHistory> PasswordHistories { get; set; }
+    public DbSet<MfaSecret> MfaSecrets { get; set; }
 
     // Clients
     public DbSet<Client> Clients { get; set; }
@@ -72,6 +74,47 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(256);
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            
+            // Add indexes for performance
+            entity.HasIndex(e => e.Email);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+        
+        // PasswordHistory entity configuration
+        modelBuilder.Entity<PasswordHistory>(entity =>
+        {
+            entity.HasIndex(e => new { e.UserId, e.CreatedAtUtc });
+        });
+        
+        // MfaSecret entity configuration
+        modelBuilder.Entity<MfaSecret>(entity =>
+        {
+            entity.HasIndex(e => e.UserId).IsUnique();
+        });
+        
+        // Client entity configuration - Add indexes
+        modelBuilder.Entity<Client>(entity =>
+        {
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.IsActive);
+        });
+        
+        // Case entity configuration - Add indexes
+        modelBuilder.Entity<Case>(entity =>
+        {
+            entity.HasIndex(e => e.ClientId);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.DueDate);
+        });
+        
+        // Document entity configuration - Add indexes
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.HasIndex(e => e.CaseId);
+            entity.HasIndex(e => e.UploadedByUserId);
+            entity.HasIndex(e => e.CreatedAt);
         });
 
         // Message entity configuration

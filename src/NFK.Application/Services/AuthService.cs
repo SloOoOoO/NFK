@@ -43,11 +43,12 @@ public class AuthService : IAuthService
             throw new ArgumentException("Invalid email format.");
         }
 
-        // Validate password requirements
-        if (!ValidatePassword(request.Password))
+        // Validate password using enhanced policy
+        var passwordValidation = PasswordPolicy.Validate(request.Password);
+        if (!passwordValidation.IsValid)
         {
-            _logger.LogWarning("Registration failed - weak password for: {Email} from IP: {IP}", request.Email, ipAddress);
-            throw new ArgumentException("Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number.");
+            _logger.LogWarning("Registration failed - password policy violation for: {Email} from IP: {IP}", request.Email, ipAddress);
+            throw new ArgumentException(string.Join(" ", passwordValidation.Errors));
         }
 
         // Check if user already exists
@@ -62,6 +63,9 @@ public class AuthService : IAuthService
 
         // Hash password
         var passwordHash = _passwordHasher.HashPassword(request.Password);
+
+        // Calculate password expiration (90 days from now for employees)
+        var passwordExpiresAt = DateTime.UtcNow.AddDays(PasswordPolicy.PasswordExpirationDays);
 
         // Create user
         var user = new User
@@ -92,10 +96,24 @@ public class AuthService : IAuthService
             DATEVId = request.DATEVId,
             IsActive = true,
             IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
-            FailedLoginAttempts = 0
+            FailedLoginAttempts = 0,
+            // Security fields
+            PasswordChangedAt = DateTime.UtcNow,
+            PasswordExpiresAt = passwordExpiresAt,
+            MfaEnabled = false
         };
 
         _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        
+        // Add to password history
+        var passwordHistory = new PasswordHistory
+        {
+            UserId = user.Id,
+            PasswordHash = passwordHash,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        _context.PasswordHistories.Add(passwordHistory);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("User registered successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
