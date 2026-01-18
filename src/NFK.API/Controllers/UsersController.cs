@@ -32,6 +32,8 @@ public class UsersController : ControllerBase
             var searchTerm = $"%{query}%";
             
             var users = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
                 .Where(u => u.IsActive && !u.IsDeleted)
                 .Where(u => 
                     EF.Functions.Like(u.FirstName, searchTerm) ||
@@ -47,7 +49,7 @@ public class UsersController : ControllerBase
                     u.FirstName,
                     u.LastName,
                     u.Email,
-                    u.Role,
+                    Role = u.UserRoles.FirstOrDefault() != null ? u.UserRoles.FirstOrDefault()!.Role.Name : "Client",
                     FullName = u.FirstName + " " + u.LastName,
                     u.Gender
                 })
