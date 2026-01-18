@@ -24,6 +24,10 @@ interface StorageStats {
 }
 
 export default function Documents() {
+  // Default limits for storage and documents
+  const DEFAULT_MAX_DOCUMENTS = 10;
+  const DEFAULT_MAX_STORAGE_MB = 100;
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterType, setFilterType] = useState('all');
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -33,8 +37,8 @@ export default function Documents() {
   const [stats, setStats] = useState<StorageStats>({
     documentCount: 0,
     totalStorageMB: 0,
-    maxDocuments: 10,
-    maxStorageMB: 100
+    maxDocuments: DEFAULT_MAX_DOCUMENTS,
+    maxStorageMB: DEFAULT_MAX_STORAGE_MB
   });
 
   useEffect(() => {
@@ -91,7 +95,7 @@ export default function Documents() {
 
     // Validation: Check document count (max 10)
     const documentCount = stats.documentCount ?? 0;
-    const maxDocuments = stats.maxDocuments ?? 10;
+    const maxDocuments = stats.maxDocuments ?? DEFAULT_MAX_DOCUMENTS;
     if (documentCount >= maxDocuments) {
       alert(`Maximale Anzahl von ${maxDocuments} Dokumenten erreicht.`);
       e.target.value = '';
@@ -100,7 +104,7 @@ export default function Documents() {
 
     // Validation: Check total storage (max 100 MB)
     const totalStorageMB = stats.totalStorageMB ?? 0;
-    const maxStorageMB = stats.maxStorageMB ?? 100;
+    const maxStorageMB = stats.maxStorageMB ?? DEFAULT_MAX_STORAGE_MB;
     if (totalStorageMB + fileSizeMB > maxStorageMB) {
       alert(`Speicherplatz überschritten. Verfügbar: ${(maxStorageMB - totalStorageMB).toFixed(2)} MB`);
       e.target.value = '';
@@ -186,10 +190,10 @@ export default function Documents() {
         <div className="mb-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div>
-              <p className="text-sm text-textSecondary dark:text-gray-400">Speicherplatz: <span className="font-medium text-textPrimary dark:text-gray-100">{(stats.totalStorageMB ?? 0).toFixed(2)} MB / {stats.maxStorageMB ?? 100} MB verwendet</span></p>
+              <p className="text-sm text-textSecondary dark:text-gray-400">Speicherplatz: <span className="font-medium text-textPrimary dark:text-gray-100">{(stats.totalStorageMB ?? 0).toFixed(2)} MB / {stats.maxStorageMB ?? DEFAULT_MAX_STORAGE_MB} MB verwendet</span></p>
             </div>
             <div>
-              <p className="text-sm text-textSecondary dark:text-gray-400">Dokumente: <span className="font-medium text-textPrimary dark:text-gray-100">{stats.documentCount ?? 0} / {stats.maxDocuments ?? 10} Dokumente</span></p>
+              <p className="text-sm text-textSecondary dark:text-gray-400">Dokumente: <span className="font-medium text-textPrimary dark:text-gray-100">{stats.documentCount ?? 0} / {stats.maxDocuments ?? DEFAULT_MAX_DOCUMENTS} Dokumente</span></p>
             </div>
           </div>
         </div>
