@@ -24,8 +24,8 @@ export default function Login() {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
       
-      // Redirect to dashboard
-      navigate('/portal/dashboard');
+      // Redirect to homepage
+      navigate('/');
     } catch (err: any) {
       console.error('Login failed:', err);
       setError(

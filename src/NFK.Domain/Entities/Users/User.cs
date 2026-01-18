@@ -17,6 +17,7 @@ public class User : BaseEntity
     public DateTime? LastLoginAt { get; set; }
     public string? GoogleId { get; set; }
     public string? DATEVId { get; set; }
+    public string? Gender { get; set; } // "male", "female", "diverse"
 
     // Extended registration fields
     public string? FullLegalName { get; set; }
