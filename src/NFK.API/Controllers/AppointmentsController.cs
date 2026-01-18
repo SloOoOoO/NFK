@@ -26,7 +26,13 @@ public class AppointmentsController : ControllerBase
     {
         try
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized(new { message = "Nicht authentifiziert" });
+            }
+
+            var userId = int.Parse(userIdClaim);
             
             var user = await _context.Users
                 .Include(u => u.UserRoles)
@@ -78,14 +84,35 @@ public class AppointmentsController : ControllerBase
     {
         try
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized(new { message = "Nicht authentifiziert" });
+            }
+
+            var userId = int.Parse(userIdClaim);
+
+            if (!DateTime.TryParse(dto.StartTime, out var startTime))
+            {
+                return BadRequest(new { message = "Ungültiges Startdatum" });
+            }
+
+            if (!DateTime.TryParse(dto.EndTime, out var endTime))
+            {
+                return BadRequest(new { message = "Ungültiges Enddatum" });
+            }
+
+            if (endTime <= startTime)
+            {
+                return BadRequest(new { message = "Enddatum muss nach dem Startdatum liegen" });
+            }
 
             var appointment = new Appointment
             {
                 ClientId = dto.ClientId,
                 Title = dto.Title,
-                StartTime = DateTime.Parse(dto.StartTime),
-                EndTime = DateTime.Parse(dto.EndTime),
+                StartTime = startTime,
+                EndTime = endTime,
                 Description = dto.Description,
                 Location = dto.Location,
                 Status = "Scheduled",
@@ -115,14 +142,52 @@ public class AppointmentsController : ControllerBase
     {
         try
         {
-            var appointment = await _context.Appointments.FindAsync(id);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized(new { message = "Nicht authentifiziert" });
+            }
+
+            var userId = int.Parse(userIdClaim);
+
+            var appointment = await _context.Appointments
+                .Include(a => a.Client)
+                .FirstOrDefaultAsync(a => a.Id == id);
             
             if (appointment == null)
                 return NotFound(new { message = "Termin nicht gefunden" });
 
+            // Check permissions: user must be the consultant or the client
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            if (userRole == "Client" && appointment.Client.UserId != userId)
+            {
+                return StatusCode(403, new { message = "Keine Berechtigung für diesen Termin" });
+            }
+
+            if (!DateTime.TryParse(dto.StartTime, out var startTime))
+            {
+                return BadRequest(new { message = "Ungültiges Startdatum" });
+            }
+
+            if (!DateTime.TryParse(dto.EndTime, out var endTime))
+            {
+                return BadRequest(new { message = "Ungültiges Enddatum" });
+            }
+
+            if (endTime <= startTime)
+            {
+                return BadRequest(new { message = "Enddatum muss nach dem Startdatum liegen" });
+            }
+
             appointment.Title = dto.Title;
-            appointment.StartTime = DateTime.Parse(dto.StartTime);
-            appointment.EndTime = DateTime.Parse(dto.EndTime);
+            appointment.StartTime = startTime;
+            appointment.EndTime = endTime;
             appointment.Description = dto.Description;
             appointment.Location = dto.Location;
             appointment.UpdatedAt = DateTime.UtcNow;
@@ -144,10 +209,33 @@ public class AppointmentsController : ControllerBase
     {
         try
         {
-            var appointment = await _context.Appointments.FindAsync(id);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized(new { message = "Nicht authentifiziert" });
+            }
+
+            var userId = int.Parse(userIdClaim);
+
+            var appointment = await _context.Appointments
+                .Include(a => a.Client)
+                .FirstOrDefaultAsync(a => a.Id == id);
             
             if (appointment == null)
                 return NotFound(new { message = "Termin nicht gefunden" });
+
+            // Check permissions: user must be the consultant or the client
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            if (userRole == "Client" && appointment.Client.UserId != userId)
+            {
+                return StatusCode(403, new { message = "Keine Berechtigung für diesen Termin" });
+            }
 
             _context.Appointments.Remove(appointment);
             await _context.SaveChangesAsync();
