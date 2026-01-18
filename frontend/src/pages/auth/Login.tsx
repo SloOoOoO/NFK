@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
+import { AxiosError } from 'axios';
+
+interface ApiError {
+  message?: string;
+}
 
 export default function Login() {
   const { t } = useTranslation();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,20 +25,20 @@ export default function Login() {
 
     try {
       const response = await authAPI.login(email, password);
-      const { accessToken, refreshToken } = response.data;
+      const { accessToken, refreshToken, user } = response.data;
       
-      // Store tokens in localStorage
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      // Update auth context with user data and tokens
+      login(user, accessToken, refreshToken);
       
       // Redirect to homepage
       navigate('/');
-    } catch (err: any) {
-      console.error('Login failed:', err);
-      setError(
-        err.response?.data?.message || 
-        t('auth.errors.loginFailed')
-      );
+    } catch (err) {
+      if (err instanceof AxiosError && err.response?.data) {
+        const apiError = err.response.data as ApiError;
+        setError(apiError.message || t('auth.errors.loginFailed'));
+      } else {
+        setError(t('auth.errors.loginFailed'));
+      }
     } finally {
       setLoading(false);
     }
