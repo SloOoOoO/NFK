@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { clientsAPI } from '../../services/api';
+import apiClient from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 
@@ -19,6 +20,14 @@ interface Client {
   postalCode?: string;
 }
 
+interface ClientUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -34,6 +43,7 @@ export default function Clients() {
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [newClient, setNewClient] = useState({
+    userId: 0,
     name: '',
     email: '',
     contact: '',
@@ -49,9 +59,11 @@ export default function Clients() {
     postalCode: '',
   });
   const [successMessage, setSuccessMessage] = useState('');
+  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
 
   useEffect(() => {
     fetchClients();
+    fetchClientUsers();
   }, []);
 
   const fetchClients = async () => {
@@ -71,13 +83,23 @@ export default function Clients() {
     }
   };
 
+  const fetchClientUsers = async () => {
+    try {
+      const response = await apiClient.get('/users?role=Client');
+      const usersData = Array.isArray(response.data) ? response.data : [];
+      setClientUsers(usersData);
+    } catch (err: any) {
+      console.error('Error fetching client users:', err);
+    }
+  };
+
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateLoading(true);
     try {
       await clientsAPI.create(newClient);
       setShowCreateModal(false);
-      setNewClient({ name: '', email: '', contact: '', phone: '' });
+      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '' });
       setSuccessMessage('Mandant erfolgreich erstellt');
       setTimeout(() => setSuccessMessage(''), 3000);
       await fetchClients();
@@ -373,14 +395,41 @@ export default function Clients() {
               
               <form onSubmit={handleCreateClient} className="p-6 space-y-4">
                 <div>
+                  <label className="block text-sm font-medium mb-2">Client auswählen *</label>
+                  <select
+                    value={newClient.userId || ''}
+                    onChange={(e) => {
+                      const userId = parseInt(e.target.value);
+                      const selectedUser = clientUsers.find(u => u.id === userId);
+                      setNewClient({
+                        ...newClient,
+                        userId,
+                        name: selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : '',
+                        email: selectedUser?.email || ''
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                    disabled={createLoading}
+                  >
+                    <option value="">Client auswählen...</option>
+                    {clientUsers.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
                   <label className="block text-sm font-medium mb-2">Name *</label>
                   <input
                     type="text"
                     value={newClient.name}
-                    onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100"
                     required
-                    disabled={createLoading}
+                    disabled
+                    readOnly
                   />
                 </div>
                 
@@ -389,10 +438,10 @@ export default function Clients() {
                   <input
                     type="email"
                     value={newClient.email}
-                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100"
                     required
-                    disabled={createLoading}
+                    disabled
+                    readOnly
                   />
                 </div>
                 
@@ -422,7 +471,10 @@ export default function Clients() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '' });
+                    }}
                     className="flex-1 btn-secondary"
                     disabled={createLoading}
                   >

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
-import { authAPI, adminAPI } from '../../services/api';
+import { authAPI } from '../../services/api';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -45,7 +45,39 @@ export default function Profile() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await adminAPI.updateUserProfile(user.id, editForm);
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('http://localhost:8080/api/v1/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: editForm.phoneNumber,
+          address: editForm.address,
+          city: editForm.city,
+          postalCode: editForm.postalCode,
+          country: editForm.country,
+          dateOfBirth: editForm.dateOfBirth,
+          taxId: editForm.taxId
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Fehler beim Aktualisieren');
+      }
+
+      // Update local user state
+      if (data.user) {
+        const updatedUser = { ...user, ...data.user };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }
+      
       await fetchUserProfile();
       setIsEditing(false);
       alert(t('profile.successUpdate'));

@@ -1,66 +1,58 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin,DATEVManager")]
 public class AnalyticsController : ControllerBase
 {
+    private readonly ApplicationDbContext _context;
     private readonly ILogger<AnalyticsController> _logger;
 
-    public AnalyticsController(ILogger<AnalyticsController> logger)
+    public AnalyticsController(ApplicationDbContext context, ILogger<AnalyticsController> logger)
     {
+        _context = context;
         _logger = logger;
     }
 
     [HttpGet("page-visits")]
-    public IActionResult GetPageVisits()
+    public async Task<IActionResult> GetPageVisits()
     {
         try
         {
-            // Mock analytics data for now
-            // In a real implementation, this would fetch from database or analytics service
-            
-            // Generate daily data for last 30 days
-            var random = new Random();
-            var dailyData = Enumerable.Range(0, 30)
-                .Select(i => new
-                {
-                    date = DateTime.Now.AddDays(-29 + i).ToString("dd.MM.yyyy"),
-                    visits = random.Next(50, 200)
-                })
-                .ToList();
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+            var twelveMonthsAgo = DateTime.UtcNow.AddMonths(-12);
 
-            // Generate monthly data for last 12 months
-            var monthlyData = Enumerable.Range(0, 12)
-                .Select(i =>
-                {
-                    var date = DateTime.Now.AddMonths(-11 + i);
-                    return new
-                    {
-                        month = date.ToString("MMM yyyy"),
-                        visits = random.Next(800, 2500)
-                    };
-                })
-                .ToList();
+            var dailyVisits = await _context.PageVisits
+                .Where(pv => pv.CreatedAt >= thirtyDaysAgo)
+                .GroupBy(pv => pv.CreatedAt.Date)
+                .Select(g => new { date = g.Key, count = g.Count() })
+                .OrderBy(x => x.date)
+                .ToListAsync();
 
-            // Yearly total
-            var yearlyData = new[]
-            {
-                new
-                {
-                    year = DateTime.Now.Year,
-                    visits = monthlyData.Sum(m => m.visits)
-                }
-            };
+            var monthlyVisits = await _context.PageVisits
+                .Where(pv => pv.CreatedAt >= twelveMonthsAgo)
+                .GroupBy(pv => new { pv.CreatedAt.Year, pv.CreatedAt.Month })
+                .Select(g => new { 
+                    month = $"{g.Key.Year}-{g.Key.Month:D2}", 
+                    count = g.Count() 
+                })
+                .OrderBy(x => x.month)
+                .ToListAsync();
+
+            var totalThisYear = await _context.PageVisits
+                .Where(pv => pv.CreatedAt.Year == DateTime.UtcNow.Year)
+                .CountAsync();
 
             return Ok(new
             {
-                daily = dailyData,
-                monthly = monthlyData,
-                yearly = yearlyData
+                daily = dailyVisits,
+                monthly = monthlyVisits,
+                totalThisYear
             });
         }
         catch (Exception ex)
