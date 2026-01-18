@@ -130,6 +130,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
+builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();
+builder.Services.AddScoped<NFK.Infrastructure.Caching.CacheService>();
+builder.Services.AddScoped<NFK.Infrastructure.Security.TotpService>();
 
 // Hangfire
 builder.Services.AddHangfire(configuration => configuration
@@ -157,6 +160,14 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials();
     });
+});
+
+// Response compression for performance
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
 });
 
 var app = builder.Build();
@@ -212,8 +223,10 @@ app.Use(async (context, next) =>
 });
 
 app.UseSerilogRequestLogging();
+app.UseResponseCompression();
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseMiddleware<NFK.Infrastructure.Middleware.RateLimitingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 

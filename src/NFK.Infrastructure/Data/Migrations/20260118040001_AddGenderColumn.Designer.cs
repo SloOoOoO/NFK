@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NFK.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using NFK.Infrastructure.Data;
 namespace NFK.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260118040001_AddGenderColumn")]
+    partial class AddGenderColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -227,12 +230,6 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("DueDate");
-
-                    b.HasIndex("Status");
-
                     b.ToTable("Cases");
                 });
 
@@ -379,10 +376,6 @@ namespace NFK.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("IsActive");
 
                     b.HasIndex("UserId");
 
@@ -606,8 +599,6 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CaseId");
-
-                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("FolderId");
 
@@ -978,93 +969,6 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("NFK.Domain.Entities.Users.MfaSecret", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BackupCodesHashed")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("EnabledAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Secret")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("MfaSecrets");
-                });
-
-            modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "CreatedAtUtc");
-
-                    b.ToTable("PasswordHistories");
-                });
-
             modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordResetToken", b =>
                 {
                     b.Property<int>("Id")
@@ -1173,12 +1077,6 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("bit");
-
-                    b.Property<string>("ReasonRevoked")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReplacedByToken")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("datetime2");
@@ -1378,15 +1276,6 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Property<DateTime?>("LockedUntil")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("MfaEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("PasswordChangedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("PasswordExpiresAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -1411,8 +1300,6 @@ namespace NFK.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -1776,28 +1663,6 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NFK.Domain.Entities.Users.MfaSecret", b =>
-                {
-                    b.HasOne("NFK.Domain.Entities.Users.User", "User")
-                        .WithOne("MfaSecret")
-                        .HasForeignKey("NFK.Domain.Entities.Users.MfaSecret", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordHistory", b =>
-                {
-                    b.HasOne("NFK.Domain.Entities.Users.User", "User")
-                        .WithMany("PasswordHistories")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordResetToken", b =>
                 {
                     b.HasOne("NFK.Domain.Entities.Users.User", "User")
@@ -1944,10 +1809,6 @@ namespace NFK.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.User", b =>
                 {
-                    b.Navigation("MfaSecret");
-
-                    b.Navigation("PasswordHistories");
-
                     b.Navigation("PasswordResetTokens");
 
                     b.Navigation("RefreshTokens");

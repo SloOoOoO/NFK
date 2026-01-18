@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NFK.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using NFK.Infrastructure.Data;
 namespace NFK.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260118040615_AddSecurityEnhancements")]
+    partial class AddSecurityEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -986,7 +989,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BackupCodesHashed")
+                    b.Property<string>("BackupCodes")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1173,12 +1176,6 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("bit");
-
-                    b.Property<string>("ReasonRevoked")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReplacedByToken")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("datetime2");
