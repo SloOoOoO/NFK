@@ -516,29 +516,52 @@ export default function Calendar() {
                   {calendarDays.map((item, index) => (
                     <div
                       key={index}
-                      className={`min-h-24 p-2 border rounded ${
+                      className={`min-h-24 p-2 border rounded relative ${
                         item.day ? 'bg-white dark:bg-gray-800 hover:bg-secondary dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
-                      } ${item.day === 11 ? 'border-primary border-2' : 'border-gray-200 dark:border-gray-700'}`}
+                      } ${item.day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear() ? 'border-primary border-2' : 'border-gray-200 dark:border-gray-700'}`}
                     >
                       {item.day && (
                         <>
                           <div className={`text-sm font-medium mb-1 ${
-                            item.day === 11 ? 'text-primary' : 'text-textPrimary dark:text-gray-200'
+                            item.day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear() ? 'text-primary' : 'text-textPrimary dark:text-gray-200'
                           }`}>
                             {item.day}
                           </div>
+                          
+                          {/* Event markers with hover tooltips */}
                           <div className="space-y-1">
-                            {item.events.slice(0, 2).map((event) => (
+                            {item.events.map((event, idx) => (
                               <div
                                 key={event.id}
-                                className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)}`}
-                                title={event.title}
+                                className="group relative"
+                                onClick={() => handleEventClick(event)}
                               >
-                                {getEventIcon(event.type)} {event.title.substring(0, 10)}...
+                                {/* Cute event marker */}
+                                {idx < 2 && (
+                                  <div className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)} cursor-pointer hover:shadow-md transition-shadow`}>
+                                    {getEventIcon(event.type)} {event.title.substring(0, 10)}...
+                                  </div>
+                                )}
+                                
+                                {/* Hover tooltip with details */}
+                                <div className="absolute hidden group-hover:block left-0 top-full mt-1 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary-200 dark:border-primary-700">
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{event.title}</p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-1">
+                                    <span>👤</span> {event.mandant}
+                                  </p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <span>🕒</span> {event.time} Uhr
+                                  </p>
+                                  {event.location && (
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                      <span>📍</span> {event.location}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             ))}
                             {item.events.length > 2 && (
-                              <div className="text-xs text-textSecondary dark:text-gray-400">
+                              <div className="text-xs text-textSecondary dark:text-gray-400 font-medium">
                                 +{item.events.length - 2} mehr
                               </div>
                             )}

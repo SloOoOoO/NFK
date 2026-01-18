@@ -174,12 +174,27 @@ public class DocumentsController : ControllerBase
                 }
             }
 
-            // For now, just store metadata (not actual file)
-            // In production, you would save to blob storage
+            // Create uploads directory if it doesn't exist
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
+
+            // Generate unique filename
+            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var filePath = Path.Combine(uploadsPath, uniqueFileName);
+
+            // Save file to disk
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
             var document = new Document
             {
                 FileName = file.FileName,
-                FilePath = $"/uploads/{Guid.NewGuid()}_{file.FileName}", // Placeholder path
+                FilePath = filePath,
                 FileType = file.ContentType,
                 FileSize = file.Length,
                 CaseId = caseId,
@@ -262,20 +277,43 @@ public class DocumentsController : ControllerBase
     {
         try
         {
-            var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == id);
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var document = await _context.Documents
+                .Include(d => d.Case)
+                    .ThenInclude(c => c!.Client)
+                .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted);
 
             if (document == null)
             {
                 return NotFound(new { error = "not_found", message = $"Document {id} not found" });
             }
 
-            // In production, retrieve actual file from blob storage
-            // For now, return placeholder
-            return Ok(new { 
-                message = "Download endpoint placeholder", 
-                fileName = document.FileName,
-                filePath = document.FilePath 
-            });
+            // Check access permissions
+            var userRole = User.FindFirst("role")?.Value;
+            if (userRole == "Client")
+            {
+                // Clients can only download their own documents
+                if (document.Case == null || document.Case.Client.UserId != currentUserId.Value)
+                {
+                    return Forbid();
+                }
+            }
+
+            // Check if file exists
+            if (!System.IO.File.Exists(document.FilePath))
+            {
+                _logger.LogError("File not found on disk: {FilePath}", document.FilePath);
+                return NotFound(new { error = "file_not_found", message = "Datei nicht auf dem Server gefunden" });
+            }
+
+            // Read file and return
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(document.FilePath);
+            return File(fileBytes, document.FileType, document.FileName);
         }
         catch (Exception ex)
         {
