@@ -34,8 +34,9 @@ public class UsersController : ControllerBase
             var users = await _context.Users
                 .Where(u => u.IsActive && !u.IsDeleted)
                 .Where(u => 
-                    (u.FirstName + " " + u.LastName).ToLower().Contains(searchTerm) ||
-                    u.Email.ToLower().Contains(searchTerm)
+                    EF.Functions.Like(u.FirstName.ToLower(), $"%{searchTerm}%") ||
+                    EF.Functions.Like(u.LastName.ToLower(), $"%{searchTerm}%") ||
+                    EF.Functions.Like(u.Email.ToLower(), $"%{searchTerm}%")
                 )
                 .Take(10)
                 .Select(u => new {

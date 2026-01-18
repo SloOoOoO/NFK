@@ -24,11 +24,12 @@ public class AnalyticsController : ControllerBase
             // In a real implementation, this would fetch from database or analytics service
             
             // Generate daily data for last 30 days
+            var random = new Random();
             var dailyData = Enumerable.Range(0, 30)
                 .Select(i => new
                 {
                     date = DateTime.Now.AddDays(-29 + i).ToString("dd.MM.yyyy"),
-                    visits = new Random(i).Next(50, 200)
+                    visits = random.Next(50, 200)
                 })
                 .ToList();
 
@@ -40,7 +41,7 @@ public class AnalyticsController : ControllerBase
                     return new
                     {
                         month = date.ToString("MMM yyyy"),
-                        visits = new Random(i * 100).Next(800, 2500)
+                        visits = random.Next(800, 2500)
                     };
                 })
                 .ToList();

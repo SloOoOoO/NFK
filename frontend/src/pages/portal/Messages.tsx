@@ -396,7 +396,7 @@ export default function Messages() {
                       <Combobox.Input
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="Name oder E-Mail eingeben..."
-                        displayValue={(user: User | null) => user?.fullName || user ? `${user.firstName} ${user.lastName}` : ''}
+                        displayValue={(user: User | null) => user ? (user.fullName || `${user.firstName} ${user.lastName}`) : ''}
                         onChange={(event) => setUserQuery(event.target.value)}
                         disabled={sending}
                       />

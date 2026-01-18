@@ -28,7 +28,7 @@ public class AuditController : ControllerBase
                 {
                     id = 1,
                     timestamp = DateTime.UtcNow.AddHours(-2),
-                    user = new { firstName = "Max", lastName = "Mustermann" },
+                    user = new { firstName = "Admin", lastName = "User" },
                     action = "UPDATE",
                     entityType = "User",
                     entityId = 5,
@@ -39,7 +39,7 @@ public class AuditController : ControllerBase
                 {
                     id = 2,
                     timestamp = DateTime.UtcNow.AddHours(-5),
-                    user = new { firstName = "Erika", lastName = "Schmidt" },
+                    user = new { firstName = "Staff", lastName = "Member" },
                     action = "CREATE",
                     entityType = "Client",
                     entityId = 12,
@@ -50,7 +50,7 @@ public class AuditController : ControllerBase
                 {
                     id = 3,
                     timestamp = DateTime.UtcNow.AddDays(-1),
-                    user = new { firstName = "Hans", lastName = "Müller" },
+                    user = new { firstName = "User", lastName = "One" },
                     action = "DELETE",
                     entityType = "Document",
                     entityId = 8,
@@ -61,7 +61,7 @@ public class AuditController : ControllerBase
                 {
                     id = 4,
                     timestamp = DateTime.UtcNow.AddDays(-2),
-                    user = new { firstName = "Anna", lastName = "Weber" },
+                    user = new { firstName = "User", lastName = "Two" },
                     action = "LOGIN",
                     entityType = "Session",
                     entityId = 0,
@@ -72,7 +72,7 @@ public class AuditController : ControllerBase
                 {
                     id = 5,
                     timestamp = DateTime.UtcNow.AddDays(-3),
-                    user = new { firstName = "Max", lastName = "Mustermann" },
+                    user = new { firstName = "Admin", lastName = "User" },
                     action = "UPDATE",
                     entityType = "Case",
                     entityId = 3,
