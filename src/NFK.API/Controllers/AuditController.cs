@@ -61,4 +61,47 @@ public class AuditController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Error fetching audit logs" });
         }
     }
+
+    [HttpGet("recent")]
+    [Authorize]
+    public async Task<IActionResult> GetRecentActivities()
+    {
+        try
+        {
+            var activities = await _context.AuditLogs
+                .Include(a => a.User)
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(5)
+                .Select(a => new
+                {
+                    a.Id,
+                    Type = a.Action,
+                    Description = FormatActivityDescription(a),
+                    Timestamp = a.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(activities);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching recent activities");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching recent activities" });
+        }
+    }
+
+    private string FormatActivityDescription(Domain.Entities.Audit.AuditLog log)
+    {
+        return log.Action switch
+        {
+            "Upload" => $"Dokument hochgeladen: {log.EntityType}",
+            "Download" => $"Dokument heruntergeladen: {log.EntityType}",
+            "CreateCase" => "Neuer Fall erstellt",
+            "UpdateClient" => "Client aktualisiert",
+            "CREATE" => $"{log.EntityType} erstellt",
+            "UPDATE" => $"{log.EntityType} aktualisiert",
+            "DELETE" => $"{log.EntityType} gelöscht",
+            _ => log.Action
+        };
+    }
 }
