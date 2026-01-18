@@ -421,7 +421,7 @@ export default function Messages() {
                                   }`
                                 }
                               >
-                                {({ selected }) => (
+                                {({ selected, active }) => (
                                   <div className="flex items-center gap-2">
                                     <span className="text-xl">{getProfileIcon(user.gender)}</span>
                                     <div className="flex-1">
