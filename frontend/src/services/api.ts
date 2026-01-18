@@ -105,6 +105,7 @@ export const casesAPI = {
 // Documents API
 export const documentsAPI = {
   getAll: () => apiClient.get('/documents'),
+  getStats: () => apiClient.get('/documents/stats'),
   upload: (file: File, clientId?: number, caseId?: number) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -127,13 +128,22 @@ export const datevAPI = {
 // Messages API
 export const messagesAPI = {
   getAll: () => apiClient.get('/messages'),
+  getById: (id: number) => apiClient.get(`/messages/${id}`),
   markAsRead: (id: number) => apiClient.put(`/messages/${id}/read`),
+  send: (data: { recipientUserId: number; subject: string; content: string; caseId?: number }) => 
+    apiClient.post('/messages/send', data),
+  reply: (id: number, content: string) => apiClient.post(`/messages/${id}/reply`, { content }),
+  delete: (id: number) => apiClient.delete(`/messages/${id}`),
 };
 
 // Events/Calendar API
 export const eventsAPI = {
   getAll: () => apiClient.get('/events'),
+  getById: (id: number) => apiClient.get(`/events/${id}`),
   create: (data: any) => apiClient.post('/events', data),
+  update: (id: number, data: any) => apiClient.put(`/events/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/events/${id}`),
+  complete: (id: number) => apiClient.put(`/events/${id}/complete`),
 };
 
 // Admin API
