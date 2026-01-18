@@ -93,11 +93,9 @@ export default function Clients() {
     try {
       const response = await apiClient.get('/users?role=Client');
       const usersData = Array.isArray(response.data) ? response.data : [];
-      console.log('Fetched client users:', usersData); // DEBUG
       
       // Filter to ensure only Client role users
       const clientsOnly = usersData.filter((u: any) => u.role === 'Client');
-      console.log('Filtered clients:', clientsOnly); // DEBUG
       
       setClientUsers(clientsOnly);
     } catch (err: any) {

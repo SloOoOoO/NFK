@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { clientsAPI, casesAPI, documentsAPI, authAPI } from '../../services/api';
+import apiClient from '../../services/api';
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
@@ -106,23 +107,16 @@ export default function Dashboard() {
 
   const fetchDatevStatus = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      
       // Fetch DATEV status
-      const statusResponse = await fetch('http://localhost:8080/api/v1/datev/status', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
-        setDatevStatus(statusData);
+      const statusResponse = await apiClient.get('/datev/status');
+      if (statusResponse.data) {
+        setDatevStatus(statusResponse.data);
       }
       
       // Fetch DATEV jobs for the last 24 hours
-      const jobsResponse = await fetch('http://localhost:8080/api/v1/datev/jobs', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (jobsResponse.ok) {
-        const jobsData = await jobsResponse.json();
+      const jobsResponse = await apiClient.get('/datev/jobs');
+      if (jobsResponse.data) {
+        const jobsData = jobsResponse.data;
         const now = new Date();
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         
@@ -148,13 +142,9 @@ export default function Dashboard() {
 
   const fetchActivities = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8080/api/v1/audit/recent', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setActivities(Array.isArray(data) ? data : []);
+      const response = await apiClient.get('/audit/recent');
+      if (response.data) {
+        setActivities(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
