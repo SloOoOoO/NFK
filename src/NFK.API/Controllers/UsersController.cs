@@ -29,21 +29,25 @@ public class UsersController : ControllerBase
                 return Ok(new List<object>());
             }
 
-            var searchTerm = query.ToLower();
+            var searchTerm = $"%{query}%";
             
             var users = await _context.Users
                 .Where(u => u.IsActive && !u.IsDeleted)
                 .Where(u => 
-                    EF.Functions.Like(u.FirstName.ToLower(), $"%{searchTerm}%") ||
-                    EF.Functions.Like(u.LastName.ToLower(), $"%{searchTerm}%") ||
-                    EF.Functions.Like(u.Email.ToLower(), $"%{searchTerm}%")
+                    EF.Functions.Like(u.FirstName, searchTerm) ||
+                    EF.Functions.Like(u.LastName, searchTerm) ||
+                    EF.Functions.Like(u.Email, searchTerm) ||
+                    EF.Functions.Like(u.FirstName + " " + u.LastName, searchTerm)
                 )
+                .OrderBy(u => u.FirstName)
+                .ThenBy(u => u.LastName)
                 .Take(10)
                 .Select(u => new {
                     u.Id,
                     u.FirstName,
                     u.LastName,
                     u.Email,
+                    u.Role,
                     FullName = u.FirstName + " " + u.LastName,
                     u.Gender
                 })

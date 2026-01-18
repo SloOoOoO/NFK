@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
+import { useEffect, Fragment } from 'react';
+import { Menu, Transition } from '@headlessui/react';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Contact() {
   const { t } = useTranslation();
   const { setDarkMode } = useDarkMode();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
   useEffect(() => {
     // Force light mode on public pages
@@ -20,6 +23,12 @@ export default function Contact() {
       }
     };
   }, [setDarkMode]);
+
+  const getProfileIcon = (gender?: string) => {
+    if (gender === 'male') return '👨';
+    if (gender === 'female') return '👩';
+    return '🧑'; // diverse
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -42,18 +51,86 @@ export default function Contact() {
                 {t('common.contact')}
               </Link>
               <LanguageSwitcher />
-              <Link
-                to="/auth/register"
-                className="text-textPrimary hover:text-primary px-4 py-2"
-              >
-                {t('common.register')}
-              </Link>
-              <Link
-                to="/auth/login"
-                className="btn-primary px-6 py-2 rounded-md"
-              >
-                {t('common.login')}
-              </Link>
+              {isLoading ? (
+                <div className="text-sm text-gray-500">Lädt...</div>
+              ) : isAuthenticated && user ? (
+                <Menu as="div" className="relative">
+                  <Menu.Button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition-colors border border-gray-200">
+                    <span className="text-3xl">{getProfileIcon(user.gender)}</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {user.firstName} {user.lastName}
+                    </span>
+                  </Menu.Button>
+                  
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                      <div className="px-1 py-1">
+                        <Menu.Item>
+                          {({ active }) => (
+                            <Link
+                              to="/portal/dashboard"
+                              className={`${
+                                active ? 'bg-primary text-white' : 'text-gray-900'
+                              } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                            >
+                              🏠 Dashboard
+                            </Link>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <Link
+                              to="/portal/profile"
+                              className={`${
+                                active ? 'bg-primary text-white' : 'text-gray-900'
+                              } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                            >
+                              👤 Profil
+                            </Link>
+                          )}
+                        </Menu.Item>
+                      </div>
+                      <div className="px-1 py-1">
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={logout}
+                              className={`${
+                                active ? 'bg-red-500 text-white' : 'text-red-600'
+                              } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                            >
+                              🚪 Abmelden
+                            </button>
+                          )}
+                        </Menu.Item>
+                      </div>
+                    </Menu.Items>
+                  </Transition>
+                </Menu>
+              ) : (
+                <>
+                  <Link
+                    to="/auth/register"
+                    className="text-textPrimary hover:text-primary px-4 py-2"
+                  >
+                    {t('common.register')}
+                  </Link>
+                  <Link
+                    to="/auth/login"
+                    className="btn-primary px-6 py-2 rounded-md"
+                  >
+                    {t('common.login')}
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

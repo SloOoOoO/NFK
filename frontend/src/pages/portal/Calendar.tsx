@@ -310,14 +310,14 @@ export default function Calendar() {
   }
 
   return (
-    <div className="flex min-h-screen bg-secondary">
+    <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-textPrimary mb-2">Kalender</h1>
-          <p className="text-textSecondary">Termine, Fristen und Aufgaben im Überblick</p>
+          <h1 className="text-3xl font-bold text-textPrimary dark:text-gray-100 mb-2">Kalender</h1>
+          <p className="text-textSecondary dark:text-gray-400">Termine, Fristen und Aufgaben im Überblick</p>
         </div>
 
         {/* Info Banner if endpoint not available */}
@@ -365,9 +365,9 @@ export default function Calendar() {
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="btn-secondary">← Zurück</button>
+              <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">← Zurück</button>
               <span className="font-semibold text-lg dark:text-gray-200">Januar 2025</span>
-              <button className="btn-secondary">Weiter →</button>
+              <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">Weiter →</button>
             </div>
             
             <Dialog.Root open={showAppointmentModal} onOpenChange={setShowAppointmentModal}>
@@ -605,7 +605,7 @@ export default function Calendar() {
               ))}
             </div>
 
-            <button className="w-full mt-4 btn-secondary text-sm">
+            <button className="w-full mt-4 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm">
               Alle Ereignisse anzeigen
             </button>
           </div>

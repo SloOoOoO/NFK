@@ -1,35 +1,22 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
-import { authAPI } from '../../services/api';
 import { useDarkMode } from '../../contexts/DarkModeContext';
-
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  gender?: string;
-}
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Landing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { setDarkMode } = useDarkMode();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
   useEffect(() => {
     // Force light mode on public pages
     const previousMode = localStorage.getItem('darkMode');
     setDarkMode(false);
-    
-    // Check if user is logged in
-    checkAuth();
     
     // Restore dark mode when leaving page
     return () => {
@@ -38,30 +25,6 @@ export default function Landing() {
       }
     };
   }, [setDarkMode]);
-
-  const checkAuth = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const response = await authAPI.getCurrentUser();
-        setCurrentUser(response.data);
-        setIsAuthenticated(true);
-      } catch (error) {
-        // Token invalid or expired
-        setIsAuthenticated(false);
-        setCurrentUser(null);
-      }
-    }
-    setLoading(false);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    // Stay on homepage
-  };
 
   const getProfileIcon = (gender?: string) => {
     if (gender === 'male') return '👨';
@@ -82,14 +45,14 @@ export default function Landing() {
             <h2 className="text-2xl font-bold text-primary">NFK Buchhaltung</h2>
             <div className="flex gap-4 items-center">
               <LanguageSwitcher />
-              {loading ? (
+              {isLoading ? (
                 <div className="text-sm text-gray-500">Lädt...</div>
-              ) : isAuthenticated && currentUser ? (
+              ) : isAuthenticated && user ? (
                 <Menu as="div" className="relative">
                   <Menu.Button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 transition-colors border border-gray-200">
-                    <span className="text-3xl">{getProfileIcon(currentUser.gender)}</span>
+                    <span className="text-3xl">{getProfileIcon(user.gender)}</span>
                     <span className="text-sm font-medium text-gray-700">
-                      {currentUser.firstName} {currentUser.lastName}
+                      {user.firstName} {user.lastName}
                     </span>
                   </Menu.Button>
                   
@@ -117,7 +80,7 @@ export default function Landing() {
                         <Menu.Item>
                           {({ active }) => (
                             <button
-                              onClick={handleLogout}
+                              onClick={logout}
                               className={`${active ? 'bg-gray-100' : ''} group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-red-600`}
                             >
                               🚪 Abmelden
