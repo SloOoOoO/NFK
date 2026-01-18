@@ -24,7 +24,7 @@ export default function Calendar() {
   const [clients, setClients] = useState<Client[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    clientId: 0,
+    clientId: null as number | null,
     title: '',
     startTime: '',
     endTime: '',
@@ -42,6 +42,11 @@ export default function Calendar() {
       const response = await fetch('http://localhost:8080/api/v1/appointments', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       setEvents(data);
     } catch (error) {
@@ -55,6 +60,11 @@ export default function Calendar() {
       const response = await fetch('http://localhost:8080/api/v1/clients', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       setClients(data);
     } catch (error) {
@@ -64,8 +74,14 @@ export default function Calendar() {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.clientId) {
+      alert('Bitte wählen Sie einen Mandanten aus');
+      return;
+    }
+    
     try {
-      await fetch('http://localhost:8080/api/v1/appointments', {
+      const response = await fetch('http://localhost:8080/api/v1/appointments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,9 +90,13 @@ export default function Calendar() {
         body: JSON.stringify(formData)
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       setShowModal(false);
       setFormData({
-        clientId: 0,
+        clientId: null,
         title: '',
         startTime: '',
         endTime: '',
@@ -85,6 +105,7 @@ export default function Calendar() {
       });
       fetchEvents();
     } catch (error) {
+      console.error('Error creating appointment:', error);
       alert('Fehler beim Erstellen des Termins');
     }
   };
@@ -263,12 +284,12 @@ export default function Calendar() {
                 <div>
                   <label className="block text-sm font-medium mb-2 dark:text-gray-200">Mandant *</label>
                   <select
-                    value={formData.clientId}
-                    onChange={(e) => setFormData({ ...formData, clientId: parseInt(e.target.value) })}
+                    value={formData.clientId || ''}
+                    onChange={(e) => setFormData({ ...formData, clientId: e.target.value ? parseInt(e.target.value) : null })}
                     required
                     className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   >
-                    <option value="0">Mandant auswählen</option>
+                    <option value="">Mandant auswählen</option>
                     {clients.map(client => (
                       <option key={client.id} value={client.id}>{client.companyName}</option>
                     ))}
