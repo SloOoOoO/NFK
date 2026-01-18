@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NFK.Application.DTOs.Users;
 using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
@@ -17,6 +19,46 @@ public class UsersController : ControllerBase
     {
         _context = context;
         _logger = logger;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUsers([FromQuery] string? role = null)
+    {
+        try
+        {
+            var query = _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .Where(u => u.IsActive && !u.IsDeleted)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(role))
+            {
+                query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Name == role));
+            }
+
+            var users = await query
+                .OrderBy(u => u.FirstName)
+                .ThenBy(u => u.LastName)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    Role = u.UserRoles.FirstOrDefault() != null 
+                        ? u.UserRoles.FirstOrDefault()!.Role.Name 
+                        : "User"
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching users");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching users" });
+        }
     }
 
     [HttpGet("search")]
@@ -64,6 +106,76 @@ public class UsersController : ControllerBase
         {
             _logger.LogError(ex, "Error searching users");
             return StatusCode(500, new { error = "internal_error", message = "Error searching users" });
+        }
+    }
+
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null)
+                return NotFound(new { message = "Benutzer nicht gefunden" });
+
+            // Update fields - handle both field name variations
+            if (!string.IsNullOrEmpty(dto.FirstName))
+                user.FirstName = dto.FirstName;
+            if (!string.IsNullOrEmpty(dto.LastName))
+                user.LastName = dto.LastName;
+            
+            // Handle both Phone and PhoneNumber
+            if (!string.IsNullOrEmpty(dto.Phone))
+                user.PhoneNumber = dto.Phone;
+            if (!string.IsNullOrEmpty(dto.PhoneNumber))
+                user.PhoneNumber = dto.PhoneNumber;
+                
+            if (!string.IsNullOrEmpty(dto.Address))
+                user.Address = dto.Address;
+            if (!string.IsNullOrEmpty(dto.City))
+                user.City = dto.City;
+            if (!string.IsNullOrEmpty(dto.PostalCode))
+                user.PostalCode = dto.PostalCode;
+            if (!string.IsNullOrEmpty(dto.Country))
+                user.Country = dto.Country;
+            if (dto.DateOfBirth.HasValue)
+                user.DateOfBirth = dto.DateOfBirth.Value;
+            
+            // Handle both TaxNumber and TaxId
+            if (!string.IsNullOrEmpty(dto.TaxNumber))
+                user.TaxId = dto.TaxNumber;
+            if (!string.IsNullOrEmpty(dto.TaxId))
+                user.TaxId = dto.TaxId;
+
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                message = "Profil erfolgreich aktualisiert",
+                user = new {
+                    user.Id,
+                    user.FirstName,
+                    user.LastName,
+                    user.Email,
+                    Phone = user.PhoneNumber,
+                    PhoneNumber = user.PhoneNumber,
+                    user.Address,
+                    user.City,
+                    user.PostalCode,
+                    user.Country,
+                    user.DateOfBirth,
+                    TaxNumber = user.TaxId,
+                    TaxId = user.TaxId
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile");
+            return StatusCode(500, new { error = "internal_error", message = "Fehler beim Aktualisieren des Profils" });
         }
     }
 }

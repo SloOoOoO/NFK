@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { documentsAPI } from '../../services/api';
+import apiClient from '../../services/api';
 
 interface Document {
   id: number;
@@ -14,6 +15,12 @@ interface Document {
   icon?: string;
   mandant?: string;
   updated?: string;
+}
+
+interface Client {
+  id: number;
+  name: string;
+  companyName?: string;
 }
 
 interface StorageStats {
@@ -40,11 +47,39 @@ export default function Documents() {
     maxDocuments: DEFAULT_MAX_DOCUMENTS,
     maxStorageMB: DEFAULT_MAX_STORAGE_MB
   });
+  
+  // Client filtering for employees
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    // Get current user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      
+      // Fetch clients if user is not a Client
+      if (parsedUser.role !== 'Client') {
+        fetchClients();
+      }
+    }
+    
     fetchDocuments();
     fetchStats();
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const response = await apiClient.get('/clients');
+      const clientsData = Array.isArray(response.data) ? response.data : [];
+      setClients(clientsData);
+    } catch (err: any) {
+      console.error('Error fetching clients:', err);
+    }
+  };
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -174,6 +209,19 @@ export default function Documents() {
     ? documents
     : documents.filter(doc => doc.type === filterType);
 
+  // Apply client and search filters
+  const finalFilteredDocuments = filteredDocuments.filter(doc => {
+    // Filter by selected client
+    if (selectedClient && doc.clientId !== selectedClient.id) {
+      return false;
+    }
+    // Filter by search query
+    if (searchQuery && !doc.fileName.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
+
   const documentTypes = ['all', ...Array.from(new Set(documents.map(d => d.type)))];
 
   return (
@@ -203,6 +251,42 @@ export default function Documents() {
         {error && (
           <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">⚠️ {error}</p>
+          </div>
+        )}
+
+        {/* Client Filter & Search (for employees only) */}
+        {user && user.role !== 'Client' && (
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-2 text-textPrimary dark:text-gray-100">Client filtern</label>
+                <select
+                  value={selectedClient?.id || ''}
+                  onChange={(e) => {
+                    const client = clients.find(c => c.id === parseInt(e.target.value));
+                    setSelectedClient(client || null);
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100"
+                >
+                  <option value="">Alle Clients</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.companyName || client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-2 text-textPrimary dark:text-gray-100">Dokument suchen</label>
+                <input
+                  type="text"
+                  placeholder="Dateiname suchen..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -279,7 +363,7 @@ export default function Documents() {
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredDocuments.map((doc) => (
+            {finalFilteredDocuments.map((doc) => (
               <div key={doc.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-200 dark:border-gray-700">
                 <div className="flex items-start justify-between mb-3">
                   <div className="text-4xl">{getFileIcon(doc.fileName)}</div>
@@ -329,7 +413,7 @@ export default function Documents() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredDocuments.map((doc) => (
+                {finalFilteredDocuments.map((doc) => (
                   <tr key={doc.id} className="hover:bg-secondary dark:hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -361,7 +445,7 @@ export default function Documents() {
           </div>
         )}
 
-        {filteredDocuments.length === 0 && !loading && (
+        {finalFilteredDocuments.length === 0 && !loading && (
           <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm text-center border border-gray-200 dark:border-gray-700">
             <div className="text-6xl mb-4">📄</div>
             <h3 className="text-xl font-semibold text-textPrimary dark:text-gray-100 mb-2">Keine Dokumente gefunden</h3>
