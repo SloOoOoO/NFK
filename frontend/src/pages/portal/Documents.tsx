@@ -23,11 +23,11 @@ interface StorageStats {
   maxStorageMB: number;
 }
 
-export default function Documents() {
-  // Default limits for storage and documents
-  const DEFAULT_MAX_DOCUMENTS = 10;
-  const DEFAULT_MAX_STORAGE_MB = 100;
+// Default limits for storage and documents
+const DEFAULT_MAX_DOCUMENTS = 10;
+const DEFAULT_MAX_STORAGE_MB = 100;
 
+export default function Documents() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterType, setFilterType] = useState('all');
   const [documents, setDocuments] = useState<Document[]>([]);
