@@ -3,6 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
+import { AxiosError } from 'axios';
+
+interface ApiError {
+  message?: string;
+}
 
 export default function Login() {
   const { t } = useTranslation();
@@ -27,11 +32,13 @@ export default function Login() {
       
       // Redirect to homepage
       navigate('/');
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error && 'response' in err 
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message 
-        : undefined;
-      setError(errorMessage || t('auth.errors.loginFailed'));
+    } catch (err) {
+      if (err instanceof AxiosError && err.response?.data) {
+        const apiError = err.response.data as ApiError;
+        setError(apiError.message || t('auth.errors.loginFailed'));
+      } else {
+        setError(t('auth.errors.loginFailed'));
+      }
     } finally {
       setLoading(false);
     }
