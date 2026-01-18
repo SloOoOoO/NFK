@@ -26,6 +26,7 @@ interface Client {
 }
 
 export default function Calendar() {
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [endpointAvailable, setEndpointAvailable] = useState(false);
@@ -53,7 +54,6 @@ export default function Calendar() {
     description: '',
     location: '',
   });
-  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     fetchEvents();
@@ -293,11 +293,9 @@ export default function Calendar() {
     return `${date} um ${time} Uhr`;
   };
 
-  // Dynamic calendar grid based on currentDate
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); // 0-indexed
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  // Simple calendar grid for January 2025
+  const daysInMonth = 31;
+  const firstDayOfWeek = 3; // Wednesday (0 = Sunday)
   const calendarDays = [];
   
   // Add empty cells for days before the 1st
@@ -307,7 +305,7 @@ export default function Calendar() {
   
   // Add days of the month
   for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${day.toString().padStart(2, '0')}.${(month + 1).toString().padStart(2, '0')}.${year}`;
+    const dateStr = `${day.toString().padStart(2, '0')}.01.2025`;
     const dayEvents = upcomingEvents.filter(e => e.date === dateStr);
     calendarDays.push({ day, events: dayEvents });
   }
@@ -345,15 +343,32 @@ export default function Calendar() {
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-2">
-              <button className="px-4 py-2 rounded-md bg-primary text-white">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-4 py-2 rounded-md ${
+                  viewMode === 'month'
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
                 Monat
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-4 py-2 rounded-md ${
+                  viewMode === 'week'
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                Woche
               </button>
             </div>
             
             <div className="flex items-center gap-4">
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">← Zurück</button>
               <span className="font-semibold text-lg dark:text-gray-200">
-                {currentDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+                {new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
               </span>
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">Weiter →</button>
             </div>
@@ -503,8 +518,9 @@ export default function Calendar() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Calendar View */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <div>
-              <div className="grid grid-cols-7 gap-2 mb-2">
+            {viewMode === 'month' ? (
+              <div>
+                <div className="grid grid-cols-7 gap-2 mb-2">
                   {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
                     <div key={day} className="text-center font-semibold text-textSecondary dark:text-gray-400 text-sm py-2">
                       {day}
@@ -516,52 +532,29 @@ export default function Calendar() {
                   {calendarDays.map((item, index) => (
                     <div
                       key={index}
-                      className={`min-h-24 p-2 border rounded relative ${
+                      className={`min-h-24 p-2 border rounded ${
                         item.day ? 'bg-white dark:bg-gray-800 hover:bg-secondary dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
-                      } ${item.day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear() ? 'border-primary border-2' : 'border-gray-200 dark:border-gray-700'}`}
+                      } ${item.day === 11 ? 'border-primary border-2' : 'border-gray-200 dark:border-gray-700'}`}
                     >
                       {item.day && (
                         <>
                           <div className={`text-sm font-medium mb-1 ${
-                            item.day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear() ? 'text-primary' : 'text-textPrimary dark:text-gray-200'
+                            item.day === 11 ? 'text-primary' : 'text-textPrimary dark:text-gray-200'
                           }`}>
                             {item.day}
                           </div>
-                          
-                          {/* Event markers with hover tooltips */}
                           <div className="space-y-1">
-                            {item.events.map((event, idx) => (
+                            {item.events.slice(0, 2).map((event) => (
                               <div
                                 key={event.id}
-                                className="group relative"
-                                onClick={() => handleEventClick(event)}
+                                className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)}`}
+                                title={event.title}
                               >
-                                {/* Cute event marker */}
-                                {idx < 2 && (
-                                  <div className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)} cursor-pointer hover:shadow-md transition-shadow`}>
-                                    {getEventIcon(event.type)} {event.title.substring(0, 10)}...
-                                  </div>
-                                )}
-                                
-                                {/* Hover tooltip with details */}
-                                <div className="absolute hidden group-hover:block left-0 top-full mt-1 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary-200 dark:border-primary-700">
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">{event.title}</p>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-1">
-                                    <span>👤</span> {event.mandant}
-                                  </p>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                    <span>🕒</span> {event.time} Uhr
-                                  </p>
-                                  {event.location && (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
-                                      <span>📍</span> {event.location}
-                                    </p>
-                                  )}
-                                </div>
+                                {getEventIcon(event.type)} {event.title.substring(0, 10)}...
                               </div>
                             ))}
                             {item.events.length > 2 && (
-                              <div className="text-xs text-textSecondary dark:text-gray-400 font-medium">
+                              <div className="text-xs text-textSecondary dark:text-gray-400">
                                 +{item.events.length - 2} mehr
                               </div>
                             )}
@@ -572,7 +565,13 @@ export default function Calendar() {
                   ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">📅</div>
+                <h3 className="text-xl font-semibold text-textPrimary dark:text-gray-200 mb-2">Wochenansicht</h3>
+                <p className="text-textSecondary dark:text-gray-400">Wochenansicht wird in Kürze verfügbar sein</p>
+              </div>
+            )}
           </div>
 
           {/* Upcoming Events */}

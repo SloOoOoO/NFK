@@ -522,20 +522,19 @@ export default function Register() {
                 <label htmlFor="vatId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   USt-IdNr.
                 </label>
-                  <input
-                    {...register('vatId')}
-                    type="text"
-                    id="vatId"
-                    aria-label="Umsatzsteuer-Identifikationsnummer"
-                    placeholder="z.B. DE123456789"
-                    maxLength={11}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    disabled={loading}
-                  />
-                  {errors.vatId && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.vatId.message}</p>
-                  )}
-                </div>
+                <input
+                  {...register('vatId')}
+                  type="text"
+                  id="vatId"
+                  aria-label="Umsatzsteuer-Identifikationsnummer"
+                  placeholder="z.B. DE123456789"
+                  maxLength={11}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  disabled={loading}
+                />
+                {errors.vatId && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.vatId.message}</p>
+                )}
               </div>
               
               {clientType !== 'Privatperson' && (
@@ -543,21 +542,20 @@ export default function Register() {
                   <label htmlFor="commercialRegister" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Handelsregister <span className="text-red-500">*</span>
                   </label>
-                    <input
-                      {...register('commercialRegister')}
-                      type="text"
-                      id="commercialRegister"
-                      aria-label="Handelsregisternummer"
-                      placeholder="z.B. HRB 12345"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      disabled={loading}
-                    />
-                    {errors.commercialRegister && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.commercialRegister.message}</p>
-                    )}
-                  </div>
-                )}
-              </div>
+                  <input
+                    {...register('commercialRegister')}
+                    type="text"
+                    id="commercialRegister"
+                    aria-label="Handelsregisternummer"
+                    placeholder="z.B. HRB 12345"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  {errors.commercialRegister && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.commercialRegister.message}</p>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Section 4: Legal & Compliance */}

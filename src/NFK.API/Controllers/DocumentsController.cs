@@ -181,8 +181,7 @@ public class DocumentsController : ControllerBase
                 Directory.CreateDirectory(uploadsPath);
             }
 
-            // Generate unique filename with sanitized extension only
-            var fileExtension = Path.GetExtension(file.FileName);
+            // Generate unique filename with sanitized extension (already validated above)
             var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
             var filePath = Path.Combine(uploadsPath, uniqueFileName);
 
