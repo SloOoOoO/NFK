@@ -44,7 +44,8 @@ public class AppointmentsController : ControllerBase
             // Filter by role
             if (userRole == "Client")
             {
-                query = query.Where(a => a.ClientId == userId);
+                // For clients, filter appointments where the appointment's client's userId matches the current user
+                query = query.Where(a => a.Client.UserId == userId);
             }
 
             var appointments = await query
