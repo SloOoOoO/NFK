@@ -1,748 +1,332 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { eventsAPI, clientsAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 
 interface Event {
   id: number;
   title: string;
-  mandant: string;
-  date: string;
-  time: string;
-  type: string;
-  color: string;
+  clientId: number;
+  clientName: string;
+  startTime: string;
+  endTime: string;
   description?: string;
   location?: string;
-  status?: 'pending' | 'accepted' | 'declined';
-  targetUserId?: number;
 }
 
 interface Client {
   id: number;
   companyName: string;
-  user?: {
-    email: string;
-  };
 }
 
 export default function Calendar() {
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [endpointAvailable, setEndpointAvailable] = useState(false);
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<Event[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showAllEvents, setShowAllEvents] = useState(false);
-  const [newAppointment, setNewAppointment] = useState({
-    clientId: 0,
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    clientId: null as number | null,
     title: '',
-    date: '',
-    time: '',
+    startTime: '',
+    endTime: '',
     description: '',
-    location: '',
-  });
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [showEventDetailModal, setShowEventDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [editForm, setEditForm] = useState({
-    title: '',
-    date: '',
-    time: '',
-    description: '',
-    location: '',
+    location: ''
   });
 
   useEffect(() => {
     fetchEvents();
     fetchClients();
-  }, []);
+  }, [currentDate]);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/appointments', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setEvents(data);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setEvents([]);
+    }
+  };
 
   const fetchClients = async () => {
     try {
-      const response = await clientsAPI.getAll();
-      setClients(response.data || []);
-    } catch (err) {
-      console.error('Error fetching clients:', err);
-    }
-  };
-
-  const fetchEvents = async () => {
-    setLoading(true);
-    try {
-      const response = await eventsAPI.getAll();
-      const eventsData = Array.isArray(response.data) ? response.data : [];
+      const response = await fetch('http://localhost:8080/api/v1/clients', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+      });
       
-      // Transform backend data to frontend format
-      const transformedEvents = eventsData.map((event: any) => ({
-        id: event.id,
-        title: event.title,
-        mandant: event.mandant,
-        date: formatDateToDDMMYYYY(new Date(event.date)),
-        time: event.time,
-        type: event.type,
-        color: getColorForType(event.type),
-        description: event.description || '',
-        location: event.location || '',
-        status: 'accepted' as const,
-      }));
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
-      setUpcomingEvents(transformedEvents);
-      setEndpointAvailable(true);
-    } catch (err: any) {
-      console.log('Events endpoint not available:', err);
-      setEndpointAvailable(false);
-      setUpcomingEvents([]);
-    } finally {
-      setLoading(false);
+      const data = await response.json();
+      setClients(data);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
     }
   };
 
-  const formatDateToDDMMYYYY = (date: Date): string => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  };
-
-  const getColorForType = (type: string): string => {
-    switch (type) {
-      case 'Termin':
-        return 'blue';
-      case 'Frist':
-        return 'red';
-      case 'Aufgabe':
-        return 'yellow';
-      default:
-        return 'blue';
-    }
-  };
-
-  const handleCreateAppointment = async (e: React.FormEvent) => {
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true);
-    try {
-      // Get selected client email
-      const selectedClient = clients.find(c => c.id === newAppointment.clientId);
-      const clientEmail = selectedClient?.user?.email || 'unknown@example.com';
-
-      // Create appointment via API
-      await eventsAPI.create({
-        clientId: newAppointment.clientId,
-        title: newAppointment.title,
-        description: newAppointment.description,
-        date: newAppointment.date,
-        time: newAppointment.time,
-        location: newAppointment.location,
-      });
-
-      // Log email notification
-      console.log(`Email notification would be sent to: ${clientEmail}`);
-
-      // Show success message
-      setSuccessMessage('Termin wurde erfolgreich erstellt!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-
-      // Close modal and reset form
-      setShowAppointmentModal(false);
-      setNewAppointment({
-        clientId: 0,
-        title: '',
-        date: '',
-        time: '',
-        description: '',
-        location: '',
-      });
-
-      // Refresh events
-      await fetchEvents();
-    } catch (err: any) {
-      console.error('Error creating appointment:', err);
-      alert('Fehler beim Erstellen des Termins');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const getEventTypeColor = (color: string) => {
-    const colors: { [key: string]: string } = {
-      'blue': 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700',
-      'red': 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700',
-      'yellow': 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700',
-      'green': 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700',
-    };
-    return colors[color] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600';
-  };
-
-  const getEventIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      'Termin': '📅',
-      'Frist': '⏰',
-      'Aufgabe': '✓',
-    };
-    return icons[type] || '📌';
-  };
-
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setShowEventDetailModal(true);
-  };
-
-  const handleEditClick = () => {
-    if (!selectedEvent) return;
     
-    // Convert DD.MM.YYYY to YYYY-MM-DD for input[type="date"]
-    const dateParts = selectedEvent.date.split('.');
-    if (dateParts.length !== 3) {
-      console.error('Invalid date format:', selectedEvent.date);
-      alert('Ungültiges Datumsformat');
+    if (!formData.clientId) {
+      alert('Bitte wählen Sie einen Mandanten aus');
       return;
     }
-    const [day, month, year] = dateParts;
-    const isoDate = `${year}-${month}-${day}`;
     
-    setEditForm({
-      title: selectedEvent.title,
-      date: isoDate,
-      time: selectedEvent.time,
-      description: selectedEvent.description || '',
-      location: selectedEvent.location || '',
-    });
-    setShowEventDetailModal(false);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEvent) return;
-    
-    setCreating(true);
     try {
-      await eventsAPI.update(selectedEvent.id, {
-        title: editForm.title,
-        date: editForm.date,
-        time: editForm.time,
-        description: editForm.description,
-        location: editForm.location,
+      const response = await fetch('http://localhost:8080/api/v1/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify(formData)
       });
       
-      setSuccessMessage('Ereignis wurde erfolgreich aktualisiert!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
-      setShowEditModal(false);
-      setSelectedEvent(null);
-      await fetchEvents();
-    } catch (err: any) {
-      console.error('Error updating event:', err);
-      alert('Fehler beim Aktualisieren des Ereignisses');
-    } finally {
-      setCreating(false);
+      setShowModal(false);
+      setFormData({
+        clientId: null,
+        title: '',
+        startTime: '',
+        endTime: '',
+        description: '',
+        location: ''
+      });
+      fetchEvents();
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      alert('Fehler beim Erstellen des Termins');
     }
   };
 
-  const handleDeleteClick = () => {
-    setShowEventDetailModal(false);
-    setShowDeleteConfirm(true);
-  };
+  const getDaysInMonth = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
 
-  const handleConfirmDelete = async () => {
-    if (!selectedEvent) return;
+    const days = [];
     
-    setCreating(true);
-    try {
-      await eventsAPI.delete(selectedEvent.id);
-      
-      setSuccessMessage('Ereignis wurde erfolgreich gelöscht!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-      setShowDeleteConfirm(false);
-      setSelectedEvent(null);
-      await fetchEvents();
-    } catch (err: any) {
-      console.error('Error deleting event:', err);
-      alert('Fehler beim Löschen des Ereignisses');
-    } finally {
-      setCreating(false);
+    // Empty cells before first day
+    for (let i = 0; i < startDayOfWeek; i++) {
+      days.push(null);
     }
-  };
-
-  const handleCompleteEvent = async () => {
-    if (!selectedEvent) return;
     
-    setCreating(true);
-    try {
-      await eventsAPI.complete(selectedEvent.id);
-      
-      setSuccessMessage('Ereignis wurde erfolgreich abgeschlossen!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-      setShowEventDetailModal(false);
-      setSelectedEvent(null);
-      await fetchEvents();
-    } catch (err: any) {
-      console.error('Error completing event:', err);
-      alert('Fehler beim Abschließen des Ereignisses');
-    } finally {
-      setCreating(false);
+    // Days of month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
     }
+    
+    return days;
   };
 
-  const formatDateTimeDisplay = (date: string, time: string) => {
-    return `${date} um ${time} Uhr`;
+  const getEventsForDay = (day: number) => {
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return events.filter(e => e.startTime.startsWith(dateStr));
   };
 
-  // Simple calendar grid for January 2025
-  const daysInMonth = 31;
-  const firstDayOfWeek = 3; // Wednesday (0 = Sunday)
-  const calendarDays = [];
-  
-  // Add empty cells for days before the 1st
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    calendarDays.push({ day: null, events: [] });
-  }
-  
-  // Add days of the month
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${day.toString().padStart(2, '0')}.01.2025`;
-    const dayEvents = upcomingEvents.filter(e => e.date === dateStr);
-    calendarDays.push({ day, events: dayEvents });
-  }
+  const previousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  };
 
   return (
-    <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 p-8">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-textPrimary dark:text-gray-100 mb-2">Kalender</h1>
-          <p className="text-textSecondary dark:text-gray-400">Termine, Fristen und Aufgaben im Überblick</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Kalender</h1>
+          <p className="text-gray-600 dark:text-gray-400">Termine, Fristen und Aufgaben im Überblick</p>
         </div>
 
-        {/* Info Banner if endpoint not available */}
-        {!endpointAvailable && !loading && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 rounded-md">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              ℹ️ Kalender-Feature ist noch nicht vollständig implementiert. Demo-Daten werden angezeigt.
-            </p>
-          </div>
-        )}
-
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 rounded-md">
-            <p className="text-sm text-green-800 dark:text-green-200">
-              ✓ {successMessage}
-            </p>
-          </div>
-        )}
-
-        {/* Actions Bar */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex items-center justify-between">
+            {/* ONLY MONAT - NO WOCHE BUTTON */}
             <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-4 py-2 rounded-md ${
-                  viewMode === 'month'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
+              <button className="px-4 py-2 rounded-md bg-primary-600 text-white">
                 Monat
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-4 py-2 rounded-md ${
-                  viewMode === 'week'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Woche
               </button>
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">← Zurück</button>
+              <button onClick={previousMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">← Zurück</button>
               <span className="font-semibold text-lg dark:text-gray-200">
-                {new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+                {currentDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
               </span>
-              <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">Weiter →</button>
+              <button onClick={nextMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">Weiter →</button>
             </div>
             
-            <Dialog.Root open={showAppointmentModal} onOpenChange={setShowAppointmentModal}>
-              <Dialog.Trigger asChild>
-                <button className="btn-primary">
-                  + Termin vereinbaren
-                </button>
-              </Dialog.Trigger>
-              <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
-                  <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Termin vereinbaren</h2>
-                  </Dialog.Title>
-                  
-                  <form onSubmit={handleCreateAppointment} className="p-6 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">Mandant *</label>
-                      <select
-                        value={newAppointment.clientId}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, clientId: parseInt(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                        required
-                        disabled={creating}
-                      >
-                        <option value="0">Mandant auswählen</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.companyName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">Titel *</label>
-                      <input
-                        type="text"
-                        value={newAppointment.title}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, title: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                        required
-                        disabled={creating}
-                        placeholder="z.B. Jahresabschlussgespräch"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-2 dark:text-gray-200">Datum *</label>
-                        <input
-                          type="date"
-                          value={newAppointment.date}
-                          onChange={(e) => setNewAppointment({ ...newAppointment, date: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                          required
-                          disabled={creating}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium mb-2 dark:text-gray-200">Uhrzeit *</label>
-                        <input
-                          type="time"
-                          value={newAppointment.time}
-                          onChange={(e) => setNewAppointment({ ...newAppointment, time: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                          required
-                          disabled={creating}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">Beschreibung</label>
-                      <textarea
-                        value={newAppointment.description}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, description: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                        rows={3}
-                        disabled={creating}
-                        placeholder="Zusätzliche Informationen..."
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ort (optional)</label>
-                      <input
-                        type="text"
-                        value={newAppointment.location}
-                        onChange={(e) => setNewAppointment({ ...newAppointment, location: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                        disabled={creating}
-                        placeholder="z.B. Büro, Videoanruf"
-                      />
-                    </div>
-                    
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
-                        📧 <strong>Benachrichtigung:</strong> Der Mandant erhält eine E-Mail-Benachrichtigung über den Termin.
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-3 pt-4">
-                      <Dialog.Close asChild>
-                        <button
-                          type="button"
-                          className="flex-1 btn-secondary"
-                          disabled={creating}
-                        >
-                          Abbrechen
-                        </button>
-                      </Dialog.Close>
-                      <button
-                        type="submit"
-                        className="flex-1 btn-primary"
-                        disabled={creating}
-                      >
-                        {creating ? 'Wird erstellt...' : 'Termin erstellen'}
-                      </button>
-                    </div>
-                  </form>
-                </Dialog.Content>
-              </Dialog.Portal>
-            </Dialog.Root>
+            <button 
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 bg-primary-600 text-white rounded-md"
+            >
+              + Termin vereinbaren
+            </button>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Termine</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{upcomingEvents.filter(e => e.type === 'Termin').length}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Termine</p>
+            <p className="text-2xl font-bold text-primary-600">{events.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Fristen</p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{upcomingEvents.filter(e => e.type === 'Frist').length}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Fristen</p>
+            <p className="text-2xl font-bold text-red-600">0</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Aufgaben</p>
-            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{upcomingEvents.filter(e => e.type === 'Aufgabe').length}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Aufgaben</p>
+            <p className="text-2xl font-bold text-yellow-600">0</p>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Calendar View */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            {viewMode === 'month' ? (
-              <div>
-                <div className="grid grid-cols-7 gap-2 mb-2">
-                  {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
-                    <div key={day} className="text-center font-semibold text-textSecondary dark:text-gray-400 text-sm py-2">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="grid grid-cols-7 gap-2">
-                  {calendarDays.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`min-h-24 p-2 border rounded ${
-                        item.day ? 'bg-white dark:bg-gray-800 hover:bg-secondary dark:hover:bg-gray-700 cursor-pointer' : 'bg-gray-50 dark:bg-gray-900'
-                      } ${item.day === 11 ? 'border-primary border-2' : 'border-gray-200 dark:border-gray-700'}`}
-                    >
-                      {item.day && (
-                        <>
-                          <div className={`text-sm font-medium mb-1 ${
-                            item.day === 11 ? 'text-primary' : 'text-textPrimary dark:text-gray-200'
-                          }`}>
-                            {item.day}
+        {/* Calendar Grid */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
+              <div key={day} className="text-center font-semibold text-gray-600 dark:text-gray-400 text-sm py-2">
+                {day}
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7 gap-2">
+            {getDaysInMonth().map((day, index) => {
+              const dayEvents = day ? getEventsForDay(day) : [];
+              
+              return (
+                <div
+                  key={index}
+                  className={`min-h-24 p-2 border rounded relative ${
+                    day ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-gray-50 dark:bg-gray-900'
+                  } border-gray-200 dark:border-gray-700`}
+                >
+                  {day && (
+                    <>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-200 mb-1">
+                        {day}
+                      </div>
+                      
+                      {/* EVENT MARKERS - CUTE PROFESSIONAL SYMBOLS */}
+                      {dayEvents.length > 0 && (
+                        <div className="absolute top-1 right-1 group">
+                          {/* Cute calendar badge */}
+                          <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform hover:scale-110 transition-transform">
+                            📅
                           </div>
-                          <div className="space-y-1">
-                            {item.events.slice(0, 2).map((event) => (
-                              <div
-                                key={event.id}
-                                className={`text-xs px-1 py-0.5 rounded truncate ${getEventTypeColor(event.color)}`}
-                                title={event.title}
-                              >
-                                {getEventIcon(event.type)} {event.title.substring(0, 10)}...
+                          
+                          {/* Hover Tooltip */}
+                          <div className="absolute hidden group-hover:block top-8 right-0 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary-200 dark:border-primary-700">
+                            {dayEvents.slice(0, 3).map(event => (
+                              <div key={event.id} className="mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                  {event.title}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                  <span>👤</span> {event.clientName}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                  <span>🕒</span> {new Date(event.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
                               </div>
                             ))}
-                            {item.events.length > 2 && (
-                              <div className="text-xs text-textSecondary dark:text-gray-400">
-                                +{item.events.length - 2} mehr
-                              </div>
+                            {dayEvents.length > 3 && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                                +{dayEvents.length - 3} weitere
+                              </p>
                             )}
                           </div>
-                        </>
+                        </div>
                       )}
-                    </div>
-                  ))}
+                      
+                      {/* Event count badge */}
+                      {dayEvents.length > 0 && (
+                        <div className="text-xs text-primary-600 dark:text-primary-400 font-medium mt-1">
+                          {dayEvents.length} {dayEvents.length === 1 ? 'Termin' : 'Termine'}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-20">
-                <div className="text-6xl mb-4">📅</div>
-                <h3 className="text-xl font-semibold text-textPrimary dark:text-gray-200 mb-2">Wochenansicht</h3>
-                <p className="text-textSecondary dark:text-gray-400">Wochenansicht wird in Kürze verfügbar sein</p>
-              </div>
-            )}
-          </div>
-
-          {/* Upcoming Events */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-textPrimary dark:text-gray-200 mb-4">Anstehende Ereignisse</h2>
-            
-            <div className="space-y-3">
-              {(showAllEvents ? upcomingEvents : upcomingEvents.slice(0, 6)).map((event) => (
-                <div 
-                  key={event.id} 
-                  className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getEventTypeColor(event.color)}`}
-                  onClick={() => handleEventClick(event)}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-xl">{getEventIcon(event.type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm text-textPrimary dark:text-gray-200 truncate">
-                        {event.title}
-                      </h4>
-                      <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">
-                        {event.mandant}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-textSecondary dark:text-gray-400">
-                        <span>📅 {event.date}</span>
-                        <span>🕐 {event.time}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {!showAllEvents && upcomingEvents.length > 6 && (
-              <button 
-                onClick={() => setShowAllEvents(true)}
-                className="w-full mt-4 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm cursor-pointer"
-              >
-                Alle Ereignisse anzeigen ({upcomingEvents.length})
-              </button>
-            )}
-            
-            {showAllEvents && upcomingEvents.length > 6 && (
-              <button 
-                onClick={() => setShowAllEvents(false)}
-                className="w-full mt-4 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm cursor-pointer"
-              >
-                Weniger anzeigen
-              </button>
-            )}
+              );
+            })}
           </div>
         </div>
 
-        {/* Event Detail Modal */}
-        <Dialog.Root open={showEventDetailModal} onOpenChange={setShowEventDetailModal}>
+        {/* Create Modal */}
+        <Dialog.Root open={showModal} onOpenChange={setShowModal}>
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
+            <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50">
               <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Ereignis Details</h2>
+                <h2 className="text-xl font-semibold dark:text-gray-100">Termin vereinbaren</h2>
               </Dialog.Title>
               
-              {selectedEvent && (
-                <div className="p-6 space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-textPrimary dark:text-gray-100 mb-2">
-                      {selectedEvent.title}
-                    </h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(selectedEvent.color)}`}>
-                      {getEventIcon(selectedEvent.type)} {selectedEvent.type}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-textSecondary dark:text-gray-300">
-                      <span className="font-medium">Mandant:</span>
-                      <span>{selectedEvent.mandant}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-textSecondary dark:text-gray-300">
-                      <span className="font-medium">Datum & Uhrzeit:</span>
-                      <span>{formatDateTimeDisplay(selectedEvent.date, selectedEvent.time)}</span>
-                    </div>
-                    
-                    {selectedEvent.location && (
-                      <div className="flex items-center gap-2 text-textSecondary dark:text-gray-300">
-                        <span className="font-medium">Ort:</span>
-                        <span>{selectedEvent.location}</span>
-                      </div>
-                    )}
-                    
-                    {selectedEvent.description && (
-                      <div className="pt-2">
-                        <span className="font-medium text-textSecondary dark:text-gray-300">Beschreibung:</span>
-                        <p className="mt-1 text-textSecondary dark:text-gray-300 whitespace-pre-wrap">
-                          {selectedEvent.description}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <button
-                      onClick={handleEditClick}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      onClick={handleCompleteEvent}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
-                      disabled={creating}
-                    >
-                      {creating ? 'Wird abgeschlossen...' : 'Abschließen'}
-                    </button>
-                    <button
-                      onClick={handleDeleteClick}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                    >
-                      Löschen
-                    </button>
-                  </div>
+              <form onSubmit={handleCreateEvent} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Mandant *</label>
+                  <select
+                    value={formData.clientId || ''}
+                    onChange={(e) => setFormData({ ...formData, clientId: e.target.value ? parseInt(e.target.value) : null })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="">Mandant auswählen</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.companyName}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-
-        {/* Event Edit Modal */}
-        <Dialog.Root open={showEditModal} onOpenChange={setShowEditModal}>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
-              <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Ereignis bearbeiten</h2>
-              </Dialog.Title>
-              
-              <form onSubmit={handleUpdateEvent} className="p-6 space-y-4">
+                
                 <div>
                   <label className="block text-sm font-medium mb-2 dark:text-gray-200">Titel *</label>
                   <input
                     type="text"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
-                    disabled={creating}
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Datum *</label>
+                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Start *</label>
                     <input
-                      type="date"
-                      value={editForm.date}
-                      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      type="datetime-local"
+                      value={formData.startTime}
+                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                       required
-                      disabled={creating}
+                      className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Uhrzeit *</label>
+                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ende *</label>
                     <input
-                      type="time"
-                      value={editForm.time}
-                      onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      type="datetime-local"
+                      value={formData.endTime}
+                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                       required
-                      disabled={creating}
+                      className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     />
                   </div>
                 </div>
@@ -750,89 +334,32 @@ export default function Calendar() {
                 <div>
                   <label className="block text-sm font-medium mb-2 dark:text-gray-200">Beschreibung</label>
                   <textarea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     rows={3}
-                    disabled={creating}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ort (optional)</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ort</label>
                   <input
                     type="text"
-                    value={editForm.location}
-                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                    disabled={creating}
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   />
                 </div>
                 
                 <div className="flex gap-3 pt-4">
-                  <Dialog.Close asChild>
-                    <button
-                      type="button"
-                      className="flex-1 btn-secondary"
-                      disabled={creating}
-                    >
-                      Abbrechen
-                    </button>
-                  </Dialog.Close>
-                  <button
-                    type="submit"
-                    className="flex-1 btn-primary"
-                    disabled={creating}
-                  >
-                    {creating ? 'Wird gespeichert...' : 'Speichern'}
+                  <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg">
+                    Abbrechen
+                  </button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg">
+                    Erstellen
                   </button>
                 </div>
               </form>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-
-        {/* Delete Confirmation Modal */}
-        <Dialog.Root open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50">
-              <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Ereignis löschen</h2>
-              </Dialog.Title>
-              
-              <div className="p-6">
-                <p className="text-textSecondary dark:text-gray-300 mb-6">
-                  Möchten Sie dieses Ereignis wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-                </p>
-                
-                {selectedEvent && (
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md mb-6">
-                    <p className="font-medium text-textPrimary dark:text-gray-100">{selectedEvent.title}</p>
-                    <p className="text-sm text-textSecondary dark:text-gray-300 mt-1">
-                      {selectedEvent.mandant} • {selectedEvent.date} • {selectedEvent.time}
-                    </p>
-                  </div>
-                )}
-                
-                <div className="flex gap-3">
-                  <Dialog.Close asChild>
-                    <button
-                      className="flex-1 btn-secondary"
-                      disabled={creating}
-                    >
-                      Abbrechen
-                    </button>
-                  </Dialog.Close>
-                  <button
-                    onClick={handleConfirmDelete}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                    disabled={creating}
-                  >
-                    {creating ? 'Wird gelöscht...' : 'Löschen'}
-                  </button>
-                </div>
-              </div>
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
