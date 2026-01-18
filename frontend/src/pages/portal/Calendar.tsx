@@ -26,7 +26,6 @@ interface Client {
 }
 
 export default function Calendar() {
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [endpointAvailable, setEndpointAvailable] = useState(false);
@@ -54,6 +53,7 @@ export default function Calendar() {
     description: '',
     location: '',
   });
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     fetchEvents();
@@ -293,9 +293,11 @@ export default function Calendar() {
     return `${date} um ${time} Uhr`;
   };
 
-  // Simple calendar grid for January 2025
-  const daysInMonth = 31;
-  const firstDayOfWeek = 3; // Wednesday (0 = Sunday)
+  // Dynamic calendar grid based on currentDate
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth(); // 0-indexed
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
   const calendarDays = [];
   
   // Add empty cells for days before the 1st
@@ -305,7 +307,7 @@ export default function Calendar() {
   
   // Add days of the month
   for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${day.toString().padStart(2, '0')}.01.2025`;
+    const dateStr = `${day.toString().padStart(2, '0')}.${(month + 1).toString().padStart(2, '0')}.${year}`;
     const dayEvents = upcomingEvents.filter(e => e.date === dateStr);
     calendarDays.push({ day, events: dayEvents });
   }
@@ -343,31 +345,16 @@ export default function Calendar() {
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-4 py-2 rounded-md ${
-                  viewMode === 'month'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
+              <button className="px-4 py-2 rounded-md bg-primary text-white">
                 Monat
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-4 py-2 rounded-md ${
-                  viewMode === 'week'
-                    ? 'bg-primary text-white'
-                    : 'bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Woche
               </button>
             </div>
             
             <div className="flex items-center gap-4">
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">← Zurück</button>
-              <span className="font-semibold text-lg dark:text-gray-200">Januar 2025</span>
+              <span className="font-semibold text-lg dark:text-gray-200">
+                {currentDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+              </span>
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">Weiter →</button>
             </div>
             
@@ -516,9 +503,8 @@ export default function Calendar() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Calendar View */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            {viewMode === 'month' ? (
-              <div>
-                <div className="grid grid-cols-7 gap-2 mb-2">
+            <div>
+              <div className="grid grid-cols-7 gap-2 mb-2">
                   {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
                     <div key={day} className="text-center font-semibold text-textSecondary dark:text-gray-400 text-sm py-2">
                       {day}
@@ -563,13 +549,7 @@ export default function Calendar() {
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-20">
-                <div className="text-6xl mb-4">📅</div>
-                <h3 className="text-xl font-semibold text-textPrimary dark:text-gray-200 mb-2">Wochenansicht</h3>
-                <p className="text-textSecondary dark:text-gray-400">Wochenansicht wird in Kürze verfügbar sein</p>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Upcoming Events */}

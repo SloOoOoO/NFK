@@ -34,15 +34,25 @@ public class AnalyticsController : ControllerBase
                 .OrderBy(x => x.date)
                 .ToListAsync();
 
-            var monthlyVisits = await _context.PageVisits
+            // Fix: Execute query first, then format strings in C# (not SQL)
+            var monthlyData = await _context.PageVisits
                 .Where(pv => pv.CreatedAt >= twelveMonthsAgo)
                 .GroupBy(pv => new { pv.CreatedAt.Year, pv.CreatedAt.Month })
                 .Select(g => new { 
-                    month = $"{g.Key.Year}-{g.Key.Month:D2}", 
-                    count = g.Count() 
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    Count = g.Count() 
+                })
+                .ToListAsync();
+
+            var monthlyVisits = monthlyData
+                .Select(x => new
+                {
+                    month = $"{x.Year}-{x.Month:D2}",
+                    count = x.Count
                 })
                 .OrderBy(x => x.month)
-                .ToListAsync();
+                .ToList();
 
             var totalThisYear = await _context.PageVisits
                 .Where(pv => pv.CreatedAt.Year == DateTime.UtcNow.Year)
