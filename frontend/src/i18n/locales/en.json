@@ -50,7 +50,8 @@
     "email": "Email",
     "phone": "Phone",
     "hours": "Business Hours",
-    "hoursValue": "Mon - Fri: 9:00 AM - 5:00 PM<br/>Sat - Sun: Closed",
+    "hoursWeekdays": "Mon - Fri: 9:00 AM - 5:00 PM",
+    "hoursWeekend": "Sat - Sun: Closed",
     "form": {
       "title": "Contact Form",
       "name": "Name",
@@ -103,6 +104,8 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome",
+    "welcomeBack": "Welcome back",
+    "overviewFor": "Here's your overview for today",
     "nav": {
       "dashboard": "Dashboard",
       "profile": "Profile",
@@ -116,9 +119,45 @@
     },
     "stats": {
       "totalClients": "Total Clients",
+      "activeClients": "Active Clients",
+      "newClients": "new",
+      "ofTotal": "of {total} total",
       "activeCases": "Active Cases",
       "pendingDocuments": "Pending Documents",
-      "unreadMessages": "Unread Messages"
+      "documents": "Documents",
+      "documentsPending": "pending",
+      "documentsToday": "{count} uploaded today",
+      "unreadMessages": "Unread Messages",
+      "upcomingDeadlines": "Upcoming Deadlines",
+      "urgent": "Urgent",
+      "dueSoon": "Due this week",
+      "datevExports": "DATEV Exports",
+      "active": "Active",
+      "last24Hours": "Last 24 Hours"
+    },
+    "sections": {
+      "deadlines": "Upcoming Deadlines",
+      "viewAll": "View all",
+      "noDeadlines": "No upcoming deadlines",
+      "client": "Client",
+      "highPriority": "Urgent",
+      "normalPriority": "Normal",
+      "quickActions": "Quick Actions",
+      "newClient": "New Client",
+      "uploadDocument": "Upload Document",
+      "newCase": "New Case",
+      "datevExport": "DATEV Export",
+      "datevActivity": "DATEV Activity",
+      "details": "Details",
+      "exportCompleted": "Export completed",
+      "syncStarted": "Synchronization started",
+      "hoursAgo": "{hours} hours ago",
+      "elsterSubmissions": "ELSTER Submissions",
+      "pending": "pending",
+      "recentActivity": "Recent Activity",
+      "documentUploaded": "Document uploaded",
+      "caseCompleted": "Case completed",
+      "newMessage": "New message"
     }
   },
   "profile": {

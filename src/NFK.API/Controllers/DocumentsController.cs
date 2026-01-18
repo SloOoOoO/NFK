@@ -26,7 +26,39 @@ public class DocumentsController : ControllerBase
     {
         try
         {
-            var documents = await _context.Documents
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var userRole = User.FindFirst("role")?.Value;
+            if (string.IsNullOrEmpty(userRole))
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User role not found" });
+            }
+
+            var query = _context.Documents
+                .Include(d => d.Case)
+                    .ThenInclude(c => c!.Client)
+                .AsQueryable();
+
+            // Role-based filtering
+            if (userRole == "Client")
+            {
+                // Clients can only see documents for cases belonging to their client record
+                query = query.Where(d => 
+                    d.Case != null && 
+                    d.Case.Client.UserId == currentUserId.Value);
+            }
+            else if (userRole == "Receptionist")
+            {
+                // Receptionists can only see documents they uploaded
+                query = query.Where(d => d.UploadedByUserId == currentUserId.Value);
+            }
+            // SuperAdmin, Consultant, DATEVManager see all documents (no filter)
+
+            var documents = await query
                 .OrderByDescending(d => d.CreatedAt)
                 .ToListAsync();
 

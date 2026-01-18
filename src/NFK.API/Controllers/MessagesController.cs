@@ -31,9 +31,33 @@ public class MessagesController : ControllerBase
                 return Unauthorized(new { error = "unauthorized", message = "User not found" });
             }
 
-            var messages = await _context.Messages
+            var userRole = User.FindFirst("role")?.Value;
+            if (string.IsNullOrEmpty(userRole))
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User role not found" });
+            }
+
+            var query = _context.Messages
                 .Include(m => m.SenderUser)
-                .Where(m => m.RecipientUserId == currentUserId.Value)
+                .AsQueryable();
+
+            // Role-based filtering
+            if (userRole == "Client")
+            {
+                // Clients can only see messages sent to them (not pool emails)
+                query = query.Where(m => m.RecipientUserId == currentUserId.Value && !m.IsPoolEmail);
+            }
+            else
+            {
+                // Employees (SuperAdmin, Consultant, Receptionist, DATEVManager) can see:
+                // 1. Messages sent to them
+                // 2. Pool emails
+                query = query.Where(m => 
+                    m.RecipientUserId == currentUserId.Value || 
+                    m.IsPoolEmail);
+            }
+
+            var messages = await query
                 .OrderByDescending(m => m.CreatedAt)
                 .ToListAsync();
 
@@ -44,7 +68,8 @@ public class MessagesController : ControllerBase
                 m.Content.Length > 100 ? m.Content.Substring(0, 100) + "..." : m.Content,
                 m.Content,
                 m.CreatedAt,
-                !m.IsRead
+                !m.IsRead,
+                m.IsPoolEmail
             )).ToList();
 
             return Ok(messageDtos);
@@ -79,6 +104,84 @@ public class MessagesController : ControllerBase
             _logger.LogError(ex, "Error marking message as read {MessageId}", id);
             return StatusCode(500, new { error = "internal_error", message = "Error marking message as read" });
         }
+    }
+
+    /// <summary>
+    /// Send a new message. Clients can only reply to users who previously messaged them.
+    /// </summary>
+    [HttpPost("send")]
+    public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var userRole = User.FindFirst("role")?.Value;
+            if (string.IsNullOrEmpty(userRole))
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User role not found" });
+            }
+
+            // Validate recipient exists
+            var recipientExists = await _context.Users.AnyAsync(u => u.Id == request.RecipientUserId && u.IsActive);
+            if (!recipientExists)
+            {
+                return BadRequest(new { error = "invalid_recipient", message = "Recipient user not found or inactive" });
+            }
+
+            // If sender is a Client, validate they can only reply to users who previously messaged them
+            if (userRole == "Client")
+            {
+                var hasReceivedMessage = await _context.Messages
+                    .AnyAsync(m => m.SenderUserId == request.RecipientUserId && m.RecipientUserId == currentUserId.Value);
+
+                if (!hasReceivedMessage)
+                {
+                    return Forbidden(new { 
+                        error = "forbidden", 
+                        message = "Clients can only reply to staff members who have previously contacted them" 
+                    });
+                }
+            }
+
+            // Create the message
+            var message = new Domain.Entities.Messaging.Message
+            {
+                SenderUserId = currentUserId.Value,
+                RecipientUserId = request.RecipientUserId,
+                Subject = request.Subject,
+                Content = request.Content,
+                CaseId = request.CaseId,
+                IsRead = false,
+                IsPoolEmail = false
+            };
+
+            _context.Messages.Add(message);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Message sent from user {SenderId} to user {RecipientId}",
+                currentUserId.Value, request.RecipientUserId);
+
+            return Ok(new { 
+                message = "Message sent successfully", 
+                messageId = message.Id 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending message");
+            return StatusCode(500, new { error = "internal_error", message = "Error sending message" });
+        }
+    }
+
+    private IActionResult Forbidden(object value)
+    {
+        return StatusCode(403, value);
     }
 
     /// <summary>

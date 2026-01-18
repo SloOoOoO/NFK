@@ -50,7 +50,8 @@
     "email": "E-posta",
     "phone": "Telefon",
     "hours": "Çalışma Saatleri",
-    "hoursValue": "Pzt - Cuma: 09:00 - 17:00<br/>Cmt - Pzr: Kapalı",
+    "hoursWeekdays": "Pzt - Cum: 09:00 - 17:00",
+    "hoursWeekend": "Cmt - Paz: Kapalı",
     "form": {
       "title": "İletişim Formu",
       "name": "İsim",
@@ -103,6 +104,8 @@
   "dashboard": {
     "title": "Kontrol Paneli",
     "welcome": "Hoş geldiniz",
+    "welcomeBack": "Tekrar hoş geldiniz",
+    "overviewFor": "Bugün için özet bilgileriniz",
     "nav": {
       "dashboard": "Kontrol Paneli",
       "profile": "Profil",
@@ -116,9 +119,45 @@
     },
     "stats": {
       "totalClients": "Toplam Müşteri",
+      "activeClients": "Aktif Müşteriler",
+      "newClients": "yeni",
+      "ofTotal": "{total} toplam",
       "activeCases": "Aktif Vakalar",
       "pendingDocuments": "Bekleyen Belgeler",
-      "unreadMessages": "Okunmamış Mesajlar"
+      "documents": "Belgeler",
+      "documentsPending": "beklemede",
+      "documentsToday": "{count} bugün yüklendi",
+      "unreadMessages": "Okunmamış Mesajlar",
+      "upcomingDeadlines": "Yaklaşan Son Tarihler",
+      "urgent": "Acil",
+      "dueSoon": "Bu hafta sona eriyor",
+      "datevExports": "DATEV Dışa Aktarmalar",
+      "active": "Aktif",
+      "last24Hours": "Son 24 Saat"
+    },
+    "sections": {
+      "deadlines": "Yaklaşan Son Tarihler",
+      "viewAll": "Tümünü göster",
+      "noDeadlines": "Yaklaşan son tarih yok",
+      "client": "Müşteri",
+      "highPriority": "Acil",
+      "normalPriority": "Normal",
+      "quickActions": "Hızlı İşlemler",
+      "newClient": "Yeni Müşteri",
+      "uploadDocument": "Belge Yükle",
+      "newCase": "Yeni Vaka",
+      "datevExport": "DATEV Dışa Aktar",
+      "datevActivity": "DATEV Etkinliği",
+      "details": "Detaylar",
+      "exportCompleted": "Dışa aktarma tamamlandı",
+      "syncStarted": "Senkronizasyon başladı",
+      "hoursAgo": "{hours} saat önce",
+      "elsterSubmissions": "ELSTER Gönderimleri",
+      "pending": "beklemede",
+      "recentActivity": "Son Aktiviteler",
+      "documentUploaded": "Belge yüklendi",
+      "caseCompleted": "Vaka tamamlandı",
+      "newMessage": "Yeni mesaj"
     }
   },
   "profile": {

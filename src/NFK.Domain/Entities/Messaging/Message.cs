@@ -19,6 +19,18 @@ public class Message : BaseEntity
     public bool IsRead { get; set; }
     public DateTime? ReadAt { get; set; }
     public int? CaseId { get; set; }
+    
+    /// <summary>
+    /// Indicates if this message originated from a pool email (e.g., info@nfk-buchhaltung.de).
+    /// Pool emails are visible to all employee roles but not to clients.
+    /// </summary>
+    public bool IsPoolEmail { get; set; }
+    
+    /// <summary>
+    /// Comma-separated list of role names that can see this message.
+    /// Used primarily for pool emails to restrict visibility to employee roles.
+    /// </summary>
+    public string? RecipientRoles { get; set; }
 
     // Navigation properties
     public virtual Users.User? SenderUser { get; set; }

@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { clientsAPI, casesAPI, documentsAPI, authAPI } from '../../services/api';
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [stats, setStats] = useState({
@@ -97,22 +100,23 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-secondary">
+    <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 p-8">
         {/* Welcome Hero Section with Gradient */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 text-white p-8 rounded-lg shadow-lg mb-8">
+        <div className="bg-gradient-to-r from-primary to-primary/80 dark:from-blue-600 dark:to-blue-700 text-white p-8 rounded-lg shadow-lg mb-8">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold mb-2">
-                Willkommen zurück{currentUser?.firstName ? `, ${currentUser.firstName} ${currentUser.lastName}` : ''}! 👋
+                {t('dashboard.welcomeBack')}{currentUser?.firstName ? `, ${currentUser.firstName} ${currentUser.lastName}` : ''}! 👋
               </h1>
               <p className="text-white/90 text-lg">
-                Hier ist Ihre Übersicht für heute, {new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {t('dashboard.overviewFor')}, {new Date().toLocaleDateString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <div className="hidden md:block">
+            <div className="hidden md:flex items-center gap-4">
+              <LanguageSwitcher />
               <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center text-4xl">
                 📊
               </div>
@@ -124,61 +128,61 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           {/* CLIENT_ Stats */}
           <Link to="/portal/clients" className="block">
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
                   <span className="text-2xl">👥</span>
                 </div>
-                <span className="text-xs text-green-600 font-medium">+{stats.clients.new_this_month} neu</span>
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium">+{stats.clients.new_this_month} {t('dashboard.stats.newClients')}</span>
               </div>
-              <h3 className="text-sm font-semibold text-textSecondary mb-1">Aktive Mandanten</h3>
-              <p className="text-3xl font-bold text-primary">{loading ? '...' : stats.clients.active}</p>
-              <p className="text-xs text-textSecondary mt-2">von {stats.clients.total} gesamt</p>
+              <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.activeClients')}</h3>
+              <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : stats.clients.active}</p>
+              <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.ofTotal', { total: stats.clients.total })}</p>
             </div>
           </Link>
 
           {/* DOC_ Stats */}
           <Link to="/portal/documents" className="block">
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
                   <span className="text-2xl">📄</span>
                 </div>
-                <span className="text-xs text-orange-600 font-medium">{stats.documents.pending_signature} ausstehend</span>
+                <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">{stats.documents.pending_signature} {t('dashboard.stats.documentsPending')}</span>
               </div>
-              <h3 className="text-sm font-semibold text-textSecondary mb-1">Dokumente</h3>
-              <p className="text-3xl font-bold text-primary">{loading ? '...' : stats.documents.total}</p>
-              <p className="text-xs text-textSecondary mt-2">{stats.documents.uploaded_today} heute hochgeladen</p>
+              <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.documents')}</h3>
+              <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : stats.documents.total}</p>
+              <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.documentsToday', { count: stats.documents.uploaded_today })}</p>
             </div>
           </Link>
 
           {/* COMPLY_ Stats */}
           <Link to="/portal/cases" className="block">
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
                   <span className="text-2xl">⏰</span>
                 </div>
-                <span className="text-xs text-red-600 font-medium">Dringend</span>
+                <span className="text-xs text-red-600 dark:text-red-400 font-medium">{t('dashboard.stats.urgent')}</span>
               </div>
-              <h3 className="text-sm font-semibold text-textSecondary mb-1">Anstehende Fristen</h3>
-              <p className="text-3xl font-bold text-primary">{loading ? '...' : deadlines.length}</p>
-              <p className="text-xs text-textSecondary mt-2">Diese Woche fällig</p>
+              <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.upcomingDeadlines')}</h3>
+              <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : deadlines.length}</p>
+              <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.dueSoon')}</p>
             </div>
           </Link>
 
           {/* DATEV_ Stats */}
           <Link to="/portal/datev" className="block">
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
                   <span className="text-2xl">🔄</span>
                 </div>
-                <span className="text-xs text-green-600 font-medium">Aktiv</span>
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium">{t('dashboard.stats.active')}</span>
               </div>
-              <h3 className="text-sm font-semibold text-textSecondary mb-1">DATEV Exports</h3>
-              <p className="text-3xl font-bold text-primary">2</p>
-              <p className="text-xs text-textSecondary mt-2">Letzte 24 Stunden</p>
+              <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.datevExports')}</h3>
+              <p className="text-3xl font-bold text-primary dark:text-blue-400">2</p>
+              <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.last24Hours')}</p>
             </div>
           </Link>
         </div>
@@ -186,32 +190,32 @@ export default function Dashboard() {
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-6">
           {/* COMPLY_ Deadlines */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-textPrimary">⏰ Anstehende Fristen</h2>
-              <Link to="/portal/cases" className="text-primary hover:underline text-sm">Alle anzeigen →</Link>
+              <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">⏰ {t('dashboard.sections.deadlines')}</h2>
+              <Link to="/portal/cases" className="text-primary dark:text-blue-400 hover:underline text-sm">{t('dashboard.sections.viewAll')} →</Link>
             </div>
             
             <div className="space-y-3">
               {deadlines.length === 0 ? (
-                <p className="text-textSecondary text-center py-4">Keine anstehenden Fristen</p>
+                <p className="text-textSecondary dark:text-gray-400 text-center py-4">{t('dashboard.sections.noDeadlines')}</p>
               ) : (
                 deadlines.map((deadline) => (
-                  <div key={deadline.id} className="border-l-4 border-red-400 bg-red-50 p-4 rounded-r-lg hover:bg-red-100 transition-colors">
+                  <div key={deadline.id} className="border-l-4 border-red-400 dark:border-red-500 bg-red-50 dark:bg-red-900/20 p-4 rounded-r-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-textPrimary mb-1">{deadline.title}</h3>
-                        <p className="text-sm text-textSecondary">Mandant: {deadline.clientName}</p>
+                        <h3 className="font-semibold text-textPrimary dark:text-gray-100 mb-1">{deadline.title}</h3>
+                        <p className="text-sm text-textSecondary dark:text-gray-400">{t('dashboard.sections.client')}: {deadline.clientName}</p>
                       </div>
                       <div className="text-right">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           deadline.priority === 'Hoch'
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' 
+                            : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
                         }`}>
-                          {deadline.priority === 'Hoch' ? '🔴 Dringend' : '🟡 Normal'}
+                          {deadline.priority === 'Hoch' ? `🔴 ${t('dashboard.sections.highPriority')}` : `🟡 ${t('dashboard.sections.normalPriority')}`}
                         </span>
-                        <p className="text-sm text-textSecondary mt-2">📅 {new Date(deadline.dueDate).toLocaleDateString('de-DE')}</p>
+                        <p className="text-sm text-textSecondary dark:text-gray-400 mt-2">📅 {new Date(deadline.dueDate).toLocaleDateString(i18n.language)}</p>
                       </div>
                     </div>
                   </div>
@@ -221,32 +225,32 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-textPrimary mb-4">⚡ Schnellzugriff</h2>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100 mb-4">⚡ {t('dashboard.sections.quickActions')}</h2>
             
             <div className="space-y-3">
               <Link to="/portal/clients" className="block">
                 <button className="w-full btn-primary text-left flex items-center gap-3 hover:scale-105 transition-transform">
                   <span>👥</span>
-                  <span>Neuer Mandant</span>
+                  <span>{t('dashboard.sections.newClient')}</span>
                 </button>
               </Link>
               <Link to="/portal/documents" className="block">
-                <button className="w-full btn-secondary text-left flex items-center gap-3 hover:scale-105 transition-transform">
+                <button className="w-full btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-left flex items-center gap-3 hover:scale-105 transition-transform">
                   <span>📤</span>
-                  <span>Dokument hochladen</span>
+                  <span>{t('dashboard.sections.uploadDocument')}</span>
                 </button>
               </Link>
               <Link to="/portal/cases" className="block">
-                <button className="w-full btn-secondary text-left flex items-center gap-3 hover:scale-105 transition-transform">
+                <button className="w-full btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-left flex items-center gap-3 hover:scale-105 transition-transform">
                   <span>📁</span>
-                  <span>Neuer Fall</span>
+                  <span>{t('dashboard.sections.newCase')}</span>
                 </button>
               </Link>
               <Link to="/portal/datev" className="block">
-                <button className="w-full btn-secondary text-left flex items-center gap-3 hover:scale-105 transition-transform">
+                <button className="w-full btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-left flex items-center gap-3 hover:scale-105 transition-transform">
                   <span>🔄</span>
-                  <span>DATEV Export</span>
+                  <span>{t('dashboard.sections.datevExport')}</span>
                 </button>
               </Link>
             </div>
@@ -256,85 +260,85 @@ export default function Dashboard() {
         {/* Bottom Grid - DATEV_ and Recent Activity */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* DATEV_ Recent Activity */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-textPrimary">🔄 DATEV Aktivitäten</h2>
-              <Link to="/portal/datev" className="text-primary hover:underline text-sm">Details →</Link>
+              <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">🔄 {t('dashboard.sections.datevActivity')}</h2>
+              <Link to="/portal/datev" className="text-primary dark:text-blue-400 hover:underline text-sm">{t('dashboard.sections.details')} →</Link>
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-start justify-between border-b pb-3">
+              <div className="flex items-start justify-between border-b dark:border-gray-700 pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full mt-2 bg-green-500"></div>
+                  <div className="w-2 h-2 rounded-full mt-2 bg-green-500 dark:bg-green-400"></div>
                   <div>
-                    <p className="font-medium text-textPrimary">Export abgeschlossen</p>
-                    <p className="text-sm text-textSecondary">Schmidt GmbH</p>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.exportCompleted')}</p>
+                    <p className="text-sm text-textSecondary dark:text-gray-400">Schmidt GmbH</p>
                   </div>
                 </div>
-                <span className="text-xs text-textSecondary whitespace-nowrap">Vor 2 Stunden</span>
+                <span className="text-xs text-textSecondary dark:text-gray-400 whitespace-nowrap">{t('dashboard.sections.hoursAgo', { hours: 2 })}</span>
               </div>
-              <div className="flex items-start justify-between border-b pb-3">
+              <div className="flex items-start justify-between border-b dark:border-gray-700 pb-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full mt-2 bg-yellow-500"></div>
+                  <div className="w-2 h-2 rounded-full mt-2 bg-yellow-500 dark:bg-yellow-400"></div>
                   <div>
-                    <p className="font-medium text-textPrimary">Synchronisation gestartet</p>
-                    <p className="text-sm text-textSecondary">Becker AG</p>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.syncStarted')}</p>
+                    <p className="text-sm text-textSecondary dark:text-gray-400">Becker AG</p>
                   </div>
                 </div>
-                <span className="text-xs text-textSecondary whitespace-nowrap">Vor 5 Stunden</span>
+                <span className="text-xs text-textSecondary dark:text-gray-400 whitespace-nowrap">{t('dashboard.sections.hoursAgo', { hours: 5 })}</span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-textSecondary">ELSTER Einreichungen</span>
-                <span className="font-semibold text-primary">3 ausstehend</span>
+                <span className="text-textSecondary dark:text-gray-400">{t('dashboard.sections.elsterSubmissions')}</span>
+                <span className="font-semibold text-primary dark:text-blue-400">3 {t('dashboard.sections.pending')}</span>
               </div>
             </div>
           </div>
 
           {/* Recent System Activity */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-textPrimary mb-4">📋 Letzte Aktivitäten</h2>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100 mb-4">📋 {t('dashboard.sections.recentActivity')}</h2>
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-4">
+              <div className="flex items-center justify-between border-b dark:border-gray-700 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                     📄
                   </div>
                   <div>
-                    <p className="font-medium text-textPrimary">Dokument hochgeladen</p>
-                    <p className="text-sm text-textSecondary">Jahresabschluss_2024.pdf</p>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.documentUploaded')}</p>
+                    <p className="text-sm text-textSecondary dark:text-gray-400">Jahresabschluss_2024.pdf</p>
                   </div>
                 </div>
-                <span className="text-xs text-textSecondary">2h</span>
+                <span className="text-xs text-textSecondary dark:text-gray-400">2h</span>
               </div>
               
-              <div className="flex items-center justify-between border-b pb-4">
+              <div className="flex items-center justify-between border-b dark:border-gray-700 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
                     ✅
                   </div>
                   <div>
-                    <p className="font-medium text-textPrimary">Fall abgeschlossen</p>
-                    <p className="text-sm text-textSecondary">FALL-2025-003</p>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.caseCompleted')}</p>
+                    <p className="text-sm text-textSecondary dark:text-gray-400">FALL-2025-003</p>
                   </div>
                 </div>
-                <span className="text-xs text-textSecondary">5h</span>
+                <span className="text-xs text-textSecondary dark:text-gray-400">5h</span>
               </div>
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
                     💬
                   </div>
                   <div>
-                    <p className="font-medium text-textPrimary">Neue Nachricht</p>
-                    <p className="text-sm text-textSecondary">Anna Schmidt</p>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">{t('dashboard.sections.newMessage')}</p>
+                    <p className="text-sm text-textSecondary dark:text-gray-400">Anna Schmidt</p>
                   </div>
                 </div>
-                <span className="text-xs text-textSecondary">1d</span>
+                <span className="text-xs text-textSecondary dark:text-gray-400">1d</span>
               </div>
             </div>
           </div>

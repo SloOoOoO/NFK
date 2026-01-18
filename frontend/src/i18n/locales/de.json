@@ -50,7 +50,8 @@
     "email": "E-Mail",
     "phone": "Telefon",
     "hours": "Öffnungszeiten",
-    "hoursValue": "Mo - Fr: 9:00 - 17:00 Uhr<br/>Sa - So: Geschlossen",
+    "hoursWeekdays": "Mo - Fr: 9:00 - 17:00 Uhr",
+    "hoursWeekend": "Sa - So: Geschlossen",
     "form": {
       "title": "Kontaktformular",
       "name": "Name",
@@ -103,6 +104,8 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Willkommen",
+    "welcomeBack": "Willkommen zurück",
+    "overviewFor": "Hier ist Ihre Übersicht für heute",
     "nav": {
       "dashboard": "Dashboard",
       "profile": "Profil",
@@ -116,9 +119,45 @@
     },
     "stats": {
       "totalClients": "Kunden gesamt",
+      "activeClients": "Aktive Mandanten",
+      "newClients": "neu",
+      "ofTotal": "von {total} gesamt",
       "activeCases": "Aktive Fälle",
       "pendingDocuments": "Ausstehende Dokumente",
-      "unreadMessages": "Ungelesene Nachrichten"
+      "documents": "Dokumente",
+      "documentsPending": "ausstehend",
+      "documentsToday": "{count} heute hochgeladen",
+      "unreadMessages": "Ungelesene Nachrichten",
+      "upcomingDeadlines": "Anstehende Fristen",
+      "urgent": "Dringend",
+      "dueSoon": "Diese Woche fällig",
+      "datevExports": "DATEV Exports",
+      "active": "Aktiv",
+      "last24Hours": "Letzte 24 Stunden"
+    },
+    "sections": {
+      "deadlines": "Anstehende Fristen",
+      "viewAll": "Alle anzeigen",
+      "noDeadlines": "Keine anstehenden Fristen",
+      "client": "Mandant",
+      "highPriority": "Dringend",
+      "normalPriority": "Normal",
+      "quickActions": "Schnellzugriff",
+      "newClient": "Neuer Mandant",
+      "uploadDocument": "Dokument hochladen",
+      "newCase": "Neuer Fall",
+      "datevExport": "DATEV Export",
+      "datevActivity": "DATEV Aktivitäten",
+      "details": "Details",
+      "exportCompleted": "Export abgeschlossen",
+      "syncStarted": "Synchronisation gestartet",
+      "hoursAgo": "Vor {hours} Stunden",
+      "elsterSubmissions": "ELSTER Einreichungen",
+      "pending": "ausstehend",
+      "recentActivity": "Letzte Aktivitäten",
+      "documentUploaded": "Dokument hochgeladen",
+      "caseCompleted": "Fall abgeschlossen",
+      "newMessage": "Neue Nachricht"
     }
   },
   "profile": {

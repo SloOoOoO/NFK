@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using NFK.Domain.Entities.Analytics;
 using NFK.Domain.Entities.Audit;
 using NFK.Domain.Entities.Clients;
 using NFK.Domain.Entities.DATEV;
@@ -51,6 +52,9 @@ public class ApplicationDbContext : DbContext
     // Audit
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<LoginAttempt> LoginAttempts { get; set; }
+    
+    // Analytics
+    public DbSet<PageVisit> PageVisits { get; set; }
 
     // Other
     public DbSet<Appointment> Appointments { get; set; }
