@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 // API base URL - can be overridden by environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
@@ -30,11 +30,11 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as typeof error.config & { _retry?: boolean };
 
     // Handle 401 Unauthorized - try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest) {
       originalRequest._retry = true;
 
       try {
@@ -52,12 +52,13 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return apiClient(originalRequest);
         }
-      } catch (refreshError) {
+      } catch {
         // Refresh failed - redirect to login
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         window.location.href = '/auth/login';
-        return Promise.reject(refreshError);
+        return Promise.reject(error);
       }
     }
 
@@ -67,7 +68,7 @@ apiClient.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  register: (data: any) =>
+  register: (data: Record<string, unknown>) =>
     apiClient.post('/auth/register', data),
   
   login: (email: string, password: string) =>
@@ -87,8 +88,8 @@ export const authAPI = {
 export const clientsAPI = {
   getAll: () => apiClient.get('/clients'),
   getById: (id: number) => apiClient.get(`/clients/${id}`),
-  create: (data: any) => apiClient.post('/clients', data),
-  update: (id: number, data: any) => apiClient.put(`/clients/${id}`, data),
+  create: (data: Record<string, unknown>) => apiClient.post('/clients', data),
+  update: (id: number, data: Record<string, unknown>) => apiClient.put(`/clients/${id}`, data),
   delete: (id: number) => apiClient.delete(`/clients/${id}`),
 };
 
@@ -96,9 +97,9 @@ export const clientsAPI = {
 export const casesAPI = {
   getAll: () => apiClient.get('/cases'),
   getById: (id: number) => apiClient.get(`/cases/${id}`),
-  create: (data: any) => apiClient.post('/cases', data),
-  update: (id: number, data: any) => apiClient.put(`/cases/${id}`, data),
-  updateStatus: (id: number, status: any) => apiClient.put(`/cases/${id}/status`, status),
+  create: (data: Record<string, unknown>) => apiClient.post('/cases', data),
+  update: (id: number, data: Record<string, unknown>) => apiClient.put(`/cases/${id}`, data),
+  updateStatus: (id: number, status: string) => apiClient.put(`/cases/${id}/status`, { status }),
   delete: (id: number) => apiClient.delete(`/cases/${id}`),
 };
 
@@ -120,7 +121,7 @@ export const documentsAPI = {
 
 // DATEV API
 export const datevAPI = {
-  export: (data: any) => apiClient.post('/datev/export', data),
+  export: (data: Record<string, unknown>) => apiClient.post('/datev/export', data),
   getJobs: () => apiClient.get('/datev/jobs'),
   retryJob: (id: number) => apiClient.post(`/datev/jobs/${id}/retry`),
 };
@@ -140,8 +141,8 @@ export const messagesAPI = {
 export const eventsAPI = {
   getAll: () => apiClient.get('/events'),
   getById: (id: number) => apiClient.get(`/events/${id}`),
-  create: (data: any) => apiClient.post('/events', data),
-  update: (id: number, data: any) => apiClient.put(`/events/${id}`, data),
+  create: (data: Record<string, unknown>) => apiClient.post('/events', data),
+  update: (id: number, data: Record<string, unknown>) => apiClient.put(`/events/${id}`, data),
   delete: (id: number) => apiClient.delete(`/events/${id}`),
   complete: (id: number) => apiClient.put(`/events/${id}/complete`),
 };
@@ -151,7 +152,7 @@ export const adminAPI = {
   getAllUsers: () => apiClient.get('/admin/users'),
   updateUserRole: (userId: number, role: string) => 
     apiClient.put(`/admin/users/${userId}/role`, { role }),
-  updateUserProfile: (userId: number, data: any) =>
+  updateUserProfile: (userId: number, data: Record<string, unknown>) =>
     apiClient.put(`/admin/users/${userId}/profile`, data),
   getHeaderText: () => apiClient.get('/admin/header-text'),
   updateHeaderText: (data: { welcomeTitle: string; welcomeSubtitle: string }) =>

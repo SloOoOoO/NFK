@@ -162,10 +162,9 @@ export default function Cases() {
 
   const handleStatusChange = async (caseId: number, newStatus: string) => {
     try {
-      await casesAPI.updateStatus(caseId, { status: newStatus });
+      await casesAPI.updateStatus(caseId, newStatus);
       await fetchCases();
-    } catch (err: any) {
-      console.error('Error updating case status:', err);
+    } catch {
       alert('Fehler beim Aktualisieren des Status');
     }
   };

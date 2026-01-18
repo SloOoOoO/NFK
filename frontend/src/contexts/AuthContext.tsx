@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import { authAPI } from '../services/api';
 
 interface User {
@@ -14,9 +15,14 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (userData: User, token: string, refreshToken?: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+}
+
+interface JWTPayload {
+  exp: number;
+  [key: string]: unknown;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,50 +32,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const response = await authAPI.getCurrentUser();
-        setUser(response.data);
-        setIsAuthenticated(true);
-      } catch (error) {
-        // Token invalid or expired
-        setIsAuthenticated(false);
-        setUser(null);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      }
+  // Check if token is valid and not expired
+  const isTokenValid = (token: string): boolean => {
+    try {
+      const decoded = jwtDecode<JWTPayload>(token);
+      const now = Date.now() / 1000;
+      return decoded.exp > now;
+    } catch {
+      return false;
     }
-    setIsLoading(false);
   };
 
-  const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
-    const { accessToken, refreshToken } = response.data;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    
-    // Get user info
-    const userResponse = await authAPI.getCurrentUser();
-    setUser(userResponse.data);
+  const checkAuth = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const userStr = localStorage.getItem('user');
+
+      if (token && userStr && isTokenValid(token)) {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+        setIsAuthenticated(true);
+      } else {
+        // Token expired or invalid - clear everything
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } catch {
+      // Error parsing user data - clear everything
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      setUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const login = (userData: User, token: string, refreshToken?: string) => {
+    localStorage.setItem('accessToken', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    setUser(userData);
     setIsAuthenticated(true);
   };
 
   const logout = () => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
-      authAPI.logout(refreshToken).catch(err => {
-        console.error('Logout error:', err);
+      authAPI.logout(refreshToken).catch(() => {
+        // Ignore logout errors
       });
     }
     
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
   };
@@ -77,11 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       const response = await authAPI.getCurrentUser();
-      setUser(response.data);
+      const userData = response.data;
+      setUser(userData);
       setIsAuthenticated(true);
-    } catch (error) {
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch {
       setUser(null);
       setIsAuthenticated(false);
+      localStorage.removeItem('user');
     }
   };
 
