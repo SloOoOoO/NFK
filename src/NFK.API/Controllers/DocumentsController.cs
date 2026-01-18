@@ -22,7 +22,7 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int? userId = null)
     {
         try
         {
@@ -41,6 +41,7 @@ public class DocumentsController : ControllerBase
             var query = _context.Documents
                 .Include(d => d.Case)
                     .ThenInclude(c => c!.Client)
+                        .ThenInclude(cl => cl.User)
                 .AsQueryable();
 
             // Role-based filtering
@@ -51,12 +52,17 @@ public class DocumentsController : ControllerBase
                     d.Case != null && 
                     d.Case.Client.UserId == currentUserId.Value);
             }
-            else if (userRole == "Receptionist")
+            else
             {
-                // Receptionists can only see documents they uploaded
-                query = query.Where(d => d.UploadedByUserId == currentUserId.Value);
+                // SuperAdmin, Consultant, DATEVManager, Receptionist see all documents
+                // But can filter by userId if provided
+                if (userId.HasValue)
+                {
+                    query = query.Where(d => 
+                        d.Case != null && 
+                        d.Case.Client.UserId == userId.Value);
+                }
             }
-            // SuperAdmin, Consultant, DATEVManager see all documents (no filter)
 
             var documents = await query
                 .OrderByDescending(d => d.CreatedAt)
@@ -69,7 +75,10 @@ public class DocumentsController : ControllerBase
                 d.FileSize,
                 d.CaseId,
                 d.CreatedAt,
-                d.UpdatedAt
+                d.UpdatedAt,
+                d.Case?.Client?.CompanyName,
+                d.Case?.Client?.UserId,
+                d.Case?.Client?.User != null ? $"{d.Case.Client.User.FirstName} {d.Case.Client.User.LastName}" : null
             )).ToList();
 
             return Ok(documentDtos);

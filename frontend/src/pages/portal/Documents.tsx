@@ -17,12 +17,6 @@ interface Document {
   updated?: string;
 }
 
-interface Client {
-  id: number;
-  name: string;
-  companyName?: string;
-}
-
 interface StorageStats {
   documentCount: number;
   totalStorageMB: number;
@@ -49,8 +43,8 @@ export default function Documents() {
   });
   
   // Client filtering for employees
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
 
@@ -61,9 +55,9 @@ export default function Documents() {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       
-      // Fetch clients if user is not a Client
+      // Fetch users with Client role if current user is an employee
       if (parsedUser.role !== 'Client') {
-        fetchClients();
+        fetchClientUsers();
       }
     }
     
@@ -71,13 +65,20 @@ export default function Documents() {
     fetchStats();
   }, []);
 
-  const fetchClients = async () => {
+  // Refetch documents when user filter changes
+  useEffect(() => {
+    if (user && user.role !== 'Client') {
+      fetchDocuments();
+    }
+  }, [selectedUserId]);
+
+  const fetchClientUsers = async () => {
     try {
-      const response = await apiClient.get('/clients');
-      const clientsData = Array.isArray(response.data) ? response.data : [];
-      setClients(clientsData);
+      const response = await apiClient.get('/users?role=Client');
+      const usersData = Array.isArray(response.data) ? response.data : [];
+      setUsers(usersData);
     } catch (err: any) {
-      console.error('Error fetching clients:', err);
+      console.error('Error fetching client users:', err);
     }
   };
 
@@ -85,7 +86,13 @@ export default function Documents() {
     setLoading(true);
     setError('');
     try {
-      const response = await documentsAPI.getAll();
+      // Build URL with optional userId filter
+      let url = '/documents';
+      if (user && user.role !== 'Client' && selectedUserId) {
+        url += `?userId=${selectedUserId}`;
+      }
+      
+      const response = await apiClient.get(url);
       const docsData = Array.isArray(response.data) ? response.data : [];
       setDocuments(docsData);
     } catch (err: any) {
@@ -225,12 +232,8 @@ export default function Documents() {
     ? documents
     : documents.filter(doc => doc.type === filterType);
 
-  // Apply client and search filters
+  // Apply search filter
   const finalFilteredDocuments = filteredDocuments.filter(doc => {
-    // Filter by selected client
-    if (selectedClient && doc.clientId !== selectedClient.id) {
-      return false;
-    }
     // Filter by search query
     if (searchQuery && !doc.fileName.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
@@ -270,46 +273,10 @@ export default function Documents() {
           </div>
         )}
 
-        {/* Client Filter & Search (for employees only) */}
-        {user && user.role !== 'Client' && (
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2 text-textPrimary dark:text-gray-100">Client filtern</label>
-                <select
-                  value={selectedClient?.id || ''}
-                  onChange={(e) => {
-                    const client = clients.find(c => c.id === parseInt(e.target.value));
-                    setSelectedClient(client || null);
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100"
-                >
-                  <option value="">Alle Clients</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>
-                      {client.companyName || client.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2 text-textPrimary dark:text-gray-100">Dokument suchen</label>
-                <input
-                  type="text"
-                  placeholder="Dateiname suchen..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Actions Bar */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -320,6 +287,22 @@ export default function Documents() {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+              
+              {/* User filter for employees */}
+              {user && user.role !== 'Client' && (
+                <select
+                  value={selectedUserId || ''}
+                  onChange={(e) => setSelectedUserId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100"
+                >
+                  <option value="">Alle Benutzer</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName}
+                    </option>
+                  ))}
+                </select>
+              )}
               
               <div className="flex gap-1 border border-gray-300 dark:border-gray-600 rounded-md">
                 <button
@@ -341,6 +324,8 @@ export default function Documents() {
               <input
                 type="text"
                 placeholder="Dokumente suchen..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 md:flex-none md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
               <label className="btn-primary whitespace-nowrap cursor-pointer">
