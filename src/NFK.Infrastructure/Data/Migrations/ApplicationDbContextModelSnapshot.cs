@@ -59,7 +59,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PageVisits");
+                    b.ToTable("PageVisits", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Audit.AuditLog", b =>
@@ -122,7 +122,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Audit.LoginAttempt", b =>
@@ -166,7 +166,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoginAttempts");
+                    b.ToTable("LoginAttempts", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Clients.Case", b =>
@@ -233,7 +233,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Cases");
+                    b.ToTable("Cases", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Clients.CaseNote", b =>
@@ -273,7 +273,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("CaseId");
 
-                    b.ToTable("CaseNotes");
+                    b.ToTable("CaseNotes", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Clients.CaseStatusHistory", b =>
@@ -315,7 +315,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("CaseId");
 
-                    b.ToTable("CaseStatusHistories");
+                    b.ToTable("CaseStatusHistories", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Clients.Client", b =>
@@ -386,7 +386,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Clients");
+                    b.ToTable("Clients", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.DATEV.DATEVJob", b =>
@@ -446,7 +446,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.ToTable("DATEVJobs");
+                    b.ToTable("DATEVJobs", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.DATEV.DATEVJobFile", b =>
@@ -494,7 +494,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("DATEVJobId");
 
-                    b.ToTable("DATEVJobFiles");
+                    b.ToTable("DATEVJobFiles", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.DATEV.DATEVLog", b =>
@@ -538,7 +538,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("DATEVJobId");
 
-                    b.ToTable("DATEVLogs");
+                    b.ToTable("DATEVLogs", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Documents.Document", b =>
@@ -613,7 +613,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UploadedByUserId");
 
-                    b.ToTable("Documents");
+                    b.ToTable("Documents", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Documents.DocumentComment", b =>
@@ -655,7 +655,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("DocumentComments");
+                    b.ToTable("DocumentComments", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Documents.DocumentFolder", b =>
@@ -700,7 +700,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("ParentFolderId");
 
-                    b.ToTable("DocumentFolders");
+                    b.ToTable("DocumentFolders", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Documents.DocumentVersion", b =>
@@ -746,7 +746,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("DocumentId");
 
-                    b.ToTable("DocumentVersions");
+                    b.ToTable("DocumentVersions", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Messaging.Message", b =>
@@ -809,7 +809,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("SenderUserId");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Messaging.MessageAttachment", b =>
@@ -857,7 +857,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("MessageAttachments");
+                    b.ToTable("MessageAttachments", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Other.Appointment", b =>
@@ -918,7 +918,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("ConsultantUserId");
 
-                    b.ToTable("Appointments");
+                    b.ToTable("Appointments", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Other.Notification", b =>
@@ -975,7 +975,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordHistory", b =>
@@ -1015,7 +1015,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId", "CreatedAtUtc");
 
-                    b.ToTable("PasswordHistories");
+                    b.ToTable("PasswordHistories", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordResetToken", b =>
@@ -1058,7 +1058,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PasswordResetTokens");
+                    b.ToTable("PasswordResetTokens", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.Permission", b =>
@@ -1098,7 +1098,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Permissions");
+                    b.ToTable("Permissions", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.RefreshToken", b =>
@@ -1156,7 +1156,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.Role", b =>
@@ -1195,7 +1195,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.RolePermission", b =>
@@ -1233,7 +1233,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.User", b =>
@@ -1367,7 +1367,7 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.UserPermission", b =>
@@ -1405,7 +1405,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserPermissions");
+                    b.ToTable("UserPermissions", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.UserRole", b =>
@@ -1443,7 +1443,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.UserSession", b =>
@@ -1495,7 +1495,7 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserSessions");
+                    b.ToTable("UserSessions", (string)null);
                 });
 
             modelBuilder.Entity("NFK.Domain.Entities.Analytics.PageVisit", b =>
