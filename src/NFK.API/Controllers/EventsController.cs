@@ -245,7 +245,6 @@ public class EventsController : ControllerBase
             }
 
             appointment.Status = "Completed";
-            appointment.CompletedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Event {EventId} marked as completed", id);

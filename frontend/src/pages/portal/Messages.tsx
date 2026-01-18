@@ -29,11 +29,9 @@ export default function Messages() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [showReplyModal, setShowReplyModal] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
   const [composeForm, setComposeForm] = useState({ recipientUserId: 0, subject: '', content: '' });
   const [replyContent, setReplyContent] = useState('');
   const [sending, setSending] = useState(false);
-  const [activeTab, setActiveTab] = useState<'inbox' | 'sent'>('inbox');
 
   useEffect(() => {
     fetchCurrentUser();
