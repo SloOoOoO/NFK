@@ -10,11 +10,13 @@ public class AuthController : ControllerBase
 {
     private readonly ILogger<AuthController> _logger;
     private readonly IAuthService _authService;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(ILogger<AuthController> logger, IAuthService authService)
+    public AuthController(ILogger<AuthController> logger, IAuthService authService, IConfiguration configuration)
     {
         _logger = logger;
         _authService = authService;
+        _configuration = configuration;
     }
 
     [HttpPost("register")]
@@ -123,7 +125,8 @@ public class AuthController : ControllerBase
     {
         // In production, this would use actual DATEV OAuth configuration
         // For now, simulate the OAuth flow by redirecting to a placeholder
-        var redirectUri = "http://localhost:5173/auth/register";
+        var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+        var redirectUri = $"{frontendUrl}/auth/register";
         var simulatedFirstName = "Max";
         var simulatedLastName = "Mustermann";
         
@@ -141,13 +144,15 @@ public class AuthController : ControllerBase
         {
             // In production, exchange code for token and get user info from DATEV
             // For now, redirect to registration
-            var redirectUri = "http://localhost:5173/auth/register";
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            var redirectUri = $"{frontendUrl}/auth/register";
             return Redirect($"{redirectUri}?source=datev&firstName=Max&lastName=Mustermann");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "DATEV callback error");
-            return Redirect("http://localhost:5173/auth/login?error=datev_failed");
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            return Redirect($"{frontendUrl}/auth/login?error=datev_failed");
         }
     }
 
@@ -159,7 +164,8 @@ public class AuthController : ControllerBase
     {
         // In production, this would use actual Google OAuth configuration
         // For now, simulate the OAuth flow
-        var redirectUri = "http://localhost:5173/auth/register";
+        var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+        var redirectUri = $"{frontendUrl}/auth/register";
         var simulatedEmail = "user@example.com";
         
         // Redirect to registration with Google email pre-filled
@@ -176,13 +182,15 @@ public class AuthController : ControllerBase
         {
             // In production, exchange code for token and get user info from Google
             // For now, redirect to registration
-            var redirectUri = "http://localhost:5173/auth/register";
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            var redirectUri = $"{frontendUrl}/auth/register";
             return Redirect($"{redirectUri}?source=google&email=user@example.com");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Google callback error");
-            return Redirect("http://localhost:5173/auth/login?error=google_failed");
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed");
         }
     }
 

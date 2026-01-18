@@ -57,12 +57,14 @@ export default function Login() {
 
   const handleDATEVLogin = () => {
     // Redirect to DATEV OAuth endpoint
-    window.location.href = 'http://localhost:8080/api/v1/auth/datev/login';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+    window.location.href = `${apiUrl}/auth/datev/login`;
   };
 
   const handleGoogleLogin = () => {
     // Redirect to Google OAuth endpoint
-    window.location.href = 'http://localhost:8080/api/v1/auth/google/login';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+    window.location.href = `${apiUrl}/auth/google/login`;
   };
 
   return (

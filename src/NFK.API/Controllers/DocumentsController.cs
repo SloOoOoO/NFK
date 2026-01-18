@@ -181,8 +181,9 @@ public class DocumentsController : ControllerBase
                 Directory.CreateDirectory(uploadsPath);
             }
 
-            // Generate unique filename
-            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+            // Generate unique filename with sanitized extension only
+            var fileExtension = Path.GetExtension(file.FileName);
+            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
             var filePath = Path.Combine(uploadsPath, uniqueFileName);
 
             // Save file to disk
