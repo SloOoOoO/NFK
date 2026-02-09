@@ -144,7 +144,7 @@ export default function Register() {
     mode: 'onChange',
     defaultValues: {
       clientType: 'Privatperson',
-      salutation: '',
+      salutation: undefined,
       privacyConsent: false,
       termsConsent: false,
     },
