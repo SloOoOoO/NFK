@@ -14,7 +14,7 @@ const registrationSchema = z.object({
     .string()
     .min(1, 'E-Mail ist erforderlich')
     .email('Ungültige E-Mail-Adresse')
-    // TODO: Add disposable email blocklist validation
+    // TODO: Integrate disposable email domain blocklist check
     ,
   password: z
     .string()
@@ -41,21 +41,33 @@ const registrationSchema = z.object({
     .string()
     .min(2, 'Nachname muss mindestens 2 Zeichen lang sein')
     .regex(/^[^0-9]+$/, 'Nachname darf keine Zahlen enthalten'),
-  street: z.string().min(3, 'Straße und Hausnummer müssen mindestens 3 Zeichen lang sein'),
+  street: z
+    .string()
+    .min(3, 'Straße und Hausnummer müssen mindestens 3 Zeichen lang sein'),
   postalCode: z
     .string()
     .regex(/^\d{5}$/, 'PLZ muss genau 5 Ziffern enthalten'),
-  city: z.string().min(2, 'Stadt muss mindestens 2 Zeichen lang sein'),
+  city: z
+    .string()
+    .min(2, 'Stadt muss mindestens 2 Zeichen lang sein'),
   
   // Section 3: Tax Data
   taxId: z
     .string()
     .regex(/^\d{11}$/, 'Steuer-ID muss genau 11 Ziffern enthalten')
     .refine(validateSteuerID, 'Ungültige Steuer-ID (Prüfsumme fehlgeschlagen)'),
+  taxNumber: z
+    .union([
+      z.string().regex(/^\d{2}\/\d{3}\/\d{5}$/, 'Steuernummer muss im Format 12/345/67890 sein'),
+      z.literal('')
+    ])
+    .optional(),
   vatId: z
-    .string()
-    .optional()
-    .refine((val) => !val || /^DE\d{9}$/.test(val), 'USt-IdNr. muss mit "DE" beginnen, gefolgt von 9 Ziffern'),
+    .union([
+      z.string().regex(/^DE\d{9}$/, 'USt-IdNr. muss mit "DE" beginnen, gefolgt von 9 Ziffern'),
+      z.literal('')
+    ])
+    .optional(),
   commercialRegister: z.string().optional(),
   
   // Section 4: Legal & Compliance
@@ -129,9 +141,10 @@ export default function Register() {
     formState: { errors },
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
-    mode: 'onBlur',
+    mode: 'onChange',
     defaultValues: {
       clientType: 'Privatperson',
+      salutation: '',
       privacyConsent: false,
       termsConsent: false,
     },
@@ -195,6 +208,7 @@ export default function Register() {
         postalCode: data.postalCode,
         city: data.city,
         taxId: data.taxId,
+        taxNumber: data.taxNumber || undefined,
         vatId: data.vatId || undefined,
         commercialRegister: data.clientType !== 'Privatperson' ? data.commercialRegister : undefined,
         privacyConsent: data.privacyConsent,
@@ -208,10 +222,11 @@ export default function Register() {
       setTimeout(() => {
         navigate('/auth/login');
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration failed:', err);
+      const error = err as { response?: { data?: { message?: string } } };
       setApiError(
-        err.response?.data?.message || 
+        error.response?.data?.message || 
         'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
       );
     } finally {
@@ -514,6 +529,26 @@ export default function Register() {
                   />
                   {errors.taxId && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.taxId.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="taxNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Steuernummer
+                  </label>
+                  <input
+                    {...register('taxNumber')}
+                    type="text"
+                    id="taxNumber"
+                    aria-label="Steuernummer"
+                    placeholder="z.B. 12/345/67890"
+                    maxLength={13}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    disabled={loading}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional (Format: 12/345/67890)</p>
+                  {errors.taxNumber && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.taxNumber.message}</p>
                   )}
                 </div>
               </div>
