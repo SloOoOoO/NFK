@@ -68,11 +68,7 @@ export default function Messages() {
     try {
       const response = await authAPI.getCurrentUser();
       setCurrentUser(response.data);
-      // Fetch all users for compose modal (if not client)
-      if (response.data.role !== 'Client') {
-        // TODO: Add endpoint to get all users
-        // For now, we'll handle this in the compose modal
-      }
+      // Users data fetching is handled via search functionality in compose modal
     } catch (error) {
       console.error('Failed to fetch current user:', error);
     }

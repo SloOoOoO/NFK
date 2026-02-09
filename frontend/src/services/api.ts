@@ -164,6 +164,13 @@ export const adminAPI = {
     apiClient.put('/admin/header-text', data),
 };
 
+// Users API
+export const usersAPI = {
+  getAll: (role?: string) => apiClient.get('/users', { params: { role } }),
+  search: (query: string) => apiClient.get('/users/search', { params: { query } }),
+  updateProfile: (data: Record<string, unknown>) => apiClient.put('/users/profile', data),
+};
+
 // Health check
 export const healthAPI = {
   check: () => axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`),
