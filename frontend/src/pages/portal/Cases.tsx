@@ -231,8 +231,8 @@ export default function Cases() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">⚠️ {error} - Demo-Daten werden angezeigt</p>
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+            <p className="text-sm text-red-800 dark:text-red-200">⚠️ {error}</p>
           </div>
         )}
 

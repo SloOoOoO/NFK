@@ -6,6 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 import { validateSteuerID } from '../../utils/taxValidation';
+import { isNotDisposableEmail, getDisposableEmailError } from '../../utils/emailValidation';
 
 // Zod validation schema
 const registrationSchema = z.object({
@@ -14,8 +15,7 @@ const registrationSchema = z.object({
     .string()
     .min(1, 'E-Mail ist erforderlich')
     .email('Ungültige E-Mail-Adresse')
-    // TODO: Integrate disposable email domain blocklist check
-    ,
+    .refine(isNotDisposableEmail, getDisposableEmailError()),
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `Passwort muss mindestens ${PASSWORD_MIN_LENGTH} Zeichen lang sein`)
