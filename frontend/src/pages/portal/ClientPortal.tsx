@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI, casesAPI, documentsAPI, messagesAPI } from '../../services/api';
 
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  gender?: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+}
+
 interface Case {
   id: number;
   title: string;
@@ -26,7 +39,7 @@ interface Message {
 
 export default function ClientPortal() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -225,10 +238,19 @@ export default function ClientPortal() {
                   <p className="text-textSecondary text-center py-4">Keine Nachrichten</p>
                 ) : (
                   messages.slice(0, 2).map((message) => {
-                    const timeAgo = Math.floor((Date.now() - new Date(message.createdAt).getTime()) / 1000 / 60);
-                    const timeDisplay = timeAgo < 60 ? `Vor ${timeAgo} Minuten` : 
-                                       timeAgo < 1440 ? `Vor ${Math.floor(timeAgo / 60)} Stunden` : 
-                                       'Gestern';
+                    const now = new Date();
+                    const messageDate = new Date(message.createdAt);
+                    const timeAgo = Math.floor((now.getTime() - messageDate.getTime()) / 1000 / 60);
+                    
+                    let timeDisplay: string;
+                    if (timeAgo < 60) {
+                      timeDisplay = `Vor ${timeAgo} Minuten`;
+                    } else if (timeAgo < 1440) {
+                      timeDisplay = `Vor ${Math.floor(timeAgo / 60)} Stunden`;
+                    } else {
+                      // For messages older than 24 hours, show the actual date
+                      timeDisplay = messageDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    }
                     
                     return (
                       <div 

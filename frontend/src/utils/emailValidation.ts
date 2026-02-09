@@ -22,8 +22,6 @@ const DISPOSABLE_EMAIL_DOMAINS = [
   'tempinbox.com',
   'mohmal.com',
   'emailondeck.com',
-  'protonmail.com',  // Often used for temporary accounts
-  'tutanota.com',    // Often used for temporary accounts
 ];
 
 /**

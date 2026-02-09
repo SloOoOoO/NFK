@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { messagesAPI, authAPI, usersAPI } from '../../services/api';
+import { messagesAPI, authAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 import apiClient from '../../services/api';
 
@@ -68,15 +68,7 @@ export default function Messages() {
     try {
       const response = await authAPI.getCurrentUser();
       setCurrentUser(response.data);
-      // Fetch all users for compose modal (if not client)
-      if (response.data.role !== 'Client') {
-        // Fetch all users from the endpoint
-        const usersResponse = await usersAPI.getAll();
-        if (usersResponse.data && Array.isArray(usersResponse.data)) {
-          // Users data is already available from the API
-          console.log('Loaded users for compose:', usersResponse.data.length);
-        }
-      }
+      // Users data fetching is handled via search functionality in compose modal
     } catch (error) {
       console.error('Failed to fetch current user:', error);
     }
