@@ -41,8 +41,9 @@ export default function Login() {
       // Update auth context with user data and tokens
       login(user, accessToken, refreshToken);
       
-      // Redirect to homepage
-      navigate('/');
+      // Redirect to the intended destination or homepage
+      const redirectTo = searchParams.get('redirect') || '/';
+      navigate(redirectTo);
     } catch (err) {
       if (err instanceof AxiosError && err.response?.data) {
         const apiError = err.response.data as ApiError;

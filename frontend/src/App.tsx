@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import './i18n/config';
 import ErrorBoundary from './components/ErrorBoundary';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy load all route components
 const Landing = lazy(() => import('./pages/public/Landing'));
@@ -43,16 +44,16 @@ function App() {
             <Route path="/auth/reset-password" element={<ResetPassword />} />
             
             {/* Portal Routes */}
-            <Route path="/portal/dashboard" element={<Dashboard />} />
-            <Route path="/portal/profile" element={<Profile />} />
-            <Route path="/portal/clients" element={<Clients />} />
-            <Route path="/portal/cases" element={<Cases />} />
-            <Route path="/portal/documents" element={<Documents />} />
-            <Route path="/portal/messages" element={<Messages />} />
-            <Route path="/portal/calendar" element={<Calendar />} />
-            <Route path="/portal/datev" element={<DATEV />} />
-            <Route path="/portal/admin" element={<AdminDashboard />} />
-            <Route path="/portal/client" element={<ClientPortal />} />
+            <Route path="/portal/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/portal/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/portal/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+            <Route path="/portal/cases" element={<ProtectedRoute><Cases /></ProtectedRoute>} />
+            <Route path="/portal/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+            <Route path="/portal/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/portal/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+            <Route path="/portal/datev" element={<ProtectedRoute><DATEV /></ProtectedRoute>} />
+            <Route path="/portal/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/portal/client" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />
             
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
