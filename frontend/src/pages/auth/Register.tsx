@@ -35,41 +35,39 @@ const registrationSchema = z.object({
   }),
   firstName: z
     .string()
-    .min(1, 'Vorname ist erforderlich')
     .min(2, 'Vorname muss mindestens 2 Zeichen lang sein')
     .regex(/^[^0-9]+$/, 'Vorname darf keine Zahlen enthalten'),
   lastName: z
     .string()
-    .min(1, 'Nachname ist erforderlich')
     .min(2, 'Nachname muss mindestens 2 Zeichen lang sein')
     .regex(/^[^0-9]+$/, 'Nachname darf keine Zahlen enthalten'),
   street: z
     .string()
-    .min(1, 'Straße und Hausnummer sind erforderlich')
     .min(3, 'Straße und Hausnummer müssen mindestens 3 Zeichen lang sein'),
   postalCode: z
     .string()
-    .min(1, 'PLZ ist erforderlich')
     .regex(/^\d{5}$/, 'PLZ muss genau 5 Ziffern enthalten'),
   city: z
     .string()
-    .min(1, 'Stadt ist erforderlich')
     .min(2, 'Stadt muss mindestens 2 Zeichen lang sein'),
   
   // Section 3: Tax Data
   taxId: z
     .string()
-    .min(1, 'Steuer-ID ist erforderlich')
     .regex(/^\d{11}$/, 'Steuer-ID muss genau 11 Ziffern enthalten')
     .refine(validateSteuerID, 'Ungültige Steuer-ID (Prüfsumme fehlgeschlagen)'),
   taxNumber: z
-    .string()
-    .optional()
-    .refine((val) => !val || /^\d{2}\/\d{3}\/\d{5}$/.test(val), 'Steuernummer muss im Format 12/345/67890 sein'),
+    .union([
+      z.string().regex(/^\d{2}\/\d{3}\/\d{5}$/, 'Steuernummer muss im Format 12/345/67890 sein'),
+      z.literal('')
+    ])
+    .optional(),
   vatId: z
-    .string()
-    .optional()
-    .refine((val) => !val || /^DE\d{9}$/.test(val), 'USt-IdNr. muss mit "DE" beginnen, gefolgt von 9 Ziffern'),
+    .union([
+      z.string().regex(/^DE\d{9}$/, 'USt-IdNr. muss mit "DE" beginnen, gefolgt von 9 Ziffern'),
+      z.literal('')
+    ])
+    .optional(),
   commercialRegister: z.string().optional(),
   
   // Section 4: Legal & Compliance
