@@ -54,6 +54,31 @@ public class AdminController : ControllerBase
     {
         try
         {
+            // Get current user's ID from claims
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (currentUserIdClaim == null || !int.TryParse(currentUserIdClaim.Value, out var currentUserId))
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not authenticated" });
+            }
+
+            // Get current user's role
+            var currentUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+            var currentUserRole = currentUser?.UserRoles.FirstOrDefault()?.Role.Name;
+            
+            // Check if user is authorized to view this user's details
+            // SuperAdmin, Admin, and Consultant can view any user
+            // Other roles can only view their own info
+            var isAdminRole = currentUserRole == "SuperAdmin" || currentUserRole == "Admin" || currentUserRole == "Consultant";
+            
+            if (!isAdminRole && currentUserId != id)
+            {
+                return Forbid(); // User is trying to view someone else's info
+            }
+
             var user = await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
@@ -64,40 +89,67 @@ public class AdminController : ControllerBase
                 return NotFound(new { error = "not_found", message = $"User {id} not found" });
             }
 
-            var userDetails = new
+            // Return different levels of detail based on role
+            // Admin roles see all fields, regular users see limited fields
+            if (isAdminRole)
             {
-                user.Id,
-                user.Email,
-                user.FirstName,
-                user.LastName,
-                user.PhoneNumber,
-                user.FullLegalName,
-                user.DateOfBirth,
-                user.Address,
-                user.City,
-                user.PostalCode,
-                user.Country,
-                user.TaxId,
-                user.TaxNumber,
-                user.FirmLegalName,
-                user.FirmTaxId,
-                user.FirmChamberRegistration,
-                user.FirmAddress,
-                user.FirmCity,
-                user.FirmPostalCode,
-                user.FirmCountry,
-                user.GoogleId,
-                user.DATEVId,
-                user.Gender,
-                user.IsActive,
-                user.IsEmailConfirmed,
-                user.PhoneVerified,
-                Role = user.UserRoles.FirstOrDefault()?.Role.Name ?? "Client",
-                user.CreatedAt,
-                user.UpdatedAt
-            };
-
-            return Ok(userDetails);
+                var adminUserDetails = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.PhoneNumber,
+                    user.FullLegalName,
+                    user.DateOfBirth,
+                    user.Address,
+                    user.City,
+                    user.PostalCode,
+                    user.Country,
+                    user.TaxId,
+                    user.TaxNumber,
+                    user.VatId,
+                    user.CommercialRegister,
+                    user.ClientType,
+                    user.CompanyName,
+                    user.Salutation,
+                    user.FirmLegalName,
+                    user.FirmTaxId,
+                    user.FirmChamberRegistration,
+                    user.FirmAddress,
+                    user.FirmCity,
+                    user.FirmPostalCode,
+                    user.FirmCountry,
+                    user.GoogleId,
+                    user.DATEVId,
+                    user.Gender,
+                    user.IsActive,
+                    user.IsEmailConfirmed,
+                    user.PhoneVerified,
+                    Role = user.UserRoles.FirstOrDefault()?.Role.Name ?? "Client",
+                    user.CreatedAt,
+                    user.UpdatedAt
+                };
+                return Ok(adminUserDetails);
+            }
+            else
+            {
+                // Regular users see only their own basic info
+                var basicUserDetails = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.PhoneNumber,
+                    user.Address,
+                    user.City,
+                    user.PostalCode,
+                    user.Country,
+                    Role = user.UserRoles.FirstOrDefault()?.Role.Name ?? "Client"
+                };
+                return Ok(basicUserDetails);
+            }
         }
         catch (Exception ex)
         {

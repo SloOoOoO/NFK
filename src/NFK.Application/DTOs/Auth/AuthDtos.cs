@@ -87,6 +87,12 @@ public record UserResponse(
     string? Country = null,
     string? TaxId = null, // Steuer-ID (11-digit personal tax identifier)
     string? TaxNumber = null, // Steuernummer (business tax number)
+    string? VatId = null, // USt-IdNr (VAT ID)
+    string? CommercialRegister = null, // Handelsregister
+    string? ClientType = null, // Privatperson, Einzelunternehmen, GmbH, etc.
+    string? CompanyName = null,
+    string? Salutation = null, // Herr, Frau, Divers
+    string? Gender = null,
     string? FirmLegalName = null,
     string? FirmTaxId = null,
     string? FirmChamberRegistration = null
