@@ -192,7 +192,10 @@
     "deleteModalDescription3": "Onaylamak için <strong>\"delete\"</strong> kelimesini <strong>tersine</strong> yazın:",
     "deleteConfirmationPlaceholder": "Onay girin...",
     "deleteConfirm": "Profili Kalıcı Olarak Sil",
-    "deleting": "Siliniyor..."
+    "deleting": "Siliniyor...",
+    "deleteInvalidConfirmation": "Onay metni geçersiz. Lütfen \"delete\" kelimesini tersine yazın.",
+    "deleteSuccess": "Profiliniz başarıyla silindi.",
+    "deleteError": "Profil silinirken hata oluştu"
   },
   "clients": {
     "title": "Müşteriler",

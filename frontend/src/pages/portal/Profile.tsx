@@ -109,7 +109,7 @@ export default function Profile() {
     // Check if confirmation text is "delete" reversed (eteled)
     const reversedDelete = 'delete'.split('').reverse().join('');
     if (deleteConfirmation.toLowerCase() !== reversedDelete) {
-      alert('Bestätigungstext ist ungültig. Bitte geben Sie "delete" rückwärts ein.');
+      alert(t('profile.deleteInvalidConfirmation') || 'Bestätigungstext ist ungültig. Bitte geben Sie "delete" rückwärts ein.');
       return;
     }
 
@@ -123,11 +123,11 @@ export default function Profile() {
       localStorage.removeItem('user');
       
       // Redirect to login with success message
-      alert('Ihr Profil wurde erfolgreich gelöscht.');
+      alert(t('profile.deleteSuccess') || 'Ihr Profil wurde erfolgreich gelöscht.');
       navigate('/auth/login');
     } catch (error: any) {
       console.error('Failed to delete profile:', error);
-      alert(error.response?.data?.message || 'Fehler beim Löschen des Profils');
+      alert(error.response?.data?.message || t('profile.deleteError') || 'Fehler beim Löschen des Profils');
     } finally {
       setDeleting(false);
     }

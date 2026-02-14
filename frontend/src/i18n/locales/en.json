@@ -192,7 +192,10 @@
     "deleteModalDescription3": "To confirm, type the word <strong>\"delete\"</strong> <strong>backwards</strong>:",
     "deleteConfirmationPlaceholder": "Enter confirmation...",
     "deleteConfirm": "Delete Profile Permanently",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "deleteInvalidConfirmation": "Confirmation text is invalid. Please type \"delete\" backwards.",
+    "deleteSuccess": "Your profile has been successfully deleted.",
+    "deleteError": "Error deleting profile"
   },
   "clients": {
     "title": "Clients",

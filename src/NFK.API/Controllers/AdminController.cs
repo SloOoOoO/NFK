@@ -302,7 +302,8 @@ public class AdminController : ControllerBase
         {
             var now = DateTime.UtcNow;
             var today = now.Date;
-            var weekStart = today.AddDays(-(int)today.DayOfWeek);
+            // Use Monday as week start (ISO 8601, common in Europe including Germany)
+            var weekStart = today.AddDays(-(int)today.DayOfWeek + (today.DayOfWeek == DayOfWeek.Sunday ? -6 : 1));
             var monthStart = new DateTime(now.Year, now.Month, 1);
 
             // Total users and clients

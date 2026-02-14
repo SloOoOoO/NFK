@@ -192,7 +192,10 @@
     "deleteModalDescription3": "Geben Sie zur Bestätigung das Wort <strong>\"delete\"</strong> <strong>rückwärts</strong> ein:",
     "deleteConfirmationPlaceholder": "Bestätigung eingeben...",
     "deleteConfirm": "Profil endgültig löschen",
-    "deleting": "Löschen..."
+    "deleting": "Löschen...",
+    "deleteInvalidConfirmation": "Bestätigungstext ist ungültig. Bitte geben Sie \"delete\" rückwärts ein.",
+    "deleteSuccess": "Ihr Profil wurde erfolgreich gelöscht.",
+    "deleteError": "Fehler beim Löschen des Profils"
   },
   "clients": {
     "title": "Kunden",
