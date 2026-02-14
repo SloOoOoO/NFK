@@ -200,6 +200,7 @@
   "clients": {
     "title": "Clients",
     "addClient": "Add Client",
+    "newClient": "New Client",
     "companyName": "Company Name",
     "taxNumber": "Tax Number",
     "phone": "Phone",

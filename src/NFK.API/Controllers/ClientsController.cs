@@ -165,29 +165,103 @@ public class ClientsController : ControllerBase
     {
         try
         {
-            // For simplicity, use the first user as the contact
-            var firstUser = await _context.Users.FirstOrDefaultAsync();
-            if (firstUser == null)
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
             {
-                return BadRequest(new { error = "invalid_request", message = "No users available" });
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
             }
 
+            // Get user role - PERMISSION CHECK: Only Admin/SuperAdmin/Consultant can create clients
+            var currentUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = currentUser?.UserRoles.FirstOrDefault()?.Role?.Name ?? "RegisteredUser";
+
+            // Only Admin, SuperAdmin, and Consultant can create new clients (mandants)
+            var allowedRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
+            if (!allowedRoles.Contains(userRole))
+            {
+                _logger.LogWarning("User {UserId} with role {Role} attempted to create client - permission denied", currentUserId, userRole);
+                return StatusCode(403, new { error = "forbidden", message = "Nur Admin und Steuerberater können neue Mandanten erstellen" });
+            }
+
+            // Validate that userId is provided in request to link to existing user
+            if (request.UserId == null || request.UserId <= 0)
+            {
+                return BadRequest(new { error = "invalid_request", message = "UserId ist erforderlich" });
+            }
+
+            // Find the user to be made a client
+            var targetUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == request.UserId);
+            
+            if (targetUser == null)
+            {
+                return BadRequest(new { error = "invalid_request", message = "Benutzer nicht gefunden" });
+            }
+
+            // Check if user already has a client record
+            var existingClient = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == request.UserId);
+            if (existingClient != null)
+            {
+                return BadRequest(new { error = "invalid_request", message = "Benutzer ist bereits ein Mandant" });
+            }
+
+            // Assign Client role to user if they don't have it
+            var clientRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Client");
+            if (clientRole != null)
+            {
+                var hasClientRole = targetUser.UserRoles.Any(ur => ur.RoleId == clientRole.Id);
+                if (!hasClientRole)
+                {
+                    // Remove RegisteredUser role if present
+                    var registeredUserRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "RegisteredUser");
+                    if (registeredUserRole != null)
+                    {
+                        var registeredUserRoleToRemove = targetUser.UserRoles.FirstOrDefault(ur => ur.RoleId == registeredUserRole.Id);
+                        if (registeredUserRoleToRemove != null)
+                        {
+                            _context.UserRoles.Remove(registeredUserRoleToRemove);
+                        }
+                    }
+
+                    // Add Client role
+                    var userRole = new Domain.Entities.Users.UserRole
+                    {
+                        UserId = targetUser.Id,
+                        RoleId = clientRole.Id
+                    };
+                    _context.UserRoles.Add(userRole);
+                }
+            }
+
+            // Create Client record
             var client = new Client
             {
-                UserId = firstUser.Id,
+                UserId = request.UserId.Value,
                 CompanyName = request.Name,
                 PhoneNumber = request.Phone,
+                Address = request.Address,
+                City = request.City,
+                PostalCode = request.PostalCode,
+                TaxNumber = request.TaxNumber,
                 IsActive = true
             };
 
             _context.Clients.Add(client);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("Client created successfully by user {UserId} for user {TargetUserId}", currentUserId, request.UserId);
+
             var clientDto = new ClientDto(
                 client.Id,
                 client.CompanyName,
-                firstUser.Email,
-                request.Contact,
+                targetUser.Email,
+                request.Contact ?? $"{targetUser.FirstName} {targetUser.LastName}",
                 "Aktiv",
                 client.PhoneNumber,
                 client.TaxNumber,

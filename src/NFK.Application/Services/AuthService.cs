@@ -131,35 +131,25 @@ public class AuthService : IAuthService
             };
             _context.PasswordHistories.Add(passwordHistory);
 
-            // Assign Client role automatically
-            var clientRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Client");
-            if (clientRole != null)
+            // Assign RegisteredUser role automatically (not Client role)
+            // Users become Client role only when Admin/SuperAdmin/Consultant adds them via Clients navigation
+            var registeredUserRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "RegisteredUser");
+            if (registeredUserRole != null)
             {
                 var userRole = new UserRole
                 {
                     UserId = user.Id,
-                    RoleId = clientRole.Id
+                    RoleId = registeredUserRole.Id
                 };
                 _context.UserRoles.Add(userRole);
             }
             else
             {
-                _logger.LogWarning("Client role not found in database during registration for user: {Email}", user.Email);
+                _logger.LogWarning("RegisteredUser role not found in database during registration for user: {Email}", user.Email);
             }
 
-            // Create Client record for the user
-            var client = new Domain.Entities.Clients.Client
-            {
-                UserId = user.Id,
-                CompanyName = request.CompanyName ?? $"{request.FirstName} {request.LastName}",
-                PhoneNumber = request.PhoneNumber,
-                TaxNumber = request.TaxNumber,
-                Address = request.Address ?? request.Street,
-                City = request.City,
-                PostalCode = request.PostalCode,
-                IsActive = true
-            };
-            _context.Clients.Add(client);
+            // Do NOT create Client record during registration
+            // Client records are created only when Admin/SuperAdmin/Consultant adds user via Clients navigation
 
             // Log user registration to audit trail
             var auditLog = new Domain.Entities.Audit.AuditLog

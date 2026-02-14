@@ -200,6 +200,7 @@
   "clients": {
     "title": "Müşteriler",
     "addClient": "Müşteri Ekle",
+    "newClient": "Yeni Müşteri",
     "companyName": "Şirket Adı",
     "taxNumber": "Vergi Numarası",
     "phone": "Telefon",

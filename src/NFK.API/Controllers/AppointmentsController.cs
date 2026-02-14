@@ -92,6 +92,22 @@ public class AppointmentsController : ControllerBase
 
             var userId = int.Parse(userIdClaim);
 
+            // PERMISSION CHECK: Only employees can create appointments (not Clients or RegisteredUsers)
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "RegisteredUser";
+
+            // Only employees (Consultant, Admin, SuperAdmin, Receptionist, DATEVManager) can create appointments
+            var employeeRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            if (!employeeRoles.Contains(userRole))
+            {
+                _logger.LogWarning("User {UserId} with role {Role} attempted to create appointment - permission denied", userId, userRole);
+                return StatusCode(403, new { error = "forbidden", message = "Nur Mitarbeiter können Termine erstellen" });
+            }
+
             if (!DateTime.TryParse(dto.StartTime, out var startTime))
             {
                 return BadRequest(new { message = "Ungültiges Startdatum" });
@@ -138,6 +154,8 @@ public class AppointmentsController : ControllerBase
             };
             _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Appointment created successfully by user {UserId}", userId);
 
             return Ok(new
             {
