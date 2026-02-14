@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import './i18n/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 
 // Lazy load all route components
 const Landing = lazy(() => import('./pages/public/Landing'));
@@ -52,7 +53,7 @@ function App() {
             <Route path="/portal/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/portal/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
             <Route path="/portal/datev" element={<ProtectedRoute><DATEV /></ProtectedRoute>} />
-            <Route path="/portal/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/portal/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/portal/client" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />
             
             {/* Fallback */}

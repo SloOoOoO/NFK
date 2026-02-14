@@ -11,12 +11,21 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
     private readonly IAuthService _authService;
     private readonly IConfiguration _configuration;
+    private readonly IGoogleOAuthService? _googleOAuthService;
+    private readonly IDATEVOAuthService? _datevOAuthService;
 
-    public AuthController(ILogger<AuthController> logger, IAuthService authService, IConfiguration configuration)
+    public AuthController(
+        ILogger<AuthController> logger, 
+        IAuthService authService, 
+        IConfiguration configuration,
+        IGoogleOAuthService? googleOAuthService = null,
+        IDATEVOAuthService? datevOAuthService = null)
     {
         _logger = logger;
         _authService = authService;
         _configuration = configuration;
+        _googleOAuthService = googleOAuthService;
+        _datevOAuthService = datevOAuthService;
     }
 
     [HttpPost("register")]
@@ -123,30 +132,53 @@ public class AuthController : ControllerBase
     [HttpGet("datev/login")]
     public IActionResult DATEVLogin()
     {
-        // In production, this would use actual DATEV OAuth configuration
-        // For now, simulate the OAuth flow by redirecting to a placeholder
-        var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
-        var redirectUri = $"{frontendUrl}/auth/register";
-        var simulatedFirstName = "Max";
-        var simulatedLastName = "Mustermann";
-        
-        // Redirect to registration with DATEV data pre-filled
-        return Redirect($"{redirectUri}?source=datev&firstName={simulatedFirstName}&lastName={simulatedLastName}");
+        try
+        {
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            var callbackUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/datev/callback";
+            
+            if (_datevOAuthService != null && _configuration.GetValue<bool>("OAuth:DATEV:Enabled"))
+            {
+                var authUrl = _datevOAuthService.GetAuthorizationUrl(callbackUri);
+                return Redirect(authUrl);
+            }
+            
+            // Fallback: Simulate OAuth flow for development
+            _logger.LogWarning("DATEV OAuth not configured - using simulation mode");
+            var redirectUri = $"{frontendUrl}/auth/register";
+            return Redirect($"{redirectUri}?source=datev&firstName=Max&lastName=Mustermann");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "DATEV login error");
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            return Redirect($"{frontendUrl}/auth/login?error=datev_failed");
+        }
     }
 
     /// <summary>
     /// DATEV OAuth Callback - Handles the OAuth callback from DATEV
     /// </summary>
     [HttpGet("datev/callback")]
-    public IActionResult DATEVCallback([FromQuery] string code)
+    public async Task<IActionResult> DATEVCallback([FromQuery] string code)
     {
         try
         {
-            // In production, exchange code for token and get user info from DATEV
-            // For now, redirect to registration
             var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
-            var redirectUri = $"{frontendUrl}/auth/register";
-            return Redirect($"{redirectUri}?source=datev&firstName=Max&lastName=Mustermann");
+            
+            if (_datevOAuthService != null && !string.IsNullOrEmpty(code))
+            {
+                var callbackUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/datev/callback";
+                var profile = await _datevOAuthService.GetUserProfileAsync(code);
+                
+                // Redirect to registration with DATEV data pre-filled
+                var redirectUri = $"{frontendUrl}/auth/register";
+                return Redirect($"{redirectUri}?source=datev&firstName={Uri.EscapeDataString(profile.GivenName)}&lastName={Uri.EscapeDataString(profile.FamilyName)}");
+            }
+            
+            // Fallback for development
+            var devRedirectUri = $"{frontendUrl}/auth/register";
+            return Redirect($"{devRedirectUri}?source=datev&firstName=Max&lastName=Mustermann");
         }
         catch (Exception ex)
         {
@@ -162,29 +194,56 @@ public class AuthController : ControllerBase
     [HttpGet("google/login")]
     public IActionResult GoogleLogin()
     {
-        // In production, this would use actual Google OAuth configuration
-        // For now, simulate the OAuth flow
-        var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
-        var redirectUri = $"{frontendUrl}/auth/register";
-        var simulatedEmail = "user@example.com";
-        
-        // Redirect to registration with Google email pre-filled
-        return Redirect($"{redirectUri}?source=google&email={simulatedEmail}");
+        try
+        {
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            var callbackUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/google/callback";
+            
+            if (_googleOAuthService != null && _configuration.GetValue<bool>("OAuth:Google:Enabled"))
+            {
+                var authUrl = _googleOAuthService.GetAuthorizationUrl(callbackUri);
+                return Redirect(authUrl);
+            }
+            
+            // Fallback: Simulate OAuth flow for development
+            _logger.LogWarning("Google OAuth not configured - using simulation mode");
+            var redirectUri = $"{frontendUrl}/auth/register";
+            return Redirect($"{redirectUri}?source=google&email=user@example.com");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Google login error");
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed");
+        }
     }
 
     /// <summary>
     /// Google OAuth Callback - Handles the OAuth callback from Google
     /// </summary>
     [HttpGet("google/callback")]
-    public IActionResult GoogleCallback([FromQuery] string code)
+    public async Task<IActionResult> GoogleCallback([FromQuery] string code)
     {
         try
         {
-            // In production, exchange code for token and get user info from Google
-            // For now, redirect to registration
             var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
-            var redirectUri = $"{frontendUrl}/auth/register";
-            return Redirect($"{redirectUri}?source=google&email=user@example.com");
+            
+            if (_googleOAuthService != null && !string.IsNullOrEmpty(code))
+            {
+                var callbackUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/google/callback";
+                
+                // Exchange code for tokens and get user profile
+                var response = await _googleOAuthService.LoginAsync(code, callbackUri);
+                
+                // If user exists and is fully registered, redirect to dashboard with tokens
+                // Otherwise, redirect to registration with data pre-filled
+                var redirectUri = $"{frontendUrl}/auth/register";
+                return Redirect($"{redirectUri}?source=google&email={Uri.EscapeDataString(response.User.Email)}");
+            }
+            
+            // Fallback for development
+            var devRedirectUri = $"{frontendUrl}/auth/register";
+            return Redirect($"{devRedirectUri}?source=google&email=user@example.com");
         }
         catch (Exception ex)
         {
