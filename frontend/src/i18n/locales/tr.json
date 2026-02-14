@@ -263,6 +263,7 @@
     "tasks": "Görevler",
     "appointment": "randevu",
     "more": "daha fazla",
+    "errorCreating": "Randevu oluşturulurken hata oluştu. Lütfen tekrar deneyin.",
     "dayNames": {
       "sun": "Paz",
       "mon": "Pzt",

@@ -30,9 +30,9 @@ public class AuditController : ControllerBase
                 .Where(a => 
                     a.Action == "UserRegistration" || 
                     a.Action == "RoleChange" || 
-                    a.Action == "CREATE" && a.EntityType == "Appointment" ||
-                    a.EntityType == "User" && a.Action == "CREATE" ||
-                    a.EntityType == "User" && a.Details != null && a.Details.Contains("role"))
+                    (a.Action == "CREATE" && a.EntityType == "Appointment") ||
+                    (a.EntityType == "User" && a.Action == "CREATE") ||
+                    (a.EntityType == "User" && a.Details != null && a.Details.Contains("role")))
                 .OrderByDescending(a => a.CreatedAt)
                 .AsQueryable();
 

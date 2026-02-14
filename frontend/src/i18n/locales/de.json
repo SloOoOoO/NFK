@@ -263,6 +263,7 @@
     "tasks": "Aufgaben",
     "appointment": "Termin",
     "more": "weitere",
+    "errorCreating": "Fehler beim Erstellen des Termins. Bitte versuchen Sie es erneut.",
     "dayNames": {
       "sun": "So",
       "mon": "Mo",

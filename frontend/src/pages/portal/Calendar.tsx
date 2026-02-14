@@ -108,7 +108,7 @@ export default function Calendar() {
       fetchEvents();
     } catch (error) {
       console.error('Error creating appointment:', error);
-      alert(t('common.saving') + ' - Error');
+      alert(t('calendar.errorCreating'));
     }
   };
 

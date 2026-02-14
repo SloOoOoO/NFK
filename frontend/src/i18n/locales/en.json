@@ -263,6 +263,7 @@
     "tasks": "Tasks",
     "appointment": "appointment",
     "more": "more",
+    "errorCreating": "Error creating appointment. Please try again.",
     "dayNames": {
       "sun": "Sun",
       "mon": "Mon",
