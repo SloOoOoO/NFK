@@ -11,6 +11,9 @@ interface ApiError {
   retryAfter?: number;
 }
 
+// Rate limiting constants
+const DEFAULT_RATE_LIMIT_SECONDS = 900; // 15 minutes
+
 export default function Login() {
   const { t } = useTranslation();
   const { login } = useAuth();
@@ -74,7 +77,7 @@ export default function Login() {
         // Check for rate limiting (429 status)
         if (err.response?.status === 429) {
           const apiError = err.response.data as ApiError;
-          const retrySeconds = apiError.retryAfter || 900; // Default to 15 minutes
+          const retrySeconds = apiError.retryAfter || DEFAULT_RATE_LIMIT_SECONDS;
           setRateLimited(true);
           setRetryAfter(retrySeconds);
           setError(`Zu viele Anmeldeversuche. Bitte versuchen Sie es in ${Math.ceil(retrySeconds / 60)} Minuten erneut.`);
@@ -120,7 +123,7 @@ export default function Login() {
                 <div className="mt-2 w-full bg-yellow-200 rounded-full h-2">
                   <div 
                     className="bg-yellow-600 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${Math.max(0, 100 - (retryAfter / 900) * 100)}%` }}
+                    style={{ width: `${Math.max(0, 100 - (retryAfter / DEFAULT_RATE_LIMIT_SECONDS) * 100)}%` }}
                   ></div>
                 </div>
               </div>
