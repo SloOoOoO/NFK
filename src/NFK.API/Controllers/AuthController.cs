@@ -171,9 +171,9 @@ public class AuthController : ControllerBase
                 var callbackUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/datev/callback";
                 var profile = await _datevOAuthService.GetUserProfileAsync(code);
                 
-                // Redirect to registration with DATEV data pre-filled
+                // Redirect to registration with DATEV data pre-filled and provider ID
                 var redirectUri = $"{frontendUrl}/auth/register";
-                return Redirect($"{redirectUri}?source=datev&firstName={Uri.EscapeDataString(profile.GivenName)}&lastName={Uri.EscapeDataString(profile.FamilyName)}");
+                return Redirect($"{redirectUri}?source=datev&firstName={Uri.EscapeDataString(profile.GivenName)}&lastName={Uri.EscapeDataString(profile.FamilyName)}&providerId={Uri.EscapeDataString(profile.Sub)}");
             }
             
             // Fallback for development
@@ -238,7 +238,7 @@ public class AuthController : ControllerBase
                 // If user exists and is fully registered, redirect to dashboard with tokens
                 // Otherwise, redirect to registration with data pre-filled
                 var redirectUri = $"{frontendUrl}/auth/register";
-                return Redirect($"{redirectUri}?source=google&email={Uri.EscapeDataString(response.User.Email)}");
+                return Redirect($"{redirectUri}?source=google&email={Uri.EscapeDataString(response.User.Email)}&providerId={Uri.EscapeDataString(response.User.Email)}");
             }
             
             // Fallback for development

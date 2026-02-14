@@ -13,15 +13,23 @@ export default function Connections() {
   const fetchConnectionStatus = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch DATEV connection status
-      const datevResponse = await apiClient.get('/datev/status');
-      if (datevResponse.data) {
-        setDatevConnected(datevResponse.data.connected || false);
-        setDatevLastSync(datevResponse.data.lastSync || null);
-      }
+      // Fetch current user to check OAuth connections
+      const userResponse = await apiClient.get('/auth/me');
+      const user = userResponse.data;
       
-      // Google connection is not yet implemented, so it remains false
-      setGoogleConnected(false);
+      // Check if user has GoogleId or DATEVId
+      setGoogleConnected(!!user.googleId);
+      setDatevConnected(!!user.datevId);
+      
+      // Fetch DATEV connection status for last sync info
+      try {
+        const datevResponse = await apiClient.get('/datev/status');
+        if (datevResponse.data) {
+          setDatevLastSync(datevResponse.data.lastSync || null);
+        }
+      } catch {
+        // DATEV status endpoint might not exist, ignore error
+      }
     } catch (error) {
       console.error('Error fetching connection status:', error);
       // On error, assume not connected

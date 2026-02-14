@@ -294,4 +294,85 @@ public class AdminController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Error updating header text" });
         }
     }
+
+    [HttpGet("statistics")]
+    public async Task<IActionResult> GetStatistics()
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            var today = now.Date;
+            // Use Monday as week start (ISO 8601, common in Europe including Germany)
+            var weekStart = today.AddDays(-(int)today.DayOfWeek + (today.DayOfWeek == DayOfWeek.Sunday ? -6 : 1));
+            var monthStart = new DateTime(now.Year, now.Month, 1);
+
+            // Total users and clients
+            var totalUsers = await _context.Users.CountAsync(u => !u.IsDeleted);
+            var totalClients = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .CountAsync(u => !u.IsDeleted && u.UserRoles.Any(ur => ur.Role.Name == "Client"));
+
+            // Active users (users who are currently active)
+            var activeUsers = await _context.Users.CountAsync(u => u.IsActive && !u.IsDeleted);
+
+            // Daily active users (logged in today)
+            var dailyActiveCount = await _context.Users
+                .CountAsync(u => u.LastLoginAt.HasValue && u.LastLoginAt.Value >= today && !u.IsDeleted);
+
+            // Weekly active users (logged in this week)
+            var weeklyActiveCount = await _context.Users
+                .CountAsync(u => u.LastLoginAt.HasValue && u.LastLoginAt.Value >= weekStart && !u.IsDeleted);
+
+            // Monthly active users (logged in this month)
+            var monthlyActiveCount = await _context.Users
+                .CountAsync(u => u.LastLoginAt.HasValue && u.LastLoginAt.Value >= monthStart && !u.IsDeleted);
+
+            // New signups
+            var signupsToday = await _context.Users.CountAsync(u => u.CreatedAt >= today && !u.IsDeleted);
+            var signupsThisWeek = await _context.Users.CountAsync(u => u.CreatedAt >= weekStart && !u.IsDeleted);
+            var signupsThisMonth = await _context.Users.CountAsync(u => u.CreatedAt >= monthStart && !u.IsDeleted);
+
+            // Key events
+            var loginsToday = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= today);
+            var loginsThisWeek = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= weekStart);
+
+            var documentUploadsToday = await _context.Documents
+                .CountAsync(d => d.CreatedAt >= today && !d.IsDeleted);
+            var documentUploadsThisWeek = await _context.Documents
+                .CountAsync(d => d.CreatedAt >= weekStart && !d.IsDeleted);
+
+            var datevSyncsToday = await _context.Set<Domain.Entities.DATEV.DATEVJob>()
+                .CountAsync(j => j.CompletedAt.HasValue && j.CompletedAt.Value >= today && j.Status == "Completed");
+            var datevSyncsThisWeek = await _context.Set<Domain.Entities.DATEV.DATEVJob>()
+                .CountAsync(j => j.CompletedAt.HasValue && j.CompletedAt.Value >= weekStart && j.Status == "Completed");
+
+            var statistics = new UserStatisticsDto(
+                TotalUsers: totalUsers,
+                TotalClients: totalClients,
+                ActiveUsers: activeUsers,
+                DailyActive: new DailyActiveUsersDto(dailyActiveCount, today),
+                WeeklyActive: new WeeklyActiveUsersDto(weeklyActiveCount, weekStart),
+                MonthlyActive: new MonthlyActiveUsersDto(monthlyActiveCount, monthStart),
+                NewSignups: new NewSignupsDto(signupsToday, signupsThisWeek, signupsThisMonth),
+                KeyEvents: new KeyEventsDto(
+                    loginsToday,
+                    loginsThisWeek,
+                    documentUploadsToday,
+                    documentUploadsThisWeek,
+                    datevSyncsToday,
+                    datevSyncsThisWeek
+                )
+            );
+
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching statistics");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching statistics" });
+        }
+    }
 }

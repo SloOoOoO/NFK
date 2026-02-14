@@ -129,6 +129,8 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [disabledFields, setDisabledFields] = useState<{[key: string]: boolean}>({});
+  const [oauthSource, setOauthSource] = useState<string | null>(null);
+  const [oauthProviderId, setOauthProviderId] = useState<string | null>(null);
   
   const {
     register,
@@ -150,6 +152,10 @@ export default function Register() {
   // Handle SSO pre-filled data
   useEffect(() => {
     const source = searchParams.get('source');
+    const providerId = searchParams.get('providerId');
+    
+    setOauthSource(source);
+    setOauthProviderId(providerId);
     
     if (source === 'datev') {
       // DATEV pre-fills first and last name
@@ -210,6 +216,9 @@ export default function Register() {
         commercialRegister: data.clientType !== 'Privatperson' ? data.commercialRegister : undefined,
         privacyConsent: data.privacyConsent,
         termsConsent: data.termsConsent,
+        // Add OAuth provider info if available
+        googleId: oauthSource === 'google' && oauthProviderId ? oauthProviderId : undefined,
+        datevId: oauthSource === 'datev' && oauthProviderId ? oauthProviderId : undefined,
       };
       
       await authAPI.register(payload);

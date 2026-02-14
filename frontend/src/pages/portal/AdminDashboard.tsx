@@ -16,7 +16,7 @@ export default function AdminDashboard() {
   const [editForm, setEditForm] = useState<any>({});
   const [newRole, setNewRole] = useState('');
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [statistics, setStatistics] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,9 +28,9 @@ export default function AdminDashboard() {
       const usersRes = await adminAPI.getAllUsers();
       setUsers(usersRes.data);
       
-      // Fetch audit logs and analytics for tabs
+      // Fetch audit logs and statistics for tabs
       fetchAuditLogs();
-      fetchAnalytics();
+      fetchStatistics();
     } catch (error: any) {
       console.error('Failed to fetch admin data:', error);
       if (error?.response?.status === 401 || error?.response?.status === 403) {
@@ -52,13 +52,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchAnalytics = async () => {
+  const fetchStatistics = async () => {
     try {
-      const response = await apiClient.get('/analytics/page-visits');
-      setAnalytics(response.data);
+      const response = await adminAPI.getStatistics();
+      setStatistics(response.data);
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-      setAnalytics(null);
+      console.error('Failed to fetch statistics:', error);
+      setStatistics(null);
     }
   };
 
@@ -281,91 +281,144 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Analytics Tab */}
+          {/* Analytics/Statistics Tab */}
           {activeTab === 'analytics' && (
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-6 dark:text-white">Statistiken</h2>
               
               {loading ? (
                 <div className="text-center py-8 text-textSecondary dark:text-gray-400">Lädt...</div>
-              ) : !analytics || (analytics.daily && analytics.daily.length === 0 && analytics.monthly && analytics.monthly.length === 0) ? (
+              ) : !statistics ? (
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  Noch keine Besucherdaten vorhanden
+                  Keine Statistiken verfügbar
                 </div>
               ) : (
                 <div className="space-y-8">
-                  {/* Total this year */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
-                      <div className="text-4xl font-bold mb-2">
-                        {analytics.totalThisYear?.toLocaleString('de-DE') || 0}
+                  {/* User Statistics */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Benutzerstatistiken</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.totalUsers?.toLocaleString('de-DE') || 0}
+                        </div>
+                        <div className="text-blue-100">Gesamte Benutzer</div>
                       </div>
-                      <div className="text-blue-100">Besuche dieses Jahr</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg shadow text-white">
-                      <div className="text-4xl font-bold mb-2">
-                        {analytics.monthly && analytics.monthly.length > 0 
-                          ? (analytics.monthly[analytics.monthly.length - 1]?.count?.toLocaleString('de-DE') || 0)
-                          : 0}
+                      <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.totalClients?.toLocaleString('de-DE') || 0}
+                        </div>
+                        <div className="text-green-100">Klienten</div>
                       </div>
-                      <div className="text-green-100">Besuche diesen Monat</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-lg shadow text-white">
-                      <div className="text-4xl font-bold mb-2">
-                        {analytics.daily && analytics.daily.length > 0 
-                          ? (analytics.daily[analytics.daily.length - 1]?.count || 0)
-                          : 0}
+                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.activeUsers?.toLocaleString('de-DE') || 0}
+                        </div>
+                        <div className="text-purple-100">Aktive Benutzer</div>
                       </div>
-                      <div className="text-purple-100">Besuche heute</div>
+                      <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.monthlyActive?.count?.toLocaleString('de-DE') || 0}
+                        </div>
+                        <div className="text-orange-100">Aktiv diesen Monat</div>
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Daily visits chart (last 30 days) - simplified table view */}
-                  {analytics.daily && analytics.daily.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Tägliche Besuche (letzte 30 Tage)</h3>
-                      <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                        <div className="grid grid-cols-7 gap-2">
-                          {analytics.daily?.slice(-7).map((day: any, index: number) => (
-                            <div key={index} className="text-center">
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                {new Date(day.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                              </div>
-                              <div className="bg-blue-500 rounded" style={{ height: `${Math.max(20, (day.count / 200) * 100)}px` }}></div>
-                              <div className="text-sm font-semibold mt-2 dark:text-gray-200">{day.count}</div>
-                            </div>
-                          ))}
+
+                  {/* Active Users */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Aktive Benutzer</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                          {statistics.dailyActive?.count || 0}
                         </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">Heute angemeldet</div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                          {statistics.weeklyActive?.count || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">Diese Woche angemeldet</div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                          {statistics.monthlyActive?.count || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">Diesen Monat angemeldet</div>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Monthly visits (last 12 months) */}
-                  {analytics.monthly && analytics.monthly.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Monatliche Besuche (letzte 12 Monate)</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-secondary dark:bg-gray-700">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-sm font-semibold dark:text-gray-200">Monat</th>
-                              <th className="px-4 py-2 text-right text-sm font-semibold dark:text-gray-200">Besuche</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {analytics.monthly?.map((month: any, index: number) => (
-                              <tr key={index} className="border-b dark:border-gray-700">
-                                <td className="px-4 py-2 text-sm dark:text-gray-300">{month.month}</td>
-                                <td className="px-4 py-2 text-sm text-right font-medium dark:text-gray-200">
-                                  {month.count?.toLocaleString('de-DE') || 0}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  </div>
+
+                  {/* New Signups */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Neue Registrierungen</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                          {statistics.newSignups?.today || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">Heute</div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+                          {statistics.newSignups?.thisWeek || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">Diese Woche</div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                          {statistics.newSignups?.thisMonth || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">Diesen Monat</div>
                       </div>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Key Events */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">Wichtige Ereignisse</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-secondary dark:bg-gray-700">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-semibold dark:text-gray-200">Ereignis</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold dark:text-gray-200">Heute</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold dark:text-gray-200">Diese Woche</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b dark:border-gray-700">
+                            <td className="px-4 py-3 text-sm dark:text-gray-300">🔐 Erfolgreiche Anmeldungen</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium dark:text-gray-200">
+                              {statistics.keyEvents?.loginsToday || 0}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-medium dark:text-gray-200">
+                              {statistics.keyEvents?.loginsThisWeek || 0}
+                            </td>
+                          </tr>
+                          <tr className="border-b dark:border-gray-700">
+                            <td className="px-4 py-3 text-sm dark:text-gray-300">📄 Dokument-Uploads</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium dark:text-gray-200">
+                              {statistics.keyEvents?.documentUploadsToday || 0}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-medium dark:text-gray-200">
+                              {statistics.keyEvents?.documentUploadsThisWeek || 0}
+                            </td>
+                          </tr>
+                          <tr className="border-b dark:border-gray-700">
+                            <td className="px-4 py-3 text-sm dark:text-gray-300">📊 DATEV Synchronisationen abgeschlossen</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium dark:text-gray-200">
+                              {statistics.keyEvents?.datevSyncsCompletedToday || 0}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-medium dark:text-gray-200">
+                              {statistics.keyEvents?.datevSyncsCompletedThisWeek || 0}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

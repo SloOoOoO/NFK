@@ -182,7 +182,20 @@
     "successUpdate": "Profil başarıyla güncellendi",
     "errorUpdate": "Profil güncellenirken hata oluştu",
     "loadingProfile": "Profil yükleniyor...",
-    "errorLoading": "Profil yüklenemedi"
+    "errorLoading": "Profil yüklenemedi",
+    "dangerZone": "Tehlike Bölgesi",
+    "deleteProfile": "Profili Sil",
+    "deleteWarning": "Profilinizi silmek kalıcıdır ve geri alınamaz.",
+    "deleteModalTitle": "⚠️ Profili Kalıcı Olarak Sil",
+    "deleteModalDescription1": "Bu işlem profilinizi <strong>kalıcı olarak silecek</strong> ve <strong>geri alınamaz</strong>.",
+    "deleteModalDescription2": "Yüklediğiniz tüm belgeler de silinecektir. Mesajlarınız ve randevularınız iptal edilecektir.",
+    "deleteModalDescription3": "Onaylamak için <strong>\"delete\"</strong> kelimesini <strong>tersine</strong> yazın:",
+    "deleteConfirmationPlaceholder": "Onay girin...",
+    "deleteConfirm": "Profili Kalıcı Olarak Sil",
+    "deleting": "Siliniyor...",
+    "deleteInvalidConfirmation": "Onay metni geçersiz. Lütfen \"delete\" kelimesini tersine yazın.",
+    "deleteSuccess": "Profiliniz başarıyla silindi.",
+    "deleteError": "Profil silinirken hata oluştu"
   },
   "clients": {
     "title": "Müşteriler",
