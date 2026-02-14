@@ -88,7 +88,7 @@ export default function Connections() {
             
             <div className="mb-6">
               <p className="text-sm text-textSecondary dark:text-gray-400 mb-2">
-                {t('connections.status.active')}: {loading ? 'Lädt...' : googleConnected ? t('connections.google.connected') : t('connections.google.notConnected')}
+                {t('connections.status.active')}: {loading ? t('common.loading') : googleConnected ? t('connections.google.connected') : t('connections.google.notConnected')}
               </p>
               {googleConnected && (
                 <p className="text-xs text-textSecondary dark:text-gray-500">
@@ -133,7 +133,7 @@ export default function Connections() {
             
             <div className="mb-6">
               <p className="text-sm text-textSecondary dark:text-gray-400 mb-2">
-                {t('connections.status.active')}: {loading ? 'Lädt...' : datevConnected ? t('connections.datev.connected') : t('connections.datev.notConnected')}
+                {t('connections.status.active')}: {loading ? t('common.loading') : datevConnected ? t('connections.datev.connected') : t('connections.datev.notConnected')}
               </p>
               {datevConnected && datevLastSync && (
                 <p className="text-xs text-textSecondary dark:text-gray-500">

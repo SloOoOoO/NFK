@@ -12,6 +12,7 @@ export default function Sidebar() {
   useEffect(() => {
     // Refresh user data when sidebar mounts to ensure we have latest data
     refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = () => {
