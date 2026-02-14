@@ -38,7 +38,30 @@ This document provides step-by-step instructions for setting up Single Sign-On (
 
 ### Step 3: Configure Application
 
-Add the credentials to your `appsettings.json`:
+**⚠️ SECURITY WARNING:** Never commit OAuth secrets to version control!
+
+#### Option 1: Environment Variables (Recommended for Production)
+
+Set the following environment variables:
+
+```bash
+# Google OAuth Configuration
+export GOOGLE_CLIENT_ID="YOUR_GOOGLE_CLIENT_ID_HERE"
+export GOOGLE_CLIENT_SECRET="YOUR_GOOGLE_CLIENT_SECRET_HERE"
+export GOOGLE_OAUTH_ENABLED="true"
+```
+
+For local development, create a `.env` file in the project root (copy from `.env.example`):
+
+```env
+GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID_HERE
+GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET_HERE
+GOOGLE_OAUTH_ENABLED=true
+```
+
+#### Option 2: Configuration File (Development Only)
+
+For development environments only, you can add credentials to `appsettings.Development.json`:
 
 ```json
 {
@@ -52,12 +75,10 @@ Add the credentials to your `appsettings.json`:
 }
 ```
 
-Or set environment variables:
-```bash
-OAUTH__GOOGLE__CLIENTID=YOUR_GOOGLE_CLIENT_ID_HERE
-OAUTH__GOOGLE__CLIENTSECRET=YOUR_GOOGLE_CLIENT_SECRET_HERE
-OAUTH__GOOGLE__ENABLED=true
-```
+**Important:** 
+- `appsettings.Development.json` should contain only placeholder values when committed
+- Never commit real secrets to appsettings files
+- Use environment variables or secret management services in production
 
 ### Step 4: Test Google SSO
 
@@ -107,7 +128,30 @@ OAUTH__GOOGLE__ENABLED=true
 
 ### Step 3: Configure Application
 
-Add the credentials to your `appsettings.json`:
+**⚠️ SECURITY WARNING:** Never commit OAuth secrets to version control!
+
+#### Option 1: Environment Variables (Recommended for Production)
+
+Set the following environment variables:
+
+```bash
+# DATEV OAuth Configuration
+export DATEV_CLIENT_ID="YOUR_DATEV_CLIENT_ID_HERE"
+export DATEV_CLIENT_SECRET="YOUR_DATEV_CLIENT_SECRET_HERE"
+export DATEV_OAUTH_ENABLED="true"
+```
+
+For local development, create a `.env` file in the project root (copy from `.env.example`):
+
+```env
+DATEV_CLIENT_ID=YOUR_DATEV_CLIENT_ID_HERE
+DATEV_CLIENT_SECRET=YOUR_DATEV_CLIENT_SECRET_HERE
+DATEV_OAUTH_ENABLED=true
+```
+
+#### Option 2: Configuration File (Development Only)
+
+For development environments only, you can add credentials to `appsettings.Development.json`:
 
 ```json
 {
@@ -125,12 +169,10 @@ Add the credentials to your `appsettings.json`:
 }
 ```
 
-Or set environment variables:
-```bash
-OAUTH__DATEV__CLIENTID=YOUR_DATEV_CLIENT_ID_HERE
-OAUTH__DATEV__CLIENTSECRET=YOUR_DATEV_CLIENT_SECRET_HERE
-OAUTH__DATEV__ENABLED=true
-```
+**Important:**
+- `appsettings.Development.json` should contain only placeholder values when committed
+- Never commit real secrets to appsettings files
+- Use environment variables or secret management services in production
 
 ### Step 4: Test DATEV SSO
 
@@ -145,46 +187,68 @@ OAUTH__DATEV__ENABLED=true
 
 ## Configuration
 
-### Production Configuration
+### Environment Variables
 
-For production deployments, use environment variables instead of storing credentials in `appsettings.json`:
+**⚠️ SECURITY BEST PRACTICE:** Always use environment variables for OAuth secrets in production!
 
+The application loads OAuth configuration in this order:
+1. **Environment variables** (highest priority)
+2. Configuration files (appsettings.json)
+
+#### Setting Environment Variables
+
+**Linux/macOS:**
 ```bash
 # Google OAuth
-export OAUTH__GOOGLE__CLIENTID="your-google-client-id"
-export OAUTH__GOOGLE__CLIENTSECRET="your-google-client-secret"
-export OAUTH__GOOGLE__ENABLED="true"
+export GOOGLE_CLIENT_ID="your-google-client-id"
+export GOOGLE_CLIENT_SECRET="your-google-client-secret"
+export GOOGLE_OAUTH_ENABLED="true"
 
 # DATEV OAuth
-export OAUTH__DATEV__CLIENTID="your-datev-client-id"
-export OAUTH__DATEV__CLIENTSECRET="your-datev-client-secret"
-export OAUTH__DATEV__ENABLED="true"
+export DATEV_CLIENT_ID="your-datev-client-id"
+export DATEV_CLIENT_SECRET="your-datev-client-secret"
+export DATEV_OAUTH_ENABLED="true"
 ```
 
-### Docker Configuration
+**Windows (PowerShell):**
+```powershell
+# Google OAuth
+$env:GOOGLE_CLIENT_ID="your-google-client-id"
+$env:GOOGLE_CLIENT_SECRET="your-google-client-secret"
+$env:GOOGLE_OAUTH_ENABLED="true"
 
-If using Docker, add these to your `docker-compose.yml`:
+# DATEV OAuth
+$env:DATEV_CLIENT_ID="your-datev-client-id"
+$env:DATEV_CLIENT_SECRET="your-datev-client-secret"
+$env:DATEV_OAUTH_ENABLED="true"
+```
 
+**Docker Compose:**
 ```yaml
 services:
   api:
     environment:
-      - OAUTH__GOOGLE__CLIENTID=${GOOGLE_CLIENT_ID}
-      - OAUTH__GOOGLE__CLIENTSECRET=${GOOGLE_CLIENT_SECRET}
-      - OAUTH__GOOGLE__ENABLED=true
-      - OAUTH__DATEV__CLIENTID=${DATEV_CLIENT_ID}
-      - OAUTH__DATEV__CLIENTSECRET=${DATEV_CLIENT_SECRET}
-      - OAUTH__DATEV__ENABLED=true
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_OAUTH_ENABLED=true
+      - DATEV_CLIENT_ID=${DATEV_CLIENT_ID}
+      - DATEV_CLIENT_SECRET=${DATEV_CLIENT_SECRET}
+      - DATEV_OAUTH_ENABLED=true
 ```
 
-And create a `.env` file:
-
+Create a `.env` file in the project root (use `.env.example` as template):
 ```env
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_OAUTH_ENABLED=true
 DATEV_CLIENT_ID=your-datev-client-id
 DATEV_CLIENT_SECRET=your-datev-client-secret
+DATEV_OAUTH_ENABLED=true
 ```
+
+### Production Configuration
+
+For production deployments, use environment variables instead of storing credentials in configuration files.
 
 ---
 
@@ -231,24 +295,51 @@ DATEV_CLIENT_SECRET=your-datev-client-secret
 
 ## Security Considerations
 
+### OAuth Secrets Management
+
+**⚠️ CRITICAL SECURITY REQUIREMENTS:**
+
+1. **NEVER commit secrets to version control**
+   - OAuth Client Secrets must NEVER be in appsettings.json, appsettings.Development.json, or any committed file
+   - Always use environment variables or secure secret stores (Azure Key Vault, AWS Secrets Manager, HashiCorp Vault)
+   - The `.env` file is in `.gitignore` to prevent accidental commits
+
+2. **Environment Variables Priority**
+   - The application checks environment variables first (e.g., `GOOGLE_CLIENT_ID`)
+   - Then falls back to configuration files (e.g., `OAuth:Google:ClientId`)
+   - This allows secure production deployments while keeping config files clean
+
+3. **Secret Rotation**
+   - Regularly rotate OAuth Client Secrets (recommended: every 90 days)
+   - Update environment variables after rotation
+   - Monitor OAuth usage in provider consoles
+
 ### Google OAuth
+
 - **Client Secret** must be kept secure and never committed to version control
 - Use HTTPS in production for all redirect URIs
-- Regularly rotate Client Secrets
+- Regularly rotate Client Secrets (every 90 days recommended)
 - Monitor OAuth usage in Google Cloud Console
+- Verify redirect URIs match exactly in both code and Google Console
 
 ### DATEV OAuth
-- **Client Secret** must be kept secure
+
+- **Client Secret** must be kept secure and never committed
 - DATEV SSO is only available for certified tax consultants
 - Additional verification may be required by DATEV
 - Monitor access in DATEV Developer Portal
+- Follow DATEV-specific security guidelines for handling client data
 
 ### Best Practices
-1. Store secrets in environment variables or secure vaults (e.g., Azure Key Vault, AWS Secrets Manager)
-2. Use different credentials for development and production
-3. Implement rate limiting for OAuth endpoints
-4. Log all OAuth authentication attempts for security auditing
-5. Regularly review and update OAuth scopes
+
+1. **Use environment variables for all secrets** - never hardcode in source code
+2. **Different credentials for dev/prod** - use separate OAuth apps for development and production
+3. **Implement rate limiting** - protect OAuth endpoints from abuse
+4. **Enable audit logging** - log all OAuth authentication attempts
+5. **Review scopes regularly** - only request necessary OAuth scopes
+6. **Use HTTPS everywhere** - especially for redirect URIs in production
+7. **Validate redirect URIs** - ensure they match configured values exactly
+8. **Monitor for anomalies** - watch for unusual OAuth activity patterns
 
 ---
 

@@ -134,6 +134,47 @@ builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();
 builder.Services.AddScoped<NFK.Infrastructure.Caching.CacheService>();
 
+// OAuth services - conditionally register based on configuration
+// Google OAuth
+var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") 
+    ?? builder.Configuration["OAuth:Google:ClientId"];
+var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") 
+    ?? builder.Configuration["OAuth:Google:ClientSecret"];
+var googleEnabledStr = Environment.GetEnvironmentVariable("GOOGLE_OAUTH_ENABLED") 
+    ?? builder.Configuration["OAuth:Google:Enabled"] ?? "false";
+var googleEnabled = bool.TryParse(googleEnabledStr, out var googleEnabledParsed) && googleEnabledParsed;
+
+if (googleEnabled && !string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    builder.Services.AddHttpClient<NFK.Application.Services.OAuth.GoogleOAuthService>();
+    builder.Services.AddScoped<IGoogleOAuthService, NFK.Application.Services.OAuth.GoogleOAuthService>();
+    Log.Information("Google OAuth service registered");
+}
+else
+{
+    Log.Information("Google OAuth service not registered - disabled or missing configuration");
+}
+
+// DATEV OAuth
+var datevClientId = Environment.GetEnvironmentVariable("DATEV_CLIENT_ID") 
+    ?? builder.Configuration["OAuth:DATEV:ClientId"];
+var datevClientSecret = Environment.GetEnvironmentVariable("DATEV_CLIENT_SECRET") 
+    ?? builder.Configuration["OAuth:DATEV:ClientSecret"];
+var datevEnabledStr = Environment.GetEnvironmentVariable("DATEV_OAUTH_ENABLED") 
+    ?? builder.Configuration["OAuth:DATEV:Enabled"] ?? "false";
+var datevEnabled = bool.TryParse(datevEnabledStr, out var datevEnabledParsed) && datevEnabledParsed;
+
+if (datevEnabled && !string.IsNullOrWhiteSpace(datevClientId) && !string.IsNullOrWhiteSpace(datevClientSecret))
+{
+    builder.Services.AddHttpClient<NFK.Application.Services.OAuth.DATEVOAuthService>();
+    builder.Services.AddScoped<IDATEVOAuthService, NFK.Application.Services.OAuth.DATEVOAuthService>();
+    Log.Information("DATEV OAuth service registered");
+}
+else
+{
+    Log.Information("DATEV OAuth service not registered - disabled or missing configuration");
+}
+
 // Hangfire
 builder.Services.AddHangfire(configuration => configuration
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
