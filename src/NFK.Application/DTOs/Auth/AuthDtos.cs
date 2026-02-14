@@ -113,3 +113,9 @@ public record ResetPasswordRequest(
     [MinLength(8, ErrorMessage = "Password must be at least 8 characters")]
     string NewPassword
 );
+
+public record VerifyEmailRequest(
+    [Required(ErrorMessage = "Token is required")]
+    [MinLength(1, ErrorMessage = "Token is required")]
+    string Token
+);

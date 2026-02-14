@@ -295,6 +295,29 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Failed to reset password" });
         }
     }
+
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+    {
+        try
+        {
+            await _authService.VerifyEmailAsync(request.Token);
+            return Ok(new { message = "Email verified successfully" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = "invalid_request", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return BadRequest(new { error = "invalid_token", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Email verification failed");
+            return StatusCode(500, new { error = "internal_error", message = "Failed to verify email" });
+        }
+    }
 }
 
 public record RefreshTokenRequest(string RefreshToken);

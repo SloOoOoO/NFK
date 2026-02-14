@@ -102,10 +102,14 @@ public class AuditController : ControllerBase
     {
         return log.Action switch
         {
-            "Upload" => $"Dokument hochgeladen: {log.EntityType}",
-            "Download" => $"Dokument heruntergeladen: {log.EntityType}",
+            "DocumentUpload" => $"Dokument hochgeladen: {log.EntityType}",
+            "DocumentDownload" => $"Dokument heruntergeladen: {log.EntityType}",
+            "MessageSent" => $"Nachricht gesendet",
+            "MessageReceived" => $"Nachricht empfangen",
+            "CaseCreated" => "Neuer Fall erstellt",
             "CreateCase" => "Neuer Fall erstellt",
             "UpdateClient" => "Client aktualisiert",
+            "UserRegistration" => "Benutzer registriert",
             "CREATE" => $"{log.EntityType} erstellt",
             "UPDATE" => $"{log.EntityType} aktualisiert",
             "DELETE" => $"{log.EntityType} gelöscht",

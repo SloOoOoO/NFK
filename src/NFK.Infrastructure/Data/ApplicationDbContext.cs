@@ -28,6 +28,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserSession> UserSessions { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<PasswordHistory> PasswordHistories { get; set; }
+    public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; }
 
     // Clients
     public DbSet<Client> Clients { get; set; }

@@ -224,6 +224,22 @@ public class MessagesController : ControllerBase
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
+            // Log message sending to audit trail
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = currentUserId.Value,
+                Action = "MessageSent",
+                EntityType = "Message",
+                EntityId = message.Id,
+                IpAddress = ipAddress,
+                Details = $"Message sent to user {request.RecipientUserId}: {request.Subject}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
             _logger.LogInformation(
                 "Message sent from user {SenderId} to user {RecipientId}",
                 currentUserId.Value, request.RecipientUserId);
