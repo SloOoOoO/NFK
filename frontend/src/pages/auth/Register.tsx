@@ -249,6 +249,21 @@ export default function Register() {
           <h1 className="text-2xl font-bold text-primary dark:text-blue-400 mb-4">
             Erfolgreich registriert!
           </h1>
+          <p className="text-textSecondary dark:text-gray-300 mb-4">
+            Bitte überprüfen Sie Ihre E-Mail-Adresse, um Ihr Konto zu aktivieren.
+          </p>
+          <p className="text-sm text-textSecondary dark:text-gray-400 mb-6">
+            Wir haben Ihnen eine Bestätigungs-E-Mail an <strong>{watch('email')}</strong> gesendet.
+            Klicken Sie auf den Link in der E-Mail, um Ihre Registrierung abzuschließen.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-500">
+            Sie werden in Kürze zur Anmeldeseite weitergeleitet...
+          </p>
+        </div>
+      </div>
+    );
+  }
+          </h1>
           <p className="text-textSecondary dark:text-gray-300 mb-6">
             Sie werden in Kürze zur Anmeldeseite weitergeleitet...
           </p>
