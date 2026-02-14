@@ -67,83 +67,98 @@ public class AuthService : IAuthService
         // Calculate password expiration (90 days from now for employees)
         var passwordExpiresAt = DateTime.UtcNow.AddDays(PasswordPolicy.PasswordExpirationDays);
 
-        // Create user
-        var user = new User
+        // Use transaction to ensure atomicity
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            FirstName = SanitizeInput(request.FirstName),
-            LastName = SanitizeInput(request.LastName),
-            PhoneNumber = request.PhoneNumber,
-            FullLegalName = request.FullLegalName,
-            DateOfBirth = request.DateOfBirth,
-            Address = request.Address ?? request.Street, // Use Street if Address not provided
-            City = request.City,
-            PostalCode = request.PostalCode,
-            Country = request.Country ?? "Germany",
-            TaxId = request.TaxId,
-            TaxNumber = request.TaxNumber,
-            VatId = request.VatId,
-            CommercialRegister = request.CommercialRegister,
-            PhoneVerified = false,
-            // Client type and company fields
-            ClientType = request.ClientType,
-            CompanyName = request.CompanyName,
-            Salutation = request.Salutation,
-            Gender = request.Gender,
-            // Firm details (optional)
-            FirmLegalName = request.FirmLegalName,
-            FirmTaxId = request.FirmTaxId,
-            FirmChamberRegistration = request.FirmChamberRegistration,
-            FirmAddress = request.FirmAddress,
-            FirmCity = request.FirmCity,
-            FirmPostalCode = request.FirmPostalCode,
-            FirmCountry = request.FirmCountry,
-            // OAuth IDs
-            GoogleId = request.GoogleId,
-            DATEVId = request.DATEVId,
-            IsActive = true,
-            IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
-            FailedLoginAttempts = 0,
-            // Security fields
-            PasswordChangedAt = DateTime.UtcNow,
-            PasswordExpiresAt = passwordExpiresAt
-        };
+            // Create user
+            var user = new User
+            {
+                Email = request.Email,
+                PasswordHash = passwordHash,
+                FirstName = SanitizeInput(request.FirstName),
+                LastName = SanitizeInput(request.LastName),
+                PhoneNumber = request.PhoneNumber,
+                FullLegalName = request.FullLegalName,
+                DateOfBirth = request.DateOfBirth,
+                Address = request.Address ?? request.Street, // Use Street if Address not provided
+                City = request.City,
+                PostalCode = request.PostalCode,
+                Country = request.Country ?? "Germany",
+                TaxId = request.TaxId,
+                TaxNumber = request.TaxNumber,
+                VatId = request.VatId,
+                CommercialRegister = request.CommercialRegister,
+                PhoneVerified = false,
+                // Client type and company fields
+                ClientType = request.ClientType,
+                CompanyName = request.CompanyName,
+                Salutation = request.Salutation,
+                Gender = request.Gender,
+                // Firm details (optional)
+                FirmLegalName = request.FirmLegalName,
+                FirmTaxId = request.FirmTaxId,
+                FirmChamberRegistration = request.FirmChamberRegistration,
+                FirmAddress = request.FirmAddress,
+                FirmCity = request.FirmCity,
+                FirmPostalCode = request.FirmPostalCode,
+                FirmCountry = request.FirmCountry,
+                // OAuth IDs
+                GoogleId = request.GoogleId,
+                DATEVId = request.DATEVId,
+                IsActive = true,
+                IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
+                FailedLoginAttempts = 0,
+                // Security fields
+                PasswordChangedAt = DateTime.UtcNow,
+                PasswordExpiresAt = passwordExpiresAt
+            };
 
-        _context.Users.Add(user);
-        
-        // Save user first to get the generated Id
-        await _context.SaveChangesAsync();
-        
-        // Now create password history with the persisted user.Id
-        var passwordHistory = new PasswordHistory
+            _context.Users.Add(user);
+            
+            // Save user first to get the generated Id
+            await _context.SaveChangesAsync();
+            
+            // Now create password history with the persisted user.Id
+            var passwordHistory = new PasswordHistory
+            {
+                UserId = user.Id,
+                PasswordHash = passwordHash,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            _context.PasswordHistories.Add(passwordHistory);
+            
+            await _context.SaveChangesAsync();
+
+            // Log user registration to audit trail
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = user.Id,
+                Action = "UserRegistration",
+                EntityType = "User",
+                EntityId = user.Id,
+                IpAddress = ipAddress,
+                Details = $"New user registered: {user.Email}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+            await _context.SaveChangesAsync();
+
+            // Commit transaction
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("User registered successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
+
+            return new RegisterResponse("Registration successful", user.Id);
+        }
+        catch (Exception ex)
         {
-            UserId = user.Id,
-            PasswordHash = passwordHash,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-        _context.PasswordHistories.Add(passwordHistory);
-        
-        await _context.SaveChangesAsync();
-
-        // Log user registration to audit trail
-        var auditLog = new Domain.Entities.Audit.AuditLog
-        {
-            UserId = user.Id,
-            Action = "UserRegistration",
-            EntityType = "User",
-            EntityId = user.Id,
-            IpAddress = ipAddress,
-            Details = $"New user registered: {user.Email}",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-        _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("User registered successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
-
-        return new RegisterResponse("Registration successful", user.Id);
+            // Rollback on any error
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Registration failed for email: {Email} from IP: {IP}", request.Email, ipAddress);
+            throw;
+        }
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
