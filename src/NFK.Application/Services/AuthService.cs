@@ -123,6 +123,21 @@ public class AuthService : IAuthService
         
         await _context.SaveChangesAsync();
 
+        // Log user registration to audit trail
+        var auditLog = new Domain.Entities.Audit.AuditLog
+        {
+            UserId = user.Id,
+            Action = "UserRegistration",
+            EntityType = "User",
+            EntityId = user.Id,
+            IpAddress = ipAddress,
+            Details = $"New user registered: {user.Email}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+        await _context.SaveChangesAsync();
+
         _logger.LogInformation("User registered successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
 
         return new RegisterResponse("Registration successful", user.Id);

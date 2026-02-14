@@ -123,6 +123,22 @@ public class AppointmentsController : ControllerBase
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
 
+            // Log appointment creation to audit trail
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = userId,
+                Action = "CREATE",
+                EntityType = "Appointment",
+                EntityId = appointment.Id,
+                IpAddress = ipAddress,
+                Details = $"Appointment created: {appointment.Title}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+            await _context.SaveChangesAsync();
+
             return Ok(new
             {
                 success = true,

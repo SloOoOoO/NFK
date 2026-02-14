@@ -129,6 +129,7 @@ public class AdminController : ControllerBase
             }
 
             // Remove existing roles
+            var oldRole = user.UserRoles.FirstOrDefault()?.Role.Name ?? "None";
             _context.UserRoles.RemoveRange(user.UserRoles);
 
             // Add new role
@@ -139,6 +140,24 @@ public class AdminController : ControllerBase
             };
 
             _context.UserRoles.Add(userRole);
+            await _context.SaveChangesAsync();
+
+            // Log role change to audit trail
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = user.Id,
+                Action = "RoleChange",
+                EntityType = "User",
+                EntityId = user.Id,
+                IpAddress = ipAddress,
+                OldValues = $"Role: {oldRole}",
+                NewValues = $"Role: {role.Name}",
+                Details = $"User role changed from {oldRole} to {role.Name}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "User role updated successfully", role = role.Name });
