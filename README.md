@@ -136,18 +136,23 @@ NFK/
 
 ### Authentication & Authorization
 - ✅ JWT-based authentication (RS256, 15min access, 7 day refresh)
-- ✅ OAuth2 integration (Google, Apple)
-- ✅ Role-Based Access Control (5 roles)
+- ✅ OAuth2/OIDC integration (Google, DATEV)
+- ✅ SSO with registration continuation flow
+- ✅ Role-Based Access Control (7 roles)
 - ✅ Account lockout after 5 failed attempts
 - ✅ Session management
 - ✅ Password reset flow
 
 ### User Roles
-1. **SuperAdmin** - Full system access
-2. **Consultant** - Client and case management
-3. **Receptionist** - Scheduling and basic client info
-4. **Client** - Own dossier and documents
-5. **DATEVManager** - DATEV export management
+1. **SuperAdmin** - Full system access, all admin functions
+2. **Admin** - General admin role, user management
+3. **Consultant** - Client and case management (Tax Consultant)
+4. **Steuerberater** - Tax consultant role (alias for Consultant)
+5. **Receptionist** - Scheduling and basic client info
+6. **Client** - Own dossier and documents
+7. **DATEVManager** - DATEV export management
+
+**Admin Access:** SuperAdmin, Admin, Consultant, and Steuerberater roles have access to admin dashboard and can view full user details.
 
 ### Client Management
 - ✅ Client CRUD operations
@@ -224,13 +229,92 @@ See [API.md](docs/API.md) for complete documentation.
 Create `.env` file:
 
 ```bash
+# Database
 SQL_SERVER_PASSWORD=YourStrong!Passw0rd
+
+# JWT Authentication
 JWT_PRIVATE_KEY=your_private_key
 JWT_PUBLIC_KEY=your_public_key
-GOOGLE_CLIENT_ID=your_google_client_id
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_OAUTH_ENABLED=true
+
+# DATEV OAuth (optional)
+DATEV_CLIENT_ID=your_datev_client_id
+DATEV_CLIENT_SECRET=your_datev_client_secret
+DATEV_OAUTH_ENABLED=false
+
+# DATEV SFTP
 DATEV_SFTP_HOST=sftp.datev.de
+
+# Email
 SENDGRID_API_KEY=your_sendgrid_key
 ```
+
+### OAuth Setup
+
+#### Google OAuth Configuration
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+5. Add authorized redirect URIs:
+   - Development: `http://localhost:8080/api/v1/auth/google/callback`
+   - Production: `https://your-domain.com/api/v1/auth/google/callback`
+6. Copy Client ID and Client Secret to `appsettings.json`:
+
+```json
+{
+  "OAuth": {
+    "Google": {
+      "ClientId": "your-client-id.apps.googleusercontent.com",
+      "ClientSecret": "your-client-secret",
+      "Enabled": true
+    }
+  }
+}
+```
+
+**Registration Flow with Google:**
+- User clicks "Sign in with Google" on registration page
+- After Google authentication, user is redirected to registration form
+- Email is pre-filled and locked (greyed out, not editable)
+- User completes remaining required fields (name, address, tax ID, etc.)
+
+#### DATEV OAuth Configuration
+
+1. Contact DATEV to obtain OAuth credentials for your tax consulting firm
+2. Register your application with DATEV
+3. Add authorized redirect URIs:
+   - Development: `http://localhost:8080/api/v1/auth/datev/callback`
+   - Production: `https://your-domain.com/api/v1/auth/datev/callback`
+4. Update `appsettings.json`:
+
+```json
+{
+  "OAuth": {
+    "DATEV": {
+      "ClientId": "your-datev-client-id",
+      "ClientSecret": "your-datev-client-secret",
+      "AuthorizationEndpoint": "https://login.datev.de/openid/authorize",
+      "TokenEndpoint": "https://login.datev.de/openid/token",
+      "UserInfoEndpoint": "https://login.datev.de/openid/userinfo",
+      "Scope": "openid profile email datev:accounting",
+      "Enabled": true
+    }
+  }
+}
+```
+
+**Registration Flow with DATEV:**
+- User clicks "Sign in with DATEV" on registration page
+- After DATEV authentication, user is redirected to registration form
+- First name and last name are pre-filled and locked (greyed out, not editable)
+- User completes remaining required fields (email, address, tax ID, etc.)
+- DATEV users are typically assigned "Consultant" or "Steuerberater" role
 
 See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed configuration.
 

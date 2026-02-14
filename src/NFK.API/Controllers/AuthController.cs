@@ -173,7 +173,7 @@ public class AuthController : ControllerBase
                 
                 // Redirect to registration with DATEV data pre-filled
                 var redirectUri = $"{frontendUrl}/auth/register";
-                return Redirect($"{redirectUri}?source=datev&firstName={Uri.EscapeDataString(profile.FirstName)}&lastName={Uri.EscapeDataString(profile.LastName)}");
+                return Redirect($"{redirectUri}?source=datev&firstName={Uri.EscapeDataString(profile.GivenName)}&lastName={Uri.EscapeDataString(profile.FamilyName)}");
             }
             
             // Fallback for development
