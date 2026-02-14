@@ -4,6 +4,8 @@ import { clientsAPI } from '../../services/api';
 import apiClient from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface Client {
   id: number;
@@ -29,6 +31,8 @@ interface ClientUser {
 }
 
 export default function Clients() {
+  const { user } = useAuth();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [clients, setClients] = useState<Client[]>([]);
@@ -60,6 +64,9 @@ export default function Clients() {
   });
   const [successMessage, setSuccessMessage] = useState('');
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+
+  // Check if user can create clients (only Admin, SuperAdmin, Consultant)
+  const canCreateClients = user?.role && ['Admin', 'SuperAdmin', 'Consultant'].includes(user.role);
 
   useEffect(() => {
     fetchClients();
@@ -250,12 +257,14 @@ export default function Clients() {
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary whitespace-nowrap"
-              >
-                + Neuer Mandant
-              </button>
+              {canCreateClients && (
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="btn-primary whitespace-nowrap"
+                >
+                  + {t('dashboard.sections.newClient')}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -401,7 +410,7 @@ export default function Clients() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
               <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-textPrimary">Neuer Mandant</h2>
+                <h2 className="text-xl font-semibold text-textPrimary">{t('dashboard.sections.newClient')}</h2>
               </div>
               
               <form onSubmit={handleCreateClient} className="p-6 space-y-4">

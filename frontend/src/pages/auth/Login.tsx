@@ -7,6 +7,8 @@ import { AxiosError } from 'axios';
 
 interface ApiError {
   message?: string;
+  error?: string;
+  retryAfter?: number;
 }
 
 export default function Login() {
@@ -16,6 +18,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rateLimited, setRateLimited] = useState(false);
+  const [retryAfter, setRetryAfter] = useState(0);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -29,8 +33,29 @@ export default function Login() {
     }
   }, [searchParams]);
 
+  // Countdown timer for rate limiting
+  useEffect(() => {
+    if (retryAfter > 0) {
+      const timer = setInterval(() => {
+        setRetryAfter((prev) => {
+          if (prev <= 1) {
+            setRateLimited(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [retryAfter]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (rateLimited) {
+      return;
+    }
+    
     setError('');
     setLoading(true);
 
@@ -45,9 +70,20 @@ export default function Login() {
       const redirectTo = searchParams.get('redirect') || '/';
       navigate(redirectTo);
     } catch (err) {
-      if (err instanceof AxiosError && err.response?.data) {
-        const apiError = err.response.data as ApiError;
-        setError(apiError.message || t('auth.errors.loginFailed'));
+      if (err instanceof AxiosError) {
+        // Check for rate limiting (429 status)
+        if (err.response?.status === 429) {
+          const apiError = err.response.data as ApiError;
+          const retrySeconds = apiError.retryAfter || 900; // Default to 15 minutes
+          setRateLimited(true);
+          setRetryAfter(retrySeconds);
+          setError(`Zu viele Anmeldeversuche. Bitte versuchen Sie es in ${Math.ceil(retrySeconds / 60)} Minuten erneut.`);
+        } else if (err.response?.data) {
+          const apiError = err.response.data as ApiError;
+          setError(apiError.message || apiError.error || t('auth.errors.loginFailed'));
+        } else {
+          setError(t('auth.errors.loginFailed'));
+        }
       } else {
         setError(t('auth.errors.loginFailed'));
       }
@@ -74,8 +110,21 @@ export default function Login() {
         <h1 className="text-3xl font-bold text-center mb-8">{t('common.login')}</h1>
         
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className={`mb-6 p-4 rounded-md ${rateLimited ? 'bg-yellow-50 border border-yellow-200' : 'bg-red-50 border border-red-200'}`}>
+            <p className={`text-sm font-medium ${rateLimited ? 'text-yellow-800' : 'text-red-800'}`}>{error}</p>
+            {rateLimited && retryAfter > 0 && (
+              <div className="mt-2">
+                <p className="text-sm text-yellow-700">
+                  Verbleibende Zeit: {Math.floor(retryAfter / 60)} Min {retryAfter % 60} Sek
+                </p>
+                <div className="mt-2 w-full bg-yellow-200 rounded-full h-2">
+                  <div 
+                    className="bg-yellow-600 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.max(0, 100 - (retryAfter / 900) * 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         
@@ -117,14 +166,16 @@ export default function Login() {
 
           <button 
             type="submit" 
-            className="w-full btn-primary flex items-center justify-center gap-2"
-            disabled={loading}
+            className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || rateLimited}
           >
             {loading ? (
               <>
                 <span className="inline-block animate-spin">⏳</span>
                 <span>{t('common.loading')}</span>
               </>
+            ) : rateLimited ? (
+              `Gesperrt (${Math.floor(retryAfter / 60)}:${String(retryAfter % 60).padStart(2, '0')})`
             ) : (
               t('auth.loginButton')
             )}
