@@ -140,8 +140,9 @@ var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
     ?? builder.Configuration["OAuth:Google:ClientId"];
 var googleClientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET") 
     ?? builder.Configuration["OAuth:Google:ClientSecret"];
-var googleEnabled = bool.Parse(Environment.GetEnvironmentVariable("GOOGLE_OAUTH_ENABLED") 
-    ?? builder.Configuration["OAuth:Google:Enabled"] ?? "false");
+var googleEnabledStr = Environment.GetEnvironmentVariable("GOOGLE_OAUTH_ENABLED") 
+    ?? builder.Configuration["OAuth:Google:Enabled"] ?? "false";
+var googleEnabled = bool.TryParse(googleEnabledStr, out var googleEnabledParsed) && googleEnabledParsed;
 
 if (googleEnabled && !string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
 {
@@ -159,8 +160,9 @@ var datevClientId = Environment.GetEnvironmentVariable("DATEV_CLIENT_ID")
     ?? builder.Configuration["OAuth:DATEV:ClientId"];
 var datevClientSecret = Environment.GetEnvironmentVariable("DATEV_CLIENT_SECRET") 
     ?? builder.Configuration["OAuth:DATEV:ClientSecret"];
-var datevEnabled = bool.Parse(Environment.GetEnvironmentVariable("DATEV_OAUTH_ENABLED") 
-    ?? builder.Configuration["OAuth:DATEV:Enabled"] ?? "false");
+var datevEnabledStr = Environment.GetEnvironmentVariable("DATEV_OAUTH_ENABLED") 
+    ?? builder.Configuration["OAuth:DATEV:Enabled"] ?? "false";
+var datevEnabled = bool.TryParse(datevEnabledStr, out var datevEnabledParsed) && datevEnabledParsed;
 
 if (datevEnabled && !string.IsNullOrWhiteSpace(datevClientId) && !string.IsNullOrWhiteSpace(datevClientSecret))
 {
