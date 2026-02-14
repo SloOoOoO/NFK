@@ -98,7 +98,10 @@
       "firstNameRequired": "Vorname ist erforderlich",
       "lastNameRequired": "Nachname ist erforderlich",
       "loginFailed": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben.",
-      "registerFailed": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut."
+      "registerFailed": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "oauthFailed": "OAuth-Anmeldung fehlgeschlagen",
+      "googleFailed": "Google-Anmeldung fehlgeschlagen",
+      "datevFailed": "DATEV-Anmeldung fehlgeschlagen"
     }
   },
   "dashboard": {

@@ -33,21 +33,21 @@ export default function Login() {
     
     if (ssoError === 'datev_failed') {
       const msg = errorMessage 
-        ? `DATEV Anmeldung fehlgeschlagen: ${errorMessage}` 
-        : 'DATEV Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+        ? `${t('auth.errors.datevFailed')}: ${errorMessage}` 
+        : t('auth.errors.datevFailed');
       setError(msg);
     } else if (ssoError === 'google_failed') {
       const msg = errorMessage 
-        ? `Google Anmeldung fehlgeschlagen: ${errorMessage}` 
-        : 'Google Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+        ? `${t('auth.errors.googleFailed')}: ${errorMessage}` 
+        : t('auth.errors.googleFailed');
       setError(msg);
     } else if (ssoError === 'oauth_failed') {
       const msg = errorMessage 
-        ? `OAuth Anmeldung fehlgeschlagen: ${errorMessage}` 
-        : 'OAuth Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+        ? `${t('auth.errors.oauthFailed')}: ${errorMessage}` 
+        : t('auth.errors.oauthFailed');
       setError(msg);
     }
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   // Countdown timer for rate limiting
   useEffect(() => {

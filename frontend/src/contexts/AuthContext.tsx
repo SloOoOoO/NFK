@@ -101,7 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
-      console.error('Failed to fetch user data after OAuth login', error);
+      // Log OAuth login failure
+      if (error instanceof Error) {
+        console.error('[AuthContext] Failed to fetch user data after OAuth login:', error.message);
+      } else {
+        console.error('[AuthContext] Failed to fetch user data after OAuth login');
+      }
       // Clear tokens if we can't get user data
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
