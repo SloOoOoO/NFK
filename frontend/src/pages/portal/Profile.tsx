@@ -289,8 +289,9 @@ export default function Profile() {
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
                       Steuernummer
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
                     </label>
-                    {isEditing ? (
+                    {canEditField('taxNumber') ? (
                       <input
                         type="text"
                         value={editForm.taxNumber}
@@ -298,7 +299,7 @@ export default function Profile() {
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
                       />
                     ) : (
-                      <p className="text-textPrimary dark:text-gray-200 mt-1">
+                      <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
                         {user.taxNumber || t('profile.notSpecified')}
                       </p>
                     )}
