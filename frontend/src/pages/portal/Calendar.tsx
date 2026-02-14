@@ -175,7 +175,7 @@ export default function Calendar() {
             
             <button 
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-colors"
+              className="px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors font-medium"
             >
               + Termin vereinbaren
             </button>
@@ -259,7 +259,7 @@ export default function Calendar() {
                       
                       {/* Event count badge */}
                       {dayEvents.length > 0 && (
-                        <div className="text-xs text-primary-600 dark:text-primary-400 font-medium mt-1">
+                        <div className="text-xs text-primary dark:text-blue-400 font-semibold mt-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
                           {dayEvents.length} {dayEvents.length === 1 ? 'Termin' : 'Termine'}
                         </div>
                       )}
@@ -287,11 +287,12 @@ export default function Calendar() {
                     value={formData.clientId || ''}
                     onChange={(e) => setFormData({ ...formData, clientId: e.target.value ? parseInt(e.target.value) : null })}
                     required
-                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary dark:focus:ring-blue-500"
+                    style={{ colorScheme: 'light dark' }}
                   >
-                    <option value="" className="text-gray-900 dark:text-gray-100">Mandant auswählen</option>
+                    <option value="" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">Mandant auswählen</option>
                     {clients.map(client => (
-                      <option key={client.id} value={client.id} className="text-gray-900 dark:text-gray-100">{client.companyName}</option>
+                      <option key={client.id} value={client.id} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{client.companyName}</option>
                     ))}
                   </select>
                 </div>

@@ -49,7 +49,7 @@ export default function Sidebar() {
     { name: t('dashboard.nav.documents'), path: '/portal/documents', icon: '📄' },
     { name: t('dashboard.nav.messages'), path: '/portal/messages', icon: '✉️' },
     { name: t('dashboard.nav.calendar'), path: '/portal/calendar', icon: '📅' },
-    { name: t('dashboard.nav.datev'), path: '/portal/datev', icon: '🔄' },
+    { name: t('dashboard.nav.connections'), path: '/portal/connections', icon: '🔄' },
   ];
 
   // Add Admin tab if user is SuperAdmin

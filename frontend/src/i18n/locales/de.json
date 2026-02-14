@@ -114,6 +114,7 @@
       "documents": "Dokumente",
       "messages": "Nachrichten",
       "calendar": "Kalender",
+      "connections": "Connections",
       "datev": "DATEV",
       "admin": "Admin"
     },
@@ -148,6 +149,7 @@
       "newCase": "Neuer Fall",
       "datevExport": "DATEV Export",
       "datevActivity": "DATEV Aktivitäten",
+      "connectionsActivity": "Connections",
       "details": "Details",
       "exportCompleted": "Export abgeschlossen",
       "syncStarted": "Synchronisation gestartet",
@@ -248,6 +250,30 @@
     "endTime": "Endzeit",
     "location": "Ort",
     "status": "Status"
+  },
+  "connections": {
+    "title": "Connections",
+    "subtitle": "Verwalten Sie Ihre Integrationen",
+    "google": {
+      "title": "Google",
+      "connect": "Mit Google verbinden",
+      "disconnect": "Verbindung trennen",
+      "connected": "Verbunden",
+      "notConnected": "Nicht verbunden"
+    },
+    "datev": {
+      "title": "DATEV",
+      "connect": "Mit DATEV verbinden",
+      "disconnect": "Verbindung trennen",
+      "connected": "Verbunden",
+      "notConnected": "Nicht verbunden"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "lastSync": "Letzte Synchronisation",
+      "lastChecked": "Letzte Prüfung"
+    }
   },
   "datev": {
     "title": "DATEV",

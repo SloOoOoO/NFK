@@ -20,6 +20,7 @@ const Cases = lazy(() => import('./pages/portal/Cases'));
 const Documents = lazy(() => import('./pages/portal/Documents'));
 const Messages = lazy(() => import('./pages/portal/Messages'));
 const Calendar = lazy(() => import('./pages/portal/Calendar'));
+const Connections = lazy(() => import('./pages/portal/Connections'));
 const DATEV = lazy(() => import('./pages/portal/DATEV'));
 const Profile = lazy(() => import('./pages/portal/Profile'));
 
@@ -52,6 +53,7 @@ function App() {
             <Route path="/portal/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
             <Route path="/portal/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/portal/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+            <Route path="/portal/connections" element={<ProtectedRoute><Connections /></ProtectedRoute>} />
             <Route path="/portal/datev" element={<ProtectedRoute><DATEV /></ProtectedRoute>} />
             <Route path="/portal/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/portal/client" element={<ProtectedRoute><ClientPortal /></ProtectedRoute>} />

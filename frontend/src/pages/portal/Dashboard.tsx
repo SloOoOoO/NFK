@@ -345,41 +345,64 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Bottom Grid - DATEV_ and Recent Activity */}
+        {/* Bottom Grid - Connections and Recent Activity */}
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* DATEV_ Status */}
+          {/* Connections Status */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">🔄 {t('dashboard.sections.datevActivity')}</h2>
-              <Link to="/portal/datev" className="text-primary dark:text-blue-400 hover:underline text-sm">{t('dashboard.sections.details')} →</Link>
+              <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">🔄 {t('dashboard.sections.connectionsActivity')}</h2>
+              <Link to="/portal/connections" className="text-primary dark:text-blue-400 hover:underline text-sm">{t('dashboard.sections.details')} →</Link>
             </div>
             
-            {datevStatus ? (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className={`w-3 h-3 rounded-full ${datevStatus.connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                  <span className="font-medium text-textPrimary dark:text-gray-100">
-                    {datevStatus.connected ? 'Verbunden' : 'Nicht verbunden'}
+            <div className="space-y-4">
+              {/* Google Connection Status */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-xl">
+                    📧
+                  </div>
+                  <div>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">Google</p>
+                    <p className="text-xs text-textSecondary dark:text-gray-400">Google Workspace</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-gray-400 dark:bg-gray-600"></span>
+                  <span className="text-sm text-textSecondary dark:text-gray-400">Nicht verbunden</span>
+                </div>
+              </div>
+
+              {/* DATEV Connection Status */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-xl">
+                    📊
+                  </div>
+                  <div>
+                    <p className="font-medium text-textPrimary dark:text-gray-100">DATEV</p>
+                    <p className="text-xs text-textSecondary dark:text-gray-400">DATEV Integration</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${datevStatus?.connected ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
+                  <span className="text-sm text-textSecondary dark:text-gray-400">
+                    {datevStatus?.connected ? 'Verbunden' : 'Nicht verbunden'}
                   </span>
                 </div>
-                
-                {datevStatus.lastSync && (
-                  <p className="text-sm text-textSecondary dark:text-gray-400 mb-4">
-                    Letzte Synchronisation: {new Date(datevStatus.lastSync).toLocaleString('de-DE')}
-                  </p>
-                )}
-                
-                {!datevStatus.connected && (
-                  <Link to="/portal/datev">
-                    <button className="mt-3 px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700">
-                      DATEV einrichten
-                    </button>
-                  </Link>
-                )}
               </div>
-            ) : (
-              <p className="text-textSecondary dark:text-gray-400">Laden...</p>
-            )}
+
+              {datevStatus?.lastSync && (
+                <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">
+                  Letzte Synchronisation: {new Date(datevStatus.lastSync).toLocaleString('de-DE')}
+                </p>
+              )}
+
+              <Link to="/portal/connections">
+                <button className="w-full mt-2 px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
+                  Connections verwalten
+                </button>
+              </Link>
+            </div>
           </div>
 
           {/* Recent System Activity */}
