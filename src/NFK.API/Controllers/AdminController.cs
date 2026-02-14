@@ -8,7 +8,7 @@ namespace NFK.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "SuperAdmin")]
+[Authorize(Roles = "SuperAdmin,Admin,Consultant,Steuerberater")]
 public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

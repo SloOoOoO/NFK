@@ -25,10 +25,12 @@ public static class DatabaseSeeder
         var roles = new List<Role>
         {
             new Role { Name = "SuperAdmin", Description = "Full system access", IsSystemRole = true },
-            new Role { Name = "Consultant", Description = "Client and case management", IsSystemRole = true },
+            new Role { Name = "Consultant", Description = "Client and case management (Tax Consultant)", IsSystemRole = true },
             new Role { Name = "Receptionist", Description = "Scheduling and basic client info", IsSystemRole = true },
             new Role { Name = "Client", Description = "Own dossier and documents", IsSystemRole = true },
-            new Role { Name = "DATEVManager", Description = "DATEV export management", IsSystemRole = true }
+            new Role { Name = "DATEVManager", Description = "DATEV export management", IsSystemRole = true },
+            new Role { Name = "Admin", Description = "General admin role", IsSystemRole = true },
+            new Role { Name = "Steuerberater", Description = "Tax consultant role (alias for Consultant)", IsSystemRole = true }
         };
 
         context.Roles.AddRange(roles);
