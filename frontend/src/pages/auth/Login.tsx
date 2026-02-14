@@ -35,19 +35,25 @@ export default function Login() {
       const msg = errorMessage 
         ? `${t('auth.errors.datevFailed')}: ${errorMessage}` 
         : t('auth.errors.datevFailed');
-      console.error('[DATEV Auth Error]', errorMessage || 'Unknown error');
+      if (import.meta.env.DEV) {
+        console.error('[DATEV Auth Error]', errorMessage || 'Unknown error');
+      }
       setError(msg);
     } else if (ssoError === 'google_failed') {
       const msg = errorMessage 
         ? `${t('auth.errors.googleFailed')}: ${errorMessage}` 
         : t('auth.errors.googleFailed');
-      console.error('[Google Auth Error]', errorMessage || 'Unknown error');
+      if (import.meta.env.DEV) {
+        console.error('[Google Auth Error]', errorMessage || 'Unknown error');
+      }
       setError(msg);
     } else if (ssoError === 'oauth_failed') {
       const msg = errorMessage 
         ? `${t('auth.errors.oauthFailed')}: ${errorMessage}` 
         : t('auth.errors.oauthFailed');
-      console.error('[OAuth Auth Error]', errorMessage || 'Unknown error');
+      if (import.meta.env.DEV) {
+        console.error('[OAuth Auth Error]', errorMessage || 'Unknown error');
+      }
       setError(msg);
     }
   }, [searchParams, t]);
@@ -121,7 +127,9 @@ export default function Login() {
     // Redirect to Google OAuth endpoint
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
     const redirectUrl = `${apiUrl}/auth/google/login`;
-    console.log('[Google Login] Redirecting to:', redirectUrl);
+    if (import.meta.env.DEV) {
+      console.log('[Google Login] Redirecting to:', redirectUrl);
+    }
     window.location.href = redirectUrl;
   };
 

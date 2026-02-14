@@ -244,6 +244,7 @@ export default function Register() {
   if (success) {
     // Show different messages for SSO vs regular registration
     const isSSORegistration = oauthSource === 'google' || oauthSource === 'datev';
+    const providerName = oauthSource === 'google' ? 'Google' : 'DATEV';
     
     return (
       <div className="min-h-screen bg-secondary dark:bg-gray-900 flex items-center justify-center px-4">
@@ -255,10 +256,10 @@ export default function Register() {
           {isSSORegistration ? (
             <>
               <p className="text-textSecondary dark:text-gray-300 mb-4">
-                Ihr Konto wurde erfolgreich mit {oauthSource === 'google' ? 'Google' : 'DATEV'} verknüpft.
+                Ihr Konto wurde erfolgreich mit {providerName} verknüpft.
               </p>
               <p className="text-sm text-textSecondary dark:text-gray-400 mb-6">
-                Sie können sich jetzt mit Ihrem {oauthSource === 'google' ? 'Google' : 'DATEV'}-Konto anmelden.
+                Sie können sich jetzt mit Ihrem {providerName}-Konto anmelden.
                 Ihre E-Mail-Adresse <strong>{watch('email')}</strong> wurde automatisch verifiziert.
               </p>
             </>
