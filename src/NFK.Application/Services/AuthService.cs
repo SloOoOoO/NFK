@@ -119,7 +119,7 @@ public class AuthService : IAuthService
             // Save user first to get the generated Id
             await _context.SaveChangesAsync();
             
-            // Now create password history with the persisted user.Id
+            // Now create password history and audit log with the persisted user.Id
             var passwordHistory = new PasswordHistory
             {
                 UserId = user.Id,
@@ -127,8 +127,6 @@ public class AuthService : IAuthService
                 CreatedAtUtc = DateTime.UtcNow
             };
             _context.PasswordHistories.Add(passwordHistory);
-            
-            await _context.SaveChangesAsync();
 
             // Log user registration to audit trail
             var auditLog = new Domain.Entities.Audit.AuditLog
@@ -143,6 +141,8 @@ public class AuthService : IAuthService
                 UpdatedAt = DateTime.UtcNow
             };
             _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+            
+            // Save password history and audit log together
             await _context.SaveChangesAsync();
 
             // Commit transaction
