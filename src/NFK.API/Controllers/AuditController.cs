@@ -24,8 +24,15 @@ public class AuditController : ControllerBase
     {
         try
         {
+            // Filter to only show relevant events: registrations, role changes, and Termine creation
             var query = _context.AuditLogs
                 .Include(a => a.User)
+                .Where(a => 
+                    a.Action == "UserRegistration" || 
+                    a.Action == "RoleChange" || 
+                    a.Action == "CREATE" && a.EntityType == "Appointment" ||
+                    a.EntityType == "User" && a.Action == "CREATE" ||
+                    a.EntityType == "User" && a.Details != null && a.Details.Contains("role"))
                 .OrderByDescending(a => a.CreatedAt)
                 .AsQueryable();
 

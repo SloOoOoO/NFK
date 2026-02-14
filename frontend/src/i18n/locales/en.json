@@ -243,13 +243,35 @@
   },
   "calendar": {
     "title": "Calendar",
-    "addEvent": "Add Event",
+    "subtitle": "Appointments, deadlines and tasks overview",
+    "addEvent": "Schedule Appointment",
     "eventTitle": "Title",
     "description": "Description",
     "startTime": "Start Time",
     "endTime": "End Time",
     "location": "Location",
-    "status": "Status"
+    "status": "Status",
+    "client": "Client",
+    "selectClient": "Select client",
+    "required": "Required",
+    "create": "Create",
+    "month": "Month",
+    "back": "Back",
+    "next": "Next",
+    "appointments": "Appointments",
+    "deadlines": "Deadlines",
+    "tasks": "Tasks",
+    "appointment": "appointment",
+    "more": "more",
+    "dayNames": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
   },
   "connections": {
     "title": "Connections",

@@ -243,13 +243,35 @@
   },
   "calendar": {
     "title": "Kalender",
-    "addEvent": "Neuer Termin",
+    "subtitle": "Termine, Fristen und Aufgaben im Überblick",
+    "addEvent": "Termin vereinbaren",
     "eventTitle": "Titel",
     "description": "Beschreibung",
     "startTime": "Startzeit",
     "endTime": "Endzeit",
     "location": "Ort",
-    "status": "Status"
+    "status": "Status",
+    "client": "Mandant",
+    "selectClient": "Mandant auswählen",
+    "required": "Erforderlich",
+    "create": "Erstellen",
+    "month": "Monat",
+    "back": "Zurück",
+    "next": "Weiter",
+    "appointments": "Termine",
+    "deadlines": "Fristen",
+    "tasks": "Aufgaben",
+    "appointment": "Termin",
+    "more": "weitere",
+    "dayNames": {
+      "sun": "So",
+      "mon": "Mo",
+      "tue": "Di",
+      "wed": "Mi",
+      "thu": "Do",
+      "fri": "Fr",
+      "sat": "Sa"
+    }
   },
   "connections": {
     "title": "Verbindungen",

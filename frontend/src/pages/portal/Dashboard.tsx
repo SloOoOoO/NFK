@@ -6,14 +6,6 @@ import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { clientsAPI, casesAPI, documentsAPI, authAPI } from '../../services/api';
 import apiClient from '../../services/api';
 
-interface DATEVJob {
-  id: number;
-  jobName: string;
-  status: string;
-  completedAt?: string;
-  startedAt?: string;
-}
-
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -24,13 +16,10 @@ export default function Dashboard() {
     cases: { total: 0, high_priority: 0 },
   });
   const [deadlines, setDeadlines] = useState<any[]>([]);
-  const [datevStatus, setDatevStatus] = useState<any>(null);
-  const [datevExportsCount, setDatevExportsCount] = useState<number>(0);
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
-    fetchDatevStatus();
     fetchActivities();
   }, []);
 
@@ -113,39 +102,6 @@ export default function Dashboard() {
     }
   };
 
-  const fetchDatevStatus = async () => {
-    try {
-      // Fetch DATEV status
-      const statusResponse = await apiClient.get('/datev/status');
-      if (statusResponse.data) {
-        setDatevStatus(statusResponse.data);
-      }
-      
-      // Fetch DATEV jobs for the last 24 hours
-      const jobsResponse = await apiClient.get('/datev/jobs');
-      if (jobsResponse.data) {
-        const jobsData: DATEVJob[] = jobsResponse.data;
-        const now = new Date();
-        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        
-        // Count jobs completed in the last 24 hours
-        const recentExports = jobsData.filter((job) => {
-          if (job.completedAt) {
-            const completedDate = new Date(job.completedAt);
-            return completedDate >= yesterday;
-          }
-          return false;
-        }).length;
-        
-        setDatevExportsCount(recentExports);
-      }
-    } catch (error) {
-      console.error('Error fetching DATEV status:', error);
-      setDatevStatus({ connected: false, lastSync: null });
-      setDatevExportsCount(0);
-    }
-  };
-
   const fetchActivities = async () => {
     try {
       const response = await apiClient.get('/audit/recent');
@@ -212,8 +168,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Key Stats Cards - CLIENT_, DOC_, COMPLY_, DATEV_ */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        {/* Key Stats Cards - CLIENT_, DOC_, COMPLY_ */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
           {/* CLIENT_ Stats */}
           <Link to="/portal/clients" className="block">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
@@ -256,21 +212,6 @@ export default function Dashboard() {
               <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.upcomingDeadlines')}</h3>
               <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : deadlines.length}</p>
               <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.dueSoon')}</p>
-            </div>
-          </Link>
-
-          {/* DATEV_ Stats */}
-          <Link to="/portal/datev" className="block">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">🔄</span>
-                </div>
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">{t('dashboard.stats.active')}</span>
-              </div>
-              <h3 className="text-sm font-semibold text-textSecondary dark:text-gray-400 mb-1">{t('dashboard.stats.datevExports')}</h3>
-              <p className="text-3xl font-bold text-primary dark:text-blue-400">{loading ? '...' : datevExportsCount}</p>
-              <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">{t('dashboard.stats.last24Hours')}</p>
             </div>
           </Link>
         </div>
@@ -378,18 +319,10 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${datevStatus?.connected ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
-                  <span className="text-sm text-textSecondary dark:text-gray-400">
-                    {datevStatus?.connected ? 'Verbunden' : 'Nicht verbunden'}
-                  </span>
+                  <span className="w-3 h-3 rounded-full bg-gray-400 dark:bg-gray-600"></span>
+                  <span className="text-sm text-textSecondary dark:text-gray-400">Nicht verbunden</span>
                 </div>
               </div>
-
-              {datevStatus?.lastSync && (
-                <p className="text-xs text-textSecondary dark:text-gray-400 mt-2">
-                  Letzte Synchronisation: {new Date(datevStatus.lastSync).toLocaleString('de-DE')}
-                </p>
-              )}
 
               <Link to="/portal/connections">
                 <button className="w-full mt-2 px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
