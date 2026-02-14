@@ -4,8 +4,8 @@ import Sidebar from '../../components/Sidebar';
 
 export default function Connections() {
   const { t } = useTranslation();
-  const [googleConnected, setGoogleConnected] = useState(false);
-  const [datevConnected, setDatevConnected] = useState(false);
+  const [googleConnected] = useState(false);
+  const [datevConnected] = useState(false);
 
   const handleGoogleConnect = () => {
     // TODO: Implement Google SSO flow
