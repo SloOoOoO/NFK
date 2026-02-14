@@ -38,6 +38,9 @@ interface StorageStats {
 const DEFAULT_MAX_DOCUMENTS = 10;
 const DEFAULT_MAX_STORAGE_MB = 100;
 
+// Roles allowed to delete any document
+const DOCUMENT_DELETE_ROLES = ['SuperAdmin', 'Admin', 'Consultant'];
+
 export default function Documents() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterType, setFilterType] = useState('all');
@@ -431,7 +434,7 @@ export default function Documents() {
                     📥 Download
                   </button>
                   {/* Show Delete button for document owner or employees with view-all permissions */}
-                  {(user && (doc.uploadedByUserId === user.id || ['SuperAdmin', 'Admin', 'Consultant'].includes(user.role))) && (
+                  {(user && (doc.uploadedByUserId === user.id || DOCUMENT_DELETE_ROLES.includes(user.role))) && (
                     <button 
                       onClick={() => handleDelete(doc.id)}
                       className="flex-1 text-sm text-red-600 dark:text-red-400 hover:underline"
@@ -481,7 +484,7 @@ export default function Documents() {
                         Download
                       </button>
                       {/* Show Delete button for document owner or employees with view-all permissions */}
-                      {(user && (doc.uploadedByUserId === user.id || ['SuperAdmin', 'Admin', 'Consultant'].includes(user.role))) && (
+                      {(user && (doc.uploadedByUserId === user.id || DOCUMENT_DELETE_ROLES.includes(user.role))) && (
                         <button 
                           onClick={() => handleDelete(doc.id)}
                           className="text-red-600 dark:text-red-400 hover:underline"

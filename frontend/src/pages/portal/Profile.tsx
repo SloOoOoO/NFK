@@ -248,7 +248,7 @@ export default function Profile() {
                       />
                     ) : (
                       <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
-                        {user.fullLegalName || `${user.firstName} ${user.lastName}` || t('profile.notSpecified')}
+                        {user.fullLegalName || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : t('profile.notSpecified'))}
                       </p>
                     )}
                   </div>
