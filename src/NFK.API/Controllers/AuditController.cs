@@ -75,18 +75,19 @@ public class AuditController : ControllerBase
     {
         try
         {
-            var activities = await _context.AuditLogs
+            var auditLogs = await _context.AuditLogs
                 .Include(a => a.User)
                 .OrderByDescending(a => a.CreatedAt)
                 .Take(5)
-                .Select(a => new
-                {
-                    a.Id,
-                    Type = a.Action,
-                    Description = FormatActivityDescription(a),
-                    Timestamp = a.CreatedAt
-                })
                 .ToListAsync();
+
+            var activities = auditLogs.Select(a => new
+            {
+                a.Id,
+                Type = a.Action,
+                Description = FormatActivityDescription(a),
+                Timestamp = a.CreatedAt
+            }).ToList();
 
             return Ok(activities);
         }
