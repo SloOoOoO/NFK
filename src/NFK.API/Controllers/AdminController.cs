@@ -49,6 +49,63 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpGet("users/{id}")]
+    public async Task<IActionResult> GetUserDetails(int id)
+    {
+        try
+        {
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "not_found", message = $"User {id} not found" });
+            }
+
+            var userDetails = new
+            {
+                user.Id,
+                user.Email,
+                user.FirstName,
+                user.LastName,
+                user.PhoneNumber,
+                user.FullLegalName,
+                user.DateOfBirth,
+                user.Address,
+                user.City,
+                user.PostalCode,
+                user.Country,
+                user.TaxId,
+                user.TaxNumber,
+                user.FirmLegalName,
+                user.FirmTaxId,
+                user.FirmChamberRegistration,
+                user.FirmAddress,
+                user.FirmCity,
+                user.FirmPostalCode,
+                user.FirmCountry,
+                user.GoogleId,
+                user.DATEVId,
+                user.Gender,
+                user.IsActive,
+                user.IsEmailConfirmed,
+                user.PhoneVerified,
+                Role = user.UserRoles.FirstOrDefault()?.Role.Name ?? "Client",
+                user.CreatedAt,
+                user.UpdatedAt
+            };
+
+            return Ok(userDetails);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching user details {UserId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching user details" });
+        }
+    }
+
     [HttpPut("users/{id}/role")]
     public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateUserRoleRequest request)
     {
@@ -113,6 +170,7 @@ public class AdminController : ControllerBase
             if (request.FullLegalName != null) user.FullLegalName = request.FullLegalName;
             if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
             if (request.TaxId != null) user.TaxId = request.TaxId;
+            if (request.TaxNumber != null) user.TaxNumber = request.TaxNumber;
             
             // Update address
             if (request.Address != null) user.Address = request.Address;
