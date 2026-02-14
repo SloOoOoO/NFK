@@ -16,7 +16,6 @@ export default function AdminDashboard() {
   const [editForm, setEditForm] = useState<any>({});
   const [newRole, setNewRole] = useState('');
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
   const [statistics, setStatistics] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -29,9 +28,8 @@ export default function AdminDashboard() {
       const usersRes = await adminAPI.getAllUsers();
       setUsers(usersRes.data);
       
-      // Fetch audit logs, analytics, and statistics for tabs
+      // Fetch audit logs and statistics for tabs
       fetchAuditLogs();
-      fetchAnalytics();
       fetchStatistics();
     } catch (error: any) {
       console.error('Failed to fetch admin data:', error);
@@ -51,16 +49,6 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Failed to fetch audit logs:', error);
       setAuditLogs([]);
-    }
-  };
-
-  const fetchAnalytics = async () => {
-    try {
-      const response = await apiClient.get('/analytics/page-visits');
-      setAnalytics(response.data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-      setAnalytics(null);
     }
   };
 
