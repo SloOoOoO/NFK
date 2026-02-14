@@ -243,13 +243,36 @@
   },
   "calendar": {
     "title": "Takvim",
-    "addEvent": "Etkinlik Ekle",
+    "subtitle": "Randevular, son tarihler ve görevlere genel bakış",
+    "addEvent": "Randevu Ayarla",
     "eventTitle": "Başlık",
     "description": "Açıklama",
     "startTime": "Başlangıç Saati",
     "endTime": "Bitiş Saati",
     "location": "Konum",
-    "status": "Durum"
+    "status": "Durum",
+    "client": "Müşteri",
+    "selectClient": "Müşteri seçin",
+    "required": "Gerekli",
+    "create": "Oluştur",
+    "month": "Ay",
+    "back": "Geri",
+    "next": "İleri",
+    "appointments": "Randevular",
+    "deadlines": "Son Tarihler",
+    "tasks": "Görevler",
+    "appointment": "randevu",
+    "more": "daha fazla",
+    "errorCreating": "Randevu oluşturulurken hata oluştu. Lütfen tekrar deneyin.",
+    "dayNames": {
+      "sun": "Paz",
+      "mon": "Pzt",
+      "tue": "Sal",
+      "wed": "Çar",
+      "thu": "Per",
+      "fri": "Cum",
+      "sat": "Cmt"
+    }
   },
   "connections": {
     "title": "Bağlantılar",

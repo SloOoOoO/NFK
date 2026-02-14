@@ -98,9 +98,10 @@ public class DATEVController : ControllerBase
     {
         try
         {
-            // Check if DATEV is configured (this is a simplified check)
-            var hasJobs = await _context.DATEVJobs.AnyAsync();
-            var isConnected = hasJobs; // Simplified connection check
+            // DATEV connection status should reflect actual OAuth/API connection
+            // For now, DATEV is not connected unless there's a real OAuth token or API key
+            // This prevents showing false "connected" status
+            var isConnected = false; // Default to not connected
             
             var lastSync = await _context.AuditLogs
                 .Where(a => a.Action == "DATEVExport" || a.EntityType == "DATEVJob")

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -19,6 +20,7 @@ interface Client {
 }
 
 export default function Calendar() {
+  const { t, i18n } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<Event[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -76,7 +78,7 @@ export default function Calendar() {
     e.preventDefault();
     
     if (!formData.clientId) {
-      alert('Bitte wählen Sie einen Mandanten aus');
+      alert(t('calendar.selectClient'));
       return;
     }
     
@@ -106,7 +108,7 @@ export default function Calendar() {
       fetchEvents();
     } catch (error) {
       console.error('Error creating appointment:', error);
-      alert('Fehler beim Erstellen des Termins');
+      alert(t('calendar.errorCreating'));
     }
   };
 
@@ -152,8 +154,8 @@ export default function Calendar() {
       
       <main className="flex-1 p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Kalender</h1>
-          <p className="text-gray-600 dark:text-gray-400">Termine, Fristen und Aufgaben im Überblick</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('calendar.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('calendar.subtitle')}</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
@@ -161,23 +163,23 @@ export default function Calendar() {
             {/* ONLY MONAT - NO WOCHE BUTTON */}
             <div className="flex gap-2">
               <button className="px-4 py-2 rounded-md bg-primary-600 text-white">
-                Monat
+                {t('calendar.month')}
               </button>
             </div>
             
             <div className="flex items-center gap-4">
-              <button onClick={previousMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">← Zurück</button>
+              <button onClick={previousMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">← {t('calendar.back')}</button>
               <span className="font-semibold text-lg dark:text-gray-200">
-                {currentDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+                {currentDate.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}
               </span>
-              <button onClick={nextMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">Weiter →</button>
+              <button onClick={nextMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">{t('calendar.next')} →</button>
             </div>
             
             <button 
               onClick={() => setShowModal(true)}
               className="px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors font-medium"
             >
-              + Termin vereinbaren
+              + {t('calendar.addEvent')}
             </button>
           </div>
         </div>
@@ -185,15 +187,15 @@ export default function Calendar() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Termine</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.appointments')}</p>
             <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{events.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Fristen</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.deadlines')}</p>
             <p className="text-2xl font-bold text-red-600 dark:text-red-400">0</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Aufgaben</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.tasks')}</p>
             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">0</p>
           </div>
         </div>
@@ -201,7 +203,15 @@ export default function Calendar() {
         {/* Calendar Grid */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <div className="grid grid-cols-7 gap-2 mb-2">
-            {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day) => (
+            {[
+              t('calendar.dayNames.sun'),
+              t('calendar.dayNames.mon'),
+              t('calendar.dayNames.tue'),
+              t('calendar.dayNames.wed'),
+              t('calendar.dayNames.thu'),
+              t('calendar.dayNames.fri'),
+              t('calendar.dayNames.sat')
+            ].map((day) => (
               <div key={day} className="text-center font-semibold text-gray-600 dark:text-gray-400 text-sm py-2">
                 {day}
               </div>
@@ -244,13 +254,13 @@ export default function Calendar() {
                                   <span>👤</span> {event.clientName}
                                 </p>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                  <span>🕒</span> {new Date(event.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                                  <span>🕒</span> {new Date(event.startTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                               </div>
                             ))}
                             {dayEvents.length > 3 && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                                +{dayEvents.length - 3} weitere
+                                +{dayEvents.length - 3} {t('calendar.more')}
                               </p>
                             )}
                           </div>
@@ -260,7 +270,7 @@ export default function Calendar() {
                       {/* Event count badge */}
                       {dayEvents.length > 0 && (
                         <div className="text-xs text-primary dark:text-blue-400 font-semibold mt-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-                          {dayEvents.length} {dayEvents.length === 1 ? 'Termin' : 'Termine'}
+                          {dayEvents.length} {dayEvents.length === 1 ? t('calendar.appointment') : t('calendar.appointments')}
                         </div>
                       )}
                     </>
@@ -277,12 +287,12 @@ export default function Calendar() {
             <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
             <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 z-50">
               <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold dark:text-gray-100">Termin vereinbaren</h2>
+                <h2 className="text-xl font-semibold dark:text-gray-100">{t('calendar.addEvent')}</h2>
               </Dialog.Title>
               
               <form onSubmit={handleCreateEvent} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Mandant *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('calendar.client')} *</label>
                   <select
                     value={formData.clientId || ''}
                     onChange={(e) => setFormData({ ...formData, clientId: e.target.value ? parseInt(e.target.value) : null })}
@@ -290,7 +300,7 @@ export default function Calendar() {
                     className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary dark:focus:ring-blue-500"
                     style={{ colorScheme: 'light dark' }}
                   >
-                    <option value="" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">Mandant auswählen</option>
+                    <option value="" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{t('calendar.selectClient')}</option>
                     {clients.map(client => (
                       <option key={client.id} value={client.id} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{client.name}</option>
                     ))}
@@ -298,7 +308,7 @@ export default function Calendar() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Titel *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('calendar.eventTitle')} *</label>
                   <input
                     type="text"
                     value={formData.title}
@@ -310,7 +320,7 @@ export default function Calendar() {
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Start *</label>
+                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('calendar.startTime')} *</label>
                     <input
                       type="datetime-local"
                       value={formData.startTime}
@@ -321,7 +331,7 @@ export default function Calendar() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ende *</label>
+                    <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('calendar.endTime')} *</label>
                     <input
                       type="datetime-local"
                       value={formData.endTime}
@@ -333,7 +343,7 @@ export default function Calendar() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Beschreibung</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('calendar.description')}</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -343,7 +353,7 @@ export default function Calendar() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Ort</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('calendar.location')}</label>
                   <input
                     type="text"
                     value={formData.location}
@@ -354,10 +364,10 @@ export default function Calendar() {
                 
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    Abbrechen
+                    {t('common.cancel')}
                   </button>
                   <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">
-                    Erstellen
+                    {t('calendar.create')}
                   </button>
                 </div>
               </form>
