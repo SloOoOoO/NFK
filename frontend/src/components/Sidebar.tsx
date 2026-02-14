@@ -1,33 +1,18 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import DarkModeToggle from './DarkModeToggle';
 
 export default function Sidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user: currentUser, isLoading: loading, refreshUser } = useAuth();
 
   useEffect(() => {
-    fetchCurrentUser();
+    // Refresh user data when sidebar mounts to ensure we have latest data
+    refreshUser();
   }, []);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await authAPI.getCurrentUser();
-      setCurrentUser(response.data);
-    } catch (error) {
-      console.error('Failed to fetch current user:', error);
-      // If unauthorized, redirect to login
-      if ((error as any)?.response?.status === 401) {
-        navigate('/auth/login');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     // Clear tokens from localStorage

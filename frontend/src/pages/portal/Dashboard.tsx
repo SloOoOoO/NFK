@@ -335,12 +335,6 @@ export default function Dashboard() {
                   <span>{t('dashboard.sections.newCase')}</span>
                 </button>
               </Link>
-              <Link to="/portal/datev" className="block">
-                <button className="w-full btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-left flex items-center gap-3 hover:scale-105 transition-transform">
-                  <span>🔄</span>
-                  <span>{t('dashboard.sections.datevExport')}</span>
-                </button>
-              </Link>
             </div>
           </div>
         </div>

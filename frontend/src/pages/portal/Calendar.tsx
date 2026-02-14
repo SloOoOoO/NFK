@@ -15,7 +15,7 @@ interface Event {
 
 interface Client {
   id: number;
-  companyName: string;
+  name: string;
 }
 
 export default function Calendar() {
@@ -292,7 +292,7 @@ export default function Calendar() {
                   >
                     <option value="" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">Mandant auswählen</option>
                     {clients.map(client => (
-                      <option key={client.id} value={client.id} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{client.companyName}</option>
+                      <option key={client.id} value={client.id} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{client.name}</option>
                     ))}
                   </select>
                 </div>
