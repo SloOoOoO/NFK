@@ -68,7 +68,7 @@ public class AuthService : IAuthService
         var passwordExpiresAt = DateTime.UtcNow.AddDays(PasswordPolicy.PasswordExpirationDays);
 
         // Use transaction to ensure atomicity
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         try
         {
             // Create user
@@ -154,8 +154,7 @@ public class AuthService : IAuthService
         }
         catch (Exception ex)
         {
-            // Rollback on any error
-            await transaction.RollbackAsync();
+            // Transaction will auto-rollback on disposal if not committed
             _logger.LogError(ex, "Registration failed for email: {Email} from IP: {IP}", request.Email, ipAddress);
             throw;
         }
