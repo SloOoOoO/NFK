@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../../services/api';
 import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 import { validateSteuerID } from '../../utils/taxValidation';
@@ -126,6 +127,7 @@ function PasswordStrengthMeter({ password }: { password: string }) {
 }
 
 export default function Register() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -180,13 +182,13 @@ export default function Register() {
       
       if (!email || !providerId) {
         // Missing OAuth data - show error
-        setApiError('Google-Anmeldung fehlgeschlagen: Authentifizierungsdaten fehlen. Bitte versuchen Sie es erneut.');
+        setApiError(t('auth.errors.googleOAuthDataMissing'));
         return;
       }
       
       // Validate that email is not a placeholder
       if (email.toLowerCase().endsWith('@example.com')) {
-        setApiError('Google-Anmeldung fehlgeschlagen: Ungültige E-Mail-Adresse erhalten. Bitte verwenden Sie die normale Registrierung.');
+        setApiError(t('auth.errors.googleInvalidEmail'));
         return;
       }
       

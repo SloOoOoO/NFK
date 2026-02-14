@@ -101,7 +101,10 @@
       "registerFailed": "Kayıt başarısız. Lütfen tekrar deneyin.",
       "oauthFailed": "OAuth girişi başarısız oldu",
       "googleFailed": "Google girişi başarısız oldu",
-      "datevFailed": "DATEV girişi başarısız oldu"
+      "datevFailed": "DATEV girişi başarısız oldu",
+      "googleNotConfigured": "Google Oturum Açma yapılandırılmadı. Lütfen e-posta kaydı kullanın.",
+      "googleOAuthDataMissing": "Google girişi başarısız: Kimlik doğrulama verileri eksik. Lütfen tekrar deneyin.",
+      "googleInvalidEmail": "Google girişi başarısız: Geçersiz e-posta adresi alındı. Lütfen normal kayıt kullanın."
     }
   },
   "dashboard": {
