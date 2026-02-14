@@ -231,7 +231,9 @@ See [API.md](docs/API.md) for complete documentation.
 
 ### Environment Variables
 
-Create `.env` file:
+**⚠️ SECURITY:** Never commit secrets to version control. Always use environment variables.
+
+Create `.env` file (copy from `.env.example`):
 
 ```bash
 # Database
@@ -241,14 +243,14 @@ SQL_SERVER_PASSWORD=YourStrong!Passw0rd
 JWT_PRIVATE_KEY=your_private_key
 JWT_PUBLIC_KEY=your_public_key
 
-# Google OAuth (optional)
-GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_OAUTH_ENABLED=true
 
-# DATEV OAuth (optional)
-DATEV_CLIENT_ID=your_datev_client_id
-DATEV_CLIENT_SECRET=your_datev_client_secret
+# DATEV OAuth
+DATEV_CLIENT_ID=your-datev-client-id
+DATEV_CLIENT_SECRET=your-datev-client-secret
 DATEV_OAUTH_ENABLED=false
 
 # DATEV SFTP
@@ -262,6 +264,8 @@ SENDGRID_API_KEY=your_sendgrid_key
 
 #### Google OAuth Configuration
 
+**⚠️ SECURITY NOTICE:** Use environment variables for OAuth credentials, NOT appsettings.json!
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing one
 3. Enable Google+ API
@@ -269,19 +273,18 @@ SENDGRID_API_KEY=your_sendgrid_key
 5. Add authorized redirect URIs:
    - Development: `http://localhost:8080/api/v1/auth/google/callback`
    - Production: `https://your-domain.com/api/v1/auth/google/callback`
-6. Copy Client ID and Client Secret to `appsettings.json`:
+6. Set environment variables:
 
-```json
-{
-  "OAuth": {
-    "Google": {
-      "ClientId": "your-client-id.apps.googleusercontent.com",
-      "ClientSecret": "your-client-secret",
-      "Enabled": true
-    }
-  }
-}
+```bash
+export GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+export GOOGLE_OAUTH_ENABLED="true"
 ```
+
+**OAuth URLs** (hardcoded in application):
+- Authorization: `https://accounts.google.com/o/oauth2/v2/auth`
+- Token: `https://oauth2.googleapis.com/token`
+- UserInfo: `https://www.googleapis.com/oauth2/v2/userinfo`
 
 **Registration Flow with Google:**
 - User clicks "Sign in with Google" on registration page
@@ -291,28 +294,26 @@ SENDGRID_API_KEY=your_sendgrid_key
 
 #### DATEV OAuth Configuration
 
+**⚠️ SECURITY NOTICE:** Use environment variables for OAuth credentials, NOT appsettings.json!
+
 1. Contact DATEV to obtain OAuth credentials for your tax consulting firm
 2. Register your application with DATEV
 3. Add authorized redirect URIs:
    - Development: `http://localhost:8080/api/v1/auth/datev/callback`
    - Production: `https://your-domain.com/api/v1/auth/datev/callback`
-4. Update `appsettings.json`:
+4. Set environment variables:
 
-```json
-{
-  "OAuth": {
-    "DATEV": {
-      "ClientId": "your-datev-client-id",
-      "ClientSecret": "your-datev-client-secret",
-      "AuthorizationEndpoint": "https://login.datev.de/openid/authorize",
-      "TokenEndpoint": "https://login.datev.de/openid/token",
-      "UserInfoEndpoint": "https://login.datev.de/openid/userinfo",
-      "Scope": "openid profile email datev:accounting",
-      "Enabled": true
-    }
-  }
-}
+```bash
+export DATEV_CLIENT_ID="your-datev-client-id"
+export DATEV_CLIENT_SECRET="your-datev-client-secret"
+export DATEV_OAUTH_ENABLED="true"
 ```
+
+**OAuth URLs:**
+- Authorization: `https://login.datev.de/openid/authorize`
+- Token: `https://login.datev.de/openid/token`
+- UserInfo: `https://login.datev.de/openid/userinfo`
+- Scope: `openid profile email datev:accounting`
 
 **Registration Flow with DATEV:**
 - User clicks "Sign in with DATEV" on registration page

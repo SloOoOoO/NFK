@@ -26,7 +26,9 @@ cat public.key
 
 ### 2. Configure Environment Variables
 
-Create `.env` file in the root directory:
+**⚠️ SECURITY WARNING:** Never commit secrets to version control!
+
+Create `.env` file in the root directory (copy from `.env.example`):
 
 ```bash
 # Database
@@ -36,14 +38,17 @@ SQL_SERVER_PASSWORD=YourStrong!Passw0rd
 JWT_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
 JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
 
-# OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-APPLE_CLIENT_ID=your_apple_client_id
-APPLE_TEAM_ID=your_apple_team_id
-APPLE_KEY_ID=your_apple_key_id
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_OAUTH_ENABLED=true
 
-# DATEV
+# DATEV OAuth
+DATEV_CLIENT_ID=your-datev-client-id
+DATEV_CLIENT_SECRET=your-datev-client-secret
+DATEV_OAUTH_ENABLED=true
+
+# DATEV SFTP
 DATEV_SFTP_HOST=sftp.datev.de
 DATEV_SFTP_USERNAME=your_username
 DATEV_SFTP_PASSWORD=your_password
@@ -55,9 +60,18 @@ SENDGRID_API_KEY=your_sendgrid_api_key
 AZURE_STORAGE_CONNECTION_STRING=your_connection_string
 ```
 
+**Important Security Notes:**
+- The `.env` file is in `.gitignore` and will never be committed
+- Use `.env.example` as a template
+- In production, use secret management services (Azure Key Vault, AWS Secrets Manager)
+- Rotate secrets regularly (every 90 days recommended)
+
 ### 3. Update Configuration Files
 
 **Backend** (`src/NFK.API/appsettings.Production.json`):
+
+**⚠️ Note:** This file should NOT contain secrets. Environment variables take precedence.
+
 ```json
 {
   "ConnectionStrings": {
@@ -65,8 +79,20 @@ AZURE_STORAGE_CONNECTION_STRING=your_connection_string
     "Redis": "redis:6379"
   },
   "Jwt": {
-    "PrivateKey": "${JWT_PRIVATE_KEY}",
-    "PublicKey": "${JWT_PUBLIC_KEY}"
+    "PrivateKey": "",
+    "PublicKey": ""
+  },
+  "OAuth": {
+    "Google": {
+      "ClientId": "",
+      "ClientSecret": "",
+      "Enabled": false
+    },
+    "DATEV": {
+      "ClientId": "",
+      "ClientSecret": "",
+      "Enabled": false
+    }
   }
 }
 ```
