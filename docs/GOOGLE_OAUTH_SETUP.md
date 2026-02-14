@@ -83,7 +83,7 @@ environment:
 
 ## OAuth Flow
 
-### User Login Flow
+### New User Registration Flow (First Time Google Login)
 
 1. User clicks "Mit Google anmelden" button on login page
 2. Frontend redirects to `/api/v1/auth/google/login`
@@ -92,23 +92,52 @@ environment:
 5. Google redirects back to `/api/v1/auth/google/callback` with authorization code
 6. Backend exchanges code for access token
 7. Backend retrieves user profile from Google
-8. Backend creates or links user account
+8. **Backend checks if user exists:**
+   - If user exists → Skip to step 9
+   - If new user → Continue to registration
+9. **For new users:** Backend redirects to `/auth/register` with:
+   - `source=google` - Indicates OAuth source
+   - `email={google-email}` - Pre-filled email from Google account
+   - `providerId={google-sub}` - Google's unique user identifier
+10. **Registration form displays with:**
+    - Email field pre-filled and disabled (greyed out)
+    - Google icon next to email showing "E-Mail-Adresse von Ihrem Google-Konto übernommen"
+    - Validation ensures email is not a placeholder
+11. User completes remaining required fields (name, address, tax info, etc.)
+12. Upon submission, account is created and linked to Google account
+
+### Existing User Login Flow
+
+1. User clicks "Mit Google anmelden" button on login page
+2. Frontend redirects to `/api/v1/auth/google/login`
+3. Backend redirects to Google's OAuth authorization page
+4. User authenticates with Google and grants permissions
+5. Google redirects back to `/api/v1/auth/google/callback` with authorization code
+6. Backend exchanges code for access token
+7. Backend retrieves user profile from Google
+8. **Backend finds existing user** (by Google ID or email)
 9. Backend generates JWT tokens
 10. User is redirected to `/auth/oauth-success` with tokens
 11. Frontend stores tokens and redirects to dashboard
 
 ### Error Handling
 
-The application now includes comprehensive error handling:
+The application includes comprehensive error handling:
 
-**Backend Logging:**
-- Token exchange failures
-- User profile retrieval errors
-- Database errors during user creation/update
-- HTTP communication errors
+**Backend Error Scenarios:**
+- **OAuth Not Enabled:** Shows clear error message instead of fallback mode
+- **Token Exchange Failures:** Logs detailed error and redirects to login with message
+- **User Profile Retrieval Errors:** Handles network/API failures gracefully
+- **Missing Authorization Code:** Detects and reports missing OAuth data
+- **Database Errors:** Handles user creation/update failures
+
+**Frontend Validation:**
+- **Missing OAuth Data:** Validates that email and providerId are present
+- **Invalid Email:** Rejects placeholder emails (e.g., user@example.com)
+- **Email Domain Validation:** Uses disposable email checker and validates domains
 
 **User-Facing Errors:**
-- OAuth configuration errors
+- OAuth configuration errors (when OAuth not enabled)
 - Google authentication failures
 - Missing authorization codes
 - Network/connectivity issues
@@ -122,12 +151,14 @@ Error messages are passed to the frontend via query parameters:
 
 ### Issue: "Google OAuth not configured"
 
-**Symptoms:** Login page appears but Google button redirects to simulation mode
+**Symptoms:** Clicking Google button shows error message: "Google Sign-In ist nicht konfiguriert"
 
 **Solution:**
 1. Verify `GOOGLE_OAUTH_ENABLED=true` is set
 2. Check that `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are properly set
 3. Restart the application to reload environment variables
+
+**Note:** The application no longer has a fallback/simulation mode. OAuth must be properly configured to use Google Sign-In.
 
 ### Issue: "Redirect URI mismatch"
 
