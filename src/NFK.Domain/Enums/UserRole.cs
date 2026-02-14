@@ -8,5 +8,6 @@ public enum UserRole
     Client = 4,
     DATEVManager = 5,
     Admin = 6,           // General admin role
+    RegisteredUser = 7,  // New users who registered but not yet assigned Client role
     Steuerberater = 2    // Alias for Consultant - maps to same value for compatibility
 }

@@ -263,14 +263,6 @@ export default function Register() {
       </div>
     );
   }
-          </h1>
-          <p className="text-textSecondary dark:text-gray-300 mb-6">
-            Sie werden in Kürze zur Anmeldeseite weitergeleitet...
-          </p>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div className="min-h-screen bg-secondary dark:bg-gray-900 py-12 px-4">

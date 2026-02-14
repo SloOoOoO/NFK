@@ -31,21 +31,9 @@ public class RateLimitingMiddleware
         var clientId = GetClientIdentifier(context);
         
         // Apply different limits based on endpoint
-        if (endpoint.Contains("/api/v1/auth/login"))
-        {
-            if (!await CheckRateLimitAsync($"login:{clientId}", LoginAttempts, LoginWindowMinutes * 60))
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(new
-                {
-                    error = "Too many login attempts. Please try again later.",
-                    retryAfter = LoginWindowMinutes * 60
-                }));
-                return;
-            }
-        }
-        else if (endpoint.Contains("/api/v1/documents") && endpoint.Contains("/download"))
+        // NOTE: Login rate limiting is handled in AuthService to distinguish failed vs successful attempts
+        // We only apply general API rate limits here
+        if (endpoint.Contains("/api/v1/documents") && endpoint.Contains("/download"))
         {
             if (!await CheckRateLimitAsync($"download:{clientId}", DocumentDownloadsPerHour, 3600))
             {
@@ -59,8 +47,10 @@ public class RateLimitingMiddleware
                 return;
             }
         }
-        else if (endpoint.StartsWith("/api/v1/"))
+        else if (endpoint.StartsWith("/api/v1/") && !endpoint.Contains("/api/v1/auth/login"))
         {
+            // Apply general rate limit to all API endpoints EXCEPT login
+            // (login has its own rate limiting in AuthService based on failed attempts)
             if (!await CheckRateLimitAsync($"api:{clientId}", ApiRequestsPerMinute, 60))
             {
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;

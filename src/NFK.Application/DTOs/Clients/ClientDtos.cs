@@ -17,10 +17,15 @@ public record ClientDto(
 );
 
 public record CreateClientRequest(
+    int? UserId,
     string Name,
     string Email,
     string Contact,
-    string? Phone
+    string? Phone,
+    string? Address,
+    string? City,
+    string? PostalCode,
+    string? TaxNumber
 );
 
 public record UpdateClientRequest(

@@ -200,6 +200,7 @@
   "clients": {
     "title": "Kunden",
     "addClient": "Neuer Kunde",
+    "newClient": "Neuer Mandant",
     "companyName": "Firmenname",
     "taxNumber": "Steuernummer",
     "phone": "Telefon",
