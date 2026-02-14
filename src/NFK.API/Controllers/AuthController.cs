@@ -249,14 +249,29 @@ public class AuthController : ControllerBase
                 
                 _logger.LogInformation("Processing Google OAuth callback with code");
                 
-                // Exchange code for tokens and get user profile
-                var response = await _googleOAuthService.LoginAsync(code, callbackUri);
+                // Authenticate with Google - checks if user exists and returns appropriate response
+                var result = await _googleOAuthService.AuthenticateAsync(code, callbackUri);
                 
-                _logger.LogInformation("Google OAuth successful for user: {Email}", response.User.Email);
-                
-                // Redirect to dashboard with tokens in URL (they will be stored in localStorage by frontend)
-                var redirectUri = $"{frontendUrl}/auth/oauth-success";
-                return Redirect($"{redirectUri}?accessToken={Uri.EscapeDataString(response.AccessToken)}&refreshToken={Uri.EscapeDataString(response.RefreshToken)}");
+                if (result.UserExists && result.LoginResponse != null)
+                {
+                    // Existing user - redirect to oauth-success with tokens
+                    _logger.LogInformation("Google OAuth login successful for existing user: {Email}", result.LoginResponse.User.Email);
+                    var redirectUri = $"{frontendUrl}/auth/oauth-success";
+                    return Redirect($"{redirectUri}?accessToken={Uri.EscapeDataString(result.LoginResponse.AccessToken)}&refreshToken={Uri.EscapeDataString(result.LoginResponse.RefreshToken)}");
+                }
+                else if (!result.UserExists && result.Profile != null)
+                {
+                    // New user - redirect to registration with email pre-filled
+                    _logger.LogInformation("New Google user - redirecting to registration: {Email}", result.Profile.Email);
+                    var redirectUri = $"{frontendUrl}/auth/register";
+                    return Redirect($"{redirectUri}?source=google&email={Uri.EscapeDataString(result.Profile.Email)}&providerId={Uri.EscapeDataString(result.Profile.Sub)}");
+                }
+                else
+                {
+                    // This shouldn't happen
+                    _logger.LogError("Invalid authentication result from Google OAuth");
+                    return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("Authentication failed")}");
+                }
             }
             
             // Fallback for development

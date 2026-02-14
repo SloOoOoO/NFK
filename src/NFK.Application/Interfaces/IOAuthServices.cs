@@ -29,6 +29,22 @@ public interface IGoogleOAuthService
     /// <param name="accessToken">Google access token</param>
     /// <returns>Google user profile</returns>
     Task<GoogleUserProfile> GetUserProfileAsync(string accessToken);
+
+    /// <summary>
+    /// Check if a user with the given email or Google ID exists
+    /// </summary>
+    /// <param name="email">User email</param>
+    /// <param name="googleId">Google ID</param>
+    /// <returns>True if user exists, false otherwise</returns>
+    Task<bool> UserExistsAsync(string email, string googleId);
+
+    /// <summary>
+    /// Authenticate with Google - returns login response for existing users or profile for new users
+    /// </summary>
+    /// <param name="code">Authorization code from Google</param>
+    /// <param name="redirectUri">The same redirect URI used in authorization</param>
+    /// <returns>Authentication result indicating whether user exists and providing relevant data</returns>
+    Task<OAuthAuthenticationResult> AuthenticateAsync(string code, string redirectUri);
 }
 
 /// <summary>
