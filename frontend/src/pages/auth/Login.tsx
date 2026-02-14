@@ -29,10 +29,23 @@ export default function Login() {
   useEffect(() => {
     // Check for SSO errors
     const ssoError = searchParams.get('error');
+    const errorMessage = searchParams.get('message');
+    
     if (ssoError === 'datev_failed') {
-      setError('DATEV Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      const msg = errorMessage 
+        ? `DATEV Anmeldung fehlgeschlagen: ${errorMessage}` 
+        : 'DATEV Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+      setError(msg);
     } else if (ssoError === 'google_failed') {
-      setError('Google Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      const msg = errorMessage 
+        ? `Google Anmeldung fehlgeschlagen: ${errorMessage}` 
+        : 'Google Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+      setError(msg);
+    } else if (ssoError === 'oauth_failed') {
+      const msg = errorMessage 
+        ? `OAuth Anmeldung fehlgeschlagen: ${errorMessage}` 
+        : 'OAuth Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+      setError(msg);
     }
   }, [searchParams]);
 
