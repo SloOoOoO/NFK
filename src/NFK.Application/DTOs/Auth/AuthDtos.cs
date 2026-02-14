@@ -12,11 +12,19 @@ public record RegisterRequest(
     string? PhoneNumber = null,
     DateTime? DateOfBirth = null,
     string? Address = null,
+    string? Street = null, // Frontend sends 'street' instead of 'address'
     string? City = null,
     string? PostalCode = null,
     string? Country = null,
     string? TaxId = null, // Steuer-ID (11-digit personal tax identifier)
     string? TaxNumber = null, // Steuernummer (business tax number)
+    string? VatId = null, // USt-IdNr (VAT ID)
+    string? CommercialRegister = null, // Handelsregister
+    // Client type and company fields
+    string? ClientType = null, // Privatperson, Einzelunternehmen, GmbH, etc.
+    string? CompanyName = null,
+    string? Salutation = null, // Herr, Frau, Divers
+    string? Gender = null, // male, female, diverse
     // Optional firm fields
     string? FirmLegalName = null,
     string? FirmTaxId = null,

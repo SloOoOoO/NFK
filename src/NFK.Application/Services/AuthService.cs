@@ -77,13 +77,20 @@ public class AuthService : IAuthService
             PhoneNumber = request.PhoneNumber,
             FullLegalName = request.FullLegalName,
             DateOfBirth = request.DateOfBirth,
-            Address = request.Address,
+            Address = request.Address ?? request.Street, // Use Street if Address not provided
             City = request.City,
             PostalCode = request.PostalCode,
             Country = request.Country ?? "Germany",
             TaxId = request.TaxId,
             TaxNumber = request.TaxNumber,
+            VatId = request.VatId,
+            CommercialRegister = request.CommercialRegister,
             PhoneVerified = false,
+            // Client type and company fields
+            ClientType = request.ClientType,
+            CompanyName = request.CompanyName,
+            Salutation = request.Salutation,
+            Gender = request.Gender,
             // Firm details (optional)
             FirmLegalName = request.FirmLegalName,
             FirmTaxId = request.FirmTaxId,
