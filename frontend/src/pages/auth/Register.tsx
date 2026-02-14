@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../../services/api';
 import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 import { validateSteuerID } from '../../utils/taxValidation';
@@ -15,7 +16,11 @@ const registrationSchema = z.object({
     .string()
     .min(1, 'E-Mail ist erforderlich')
     .email('Ungültige E-Mail-Adresse')
-    .refine(isNotDisposableEmail, getDisposableEmailError()),
+    .refine(isNotDisposableEmail, getDisposableEmailError())
+    .refine(
+      (email) => !email.toLowerCase().endsWith('@example.com'),
+      'Diese E-Mail-Adresse ist ungültig. Bitte verwenden Sie eine echte E-Mail-Adresse.'
+    ),
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `Passwort muss mindestens ${PASSWORD_MIN_LENGTH} Zeichen lang sein`)
@@ -122,6 +127,7 @@ function PasswordStrengthMeter({ password }: { password: string }) {
 }
 
 export default function Register() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -174,12 +180,22 @@ export default function Register() {
       // Google pre-fills email
       const email = searchParams.get('email');
       
-      if (email) {
-        setValue('email', email);
-        setDisabledFields(prev => ({ ...prev, email: true }));
+      if (!email || !providerId) {
+        // Missing OAuth data - show error
+        setApiError(t('auth.errors.googleOAuthDataMissing'));
+        return;
       }
+      
+      // Validate that email is not a placeholder
+      if (email.toLowerCase().endsWith('@example.com')) {
+        setApiError(t('auth.errors.googleInvalidEmail'));
+        return;
+      }
+      
+      setValue('email', email);
+      setDisabledFields(prev => ({ ...prev, email: true }));
     }
-  }, [searchParams, setValue]);
+  }, [searchParams, setValue, t]);
   
   const clientType = watch('clientType');
   const password = watch('password');
