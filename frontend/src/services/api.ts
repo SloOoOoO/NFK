@@ -155,6 +155,7 @@ export const eventsAPI = {
 // Admin API
 export const adminAPI = {
   getAllUsers: () => apiClient.get('/admin/users'),
+  getStatistics: () => apiClient.get('/admin/statistics'),
   updateUserRole: (userId: number, role: string) => 
     apiClient.put(`/admin/users/${userId}/role`, { role }),
   updateUserProfile: (userId: number, data: Record<string, unknown>) =>
@@ -169,6 +170,7 @@ export const usersAPI = {
   getAll: (role?: string) => apiClient.get('/users', { params: { role } }),
   search: (query: string) => apiClient.get('/users/search', { params: { query } }),
   updateProfile: (data: Record<string, unknown>) => apiClient.put('/users/profile', data),
+  deleteProfile: (confirmationText: string) => apiClient.delete('/users/profile', { data: { confirmationText } }),
 };
 
 // Health check

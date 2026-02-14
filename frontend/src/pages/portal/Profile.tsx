@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
-import { authAPI } from '../../services/api';
+import { authAPI, usersAPI } from '../../services/api';
+import * as Dialog from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -11,6 +13,9 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -98,6 +103,34 @@ export default function Profile() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return t('profile.notSpecified');
     return new Date(dateString).toLocaleDateString('de-DE');
+  };
+
+  const handleDeleteProfile = async () => {
+    // Check if confirmation text is "delete" reversed (eteled)
+    const reversedDelete = 'delete'.split('').reverse().join('');
+    if (deleteConfirmation.toLowerCase() !== reversedDelete) {
+      alert('Bestätigungstext ist ungültig. Bitte geben Sie "delete" rückwärts ein.');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await usersAPI.deleteProfile(deleteConfirmation);
+      
+      // Clear local storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      // Redirect to login with success message
+      alert('Ihr Profil wurde erfolgreich gelöscht.');
+      navigate('/auth/login');
+    } catch (error: any) {
+      console.error('Failed to delete profile:', error);
+      alert(error.response?.data?.message || 'Fehler beim Löschen des Profils');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const isAdmin = user?.role === 'SuperAdmin';
@@ -403,9 +436,83 @@ export default function Profile() {
                 </div>
               </div>
             )}
+
+            {/* Delete Profile Section */}
+            <div className="mt-8 pt-6 border-t border-red-200 dark:border-red-900/50">
+              <h3 className="font-semibold text-lg mb-2 text-red-600 dark:text-red-400">Gefahrenbereich</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Das Löschen Ihres Profils ist dauerhaft und kann nicht rückgängig gemacht werden.
+              </p>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+              >
+                🗑️ Profil löschen
+              </button>
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Delete Profile Modal */}
+      <Dialog.Root open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full z-50">
+            <Dialog.Title className="text-xl font-bold mb-4 text-red-600 dark:text-red-400">
+              ⚠️ Profil unwiderruflich löschen
+            </Dialog.Title>
+            
+            <Dialog.Description className="text-gray-700 dark:text-gray-300 mb-6">
+              <p className="mb-4">
+                Diese Aktion wird Ihr Profil <strong>dauerhaft löschen</strong> und kann <strong>nicht rückgängig</strong> gemacht werden.
+              </p>
+              <p className="mb-4">
+                Alle Ihre hochgeladenen Dokumente werden ebenfalls gelöscht. Ihre Nachrichten und Termine werden storniert.
+              </p>
+              <p className="mb-4">
+                Geben Sie zur Bestätigung das Wort <strong className="text-red-600 dark:text-red-400">"delete"</strong> <strong>rückwärts</strong> ein:
+              </p>
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Bestätigung eingeben..."
+                autoFocus
+              />
+            </Dialog.Description>
+
+            <div className="flex gap-3 justify-end">
+              <Dialog.Close asChild>
+                <button
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-medium"
+                  disabled={deleting}
+                >
+                  Abbrechen
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleDeleteProfile}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Löschen...' : 'Profil endgültig löschen'}
+              </button>
+            </div>
+
+            <Dialog.Close asChild>
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label="Schließen"
+                disabled={deleting}
+              >
+                <X size={24} />
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
