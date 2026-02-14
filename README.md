@@ -146,13 +146,14 @@ NFK/
 ### User Roles
 1. **SuperAdmin** - Full system access, all admin functions
 2. **Admin** - General admin role, user management
-3. **Consultant** - Client and case management (Tax Consultant)
-4. **Steuerberater** - Tax consultant role (alias for Consultant)
-5. **Receptionist** - Scheduling and basic client info
-6. **Client** - Own dossier and documents
-7. **DATEVManager** - DATEV export management
+3. **Consultant** - Client and case management (Tax Consultant / Steuerberater)
+4. **Receptionist** - Scheduling and basic client info
+5. **Client** - Own dossier and documents
+6. **DATEVManager** - DATEV export management
 
-**Admin Access:** SuperAdmin, Admin, Consultant, and Steuerberater roles have access to admin dashboard and can view full user details.
+**Admin Access:** SuperAdmin, Admin, and Consultant roles have access to admin dashboard and can view full user details.
+
+**Note:** "Steuerberater" is the German term for tax consultant and is equivalent to the "Consultant" role in the system.
 
 ### Client Management
 - ✅ Client CRUD operations

@@ -5,8 +5,8 @@ interface AdminRouteProps {
   children: React.ReactNode;
 }
 
-// Roles that have admin access
-const ADMIN_ROLES = ['SuperAdmin', 'Admin', 'Consultant', 'Steuerberater'];
+// Roles that have admin access (Note: Steuerberater is German for Consultant/Tax Consultant)
+const ADMIN_ROLES = ['SuperAdmin', 'Admin', 'Consultant'];
 
 export default function AdminRoute({ children }: AdminRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
