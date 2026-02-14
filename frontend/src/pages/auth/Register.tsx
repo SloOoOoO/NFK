@@ -17,7 +17,7 @@ const registrationSchema = z.object({
     .email('Ungültige E-Mail-Adresse')
     .refine(isNotDisposableEmail, getDisposableEmailError())
     .refine(
-      (email) => !email.toLowerCase().includes('example.com'),
+      (email) => !email.toLowerCase().endsWith('@example.com'),
       'Diese E-Mail-Adresse ist ungültig. Bitte verwenden Sie eine echte E-Mail-Adresse.'
     ),
   password: z
@@ -185,7 +185,7 @@ export default function Register() {
       }
       
       // Validate that email is not a placeholder
-      if (email.toLowerCase().includes('example.com')) {
+      if (email.toLowerCase().endsWith('@example.com')) {
         setApiError('Google-Anmeldung fehlgeschlagen: Ungültige E-Mail-Adresse erhalten. Bitte verwenden Sie die normale Registrierung.');
         return;
       }
