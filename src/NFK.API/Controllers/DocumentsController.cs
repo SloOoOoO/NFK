@@ -366,6 +366,22 @@ public class DocumentsController : ControllerBase
                 return NotFound(new { error = "file_not_found", message = "Datei nicht auf dem Server gefunden" });
             }
 
+            // Log document download to audit trail
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = currentUserId.Value,
+                Action = "DocumentDownload",
+                EntityType = "Document",
+                EntityId = document.Id,
+                IpAddress = ipAddress,
+                Details = $"Downloaded document: {document.FileName}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+            await _context.SaveChangesAsync();
+
             // Read file and return
             var fileBytes = await System.IO.File.ReadAllBytesAsync(document.FilePath);
             return File(fileBytes, document.FileType, document.FileName);
@@ -381,5 +397,76 @@ public class DocumentsController : ControllerBase
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         return userIdClaim != null ? int.Parse(userIdClaim) : null;
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Get the document
+            var document = await _context.Documents
+                .Include(d => d.UploadedByUser)
+                .FirstOrDefaultAsync(d => d.Id == id && !d.IsDeleted);
+
+            if (document == null)
+            {
+                return NotFound(new { error = "not_found", message = "Dokument nicht gefunden" });
+            }
+
+            // Get user role
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            // PERMISSION CHECK:
+            // Users can delete their own documents
+            // Admin/SuperAdmin/Consultant can delete any document
+            var allowedDeleteRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
+            var canDeleteAnyDocument = allowedDeleteRoles.Contains(userRole);
+
+            if (!canDeleteAnyDocument && document.UploadedByUserId != currentUserId.Value)
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Löschen dieses Dokuments" });
+            }
+
+            // Soft delete
+            document.IsDeleted = true;
+            document.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            // Log deletion to audit
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = currentUserId.Value,
+                Action = "DELETE",
+                EntityType = "Document",
+                EntityId = document.Id,
+                Details = $"Document deleted: {document.FileName}",
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Document deleted: {DocumentId} by user: {UserId}", id, currentUserId.Value);
+
+            return Ok(new { message = "Dokument erfolgreich gelöscht" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting document: {DocumentId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Fehler beim Löschen des Dokuments" });
+        }
     }
 }

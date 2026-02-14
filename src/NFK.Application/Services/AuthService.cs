@@ -131,6 +131,36 @@ public class AuthService : IAuthService
             };
             _context.PasswordHistories.Add(passwordHistory);
 
+            // Assign Client role automatically
+            var clientRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Client");
+            if (clientRole != null)
+            {
+                var userRole = new UserRole
+                {
+                    UserId = user.Id,
+                    RoleId = clientRole.Id
+                };
+                _context.UserRoles.Add(userRole);
+            }
+            else
+            {
+                _logger.LogWarning("Client role not found in database during registration for user: {Email}", user.Email);
+            }
+
+            // Create Client record for the user
+            var client = new Domain.Entities.Clients.Client
+            {
+                UserId = user.Id,
+                CompanyName = request.CompanyName ?? $"{request.FirstName} {request.LastName}",
+                PhoneNumber = request.PhoneNumber,
+                TaxNumber = request.TaxNumber,
+                Address = request.Address ?? request.Street,
+                City = request.City,
+                PostalCode = request.PostalCode,
+                IsActive = true
+            };
+            _context.Clients.Add(client);
+
             // Log user registration to audit trail
             var auditLog = new Domain.Entities.Audit.AuditLog
             {
@@ -145,7 +175,7 @@ public class AuthService : IAuthService
             };
             _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
             
-            // Save password history and audit log together
+            // Save password history, role, client record, and audit log together
             await _context.SaveChangesAsync();
 
             // Generate email verification token for non-OAuth users

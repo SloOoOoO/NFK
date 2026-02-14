@@ -26,9 +26,43 @@ public class ClientsController : ControllerBase
     {
         try
         {
-            var clients = await _context.Clients
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Get user role
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            var query = _context.Clients
                 .AsNoTracking() // Performance: Read-only query
                 .Include(c => c.User)
+                .AsQueryable();
+
+            // ROLE-BASED FILTERING:
+            // Clients: Only see their own client record
+            // Admin/SuperAdmin/Consultant/Receptionist: See all clients
+            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var canViewAllClients = allowedViewRoles.Contains(userRole);
+
+            if (userRole == "Client")
+            {
+                // Client can only see their own record
+                query = query.Where(c => c.UserId == currentUserId.Value);
+            }
+            else if (!canViewAllClients)
+            {
+                // Other roles have no access to clients
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Klienten" });
+            }
+
+            var clients = await query
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
@@ -62,6 +96,12 @@ public class ClientsController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
             var client = await _context.Clients
                 .AsNoTracking() // Performance: Read-only query
                 .Include(c => c.User)
@@ -70,6 +110,29 @@ public class ClientsController : ControllerBase
             if (client == null)
             {
                 return NotFound(new { error = "not_found", message = $"Client {id} not found" });
+            }
+
+            // Get user role
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            // PERMISSION CHECK:
+            // Clients: Only view their own client record
+            // Admin/SuperAdmin/Consultant/Receptionist: View any client
+            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var canViewAllClients = allowedViewRoles.Contains(userRole);
+
+            if (userRole == "Client" && client.UserId != currentUserId.Value)
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung für diesen Klienten" });
+            }
+            else if (!canViewAllClients && userRole != "Client")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Klienten" });
             }
 
             var clientDto = new ClientDto(
@@ -218,5 +281,11 @@ public class ClientsController : ControllerBase
             _logger.LogError(ex, "Error deleting client {ClientId}", id);
             return StatusCode(500, new { error = "internal_error", message = "Error deleting client" });
         }
+    }
+    
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return userIdClaim != null ? int.Parse(userIdClaim) : null;
     }
 }

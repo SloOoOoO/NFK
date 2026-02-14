@@ -27,8 +27,43 @@ public class CasesController : ControllerBase
     {
         try
         {
-            var cases = await _context.Cases
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Get user role
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            var query = _context.Cases
                 .Include(c => c.Client)
+                    .ThenInclude(cl => cl.User)
+                .AsQueryable();
+
+            // ROLE-BASED FILTERING:
+            // Clients: Only see their own cases
+            // Admin/SuperAdmin/Consultant/Receptionist: See all cases
+            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var canViewAllCases = allowedViewRoles.Contains(userRole);
+
+            if (userRole == "Client")
+            {
+                // Client can only see cases where they are the client
+                query = query.Where(c => c.Client.UserId == currentUserId.Value);
+            }
+            else if (!canViewAllCases)
+            {
+                // Other roles have no access to cases
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Fällen" });
+            }
+
+            var cases = await query
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
 
@@ -59,13 +94,43 @@ public class CasesController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
             var caseEntity = await _context.Cases
                 .Include(c => c.Client)
+                    .ThenInclude(cl => cl.User)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (caseEntity == null)
             {
                 return NotFound(new { error = "not_found", message = $"Case {id} not found" });
+            }
+
+            // Get user role
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            // PERMISSION CHECK:
+            // Clients: Only view their own cases
+            // Admin/SuperAdmin/Consultant/Receptionist: View any case
+            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var canViewAllCases = allowedViewRoles.Contains(userRole);
+
+            if (userRole == "Client" && caseEntity.Client.UserId != currentUserId.Value)
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung für diesen Fall" });
+            }
+            else if (!canViewAllCases && userRole != "Client")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Fällen" });
             }
 
             var caseDto = new CaseDto(
@@ -287,5 +352,11 @@ public class CasesController : ControllerBase
             "Niedrig" or "Low" => 1,
             _ => 2
         };
+    }
+    
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return userIdClaim != null ? int.Parse(userIdClaim) : null;
     }
 }
