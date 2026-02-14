@@ -230,12 +230,12 @@ public class ClientsController : ControllerBase
                     }
 
                     // Add Client role
-                    var userRole = new Domain.Entities.Users.UserRole
+                    var newUserRole = new Domain.Entities.Users.UserRole
                     {
                         UserId = targetUser.Id,
                         RoleId = clientRole.Id
                     };
-                    _context.UserRoles.Add(userRole);
+                    _context.UserRoles.Add(newUserRole);
                 }
             }
 
