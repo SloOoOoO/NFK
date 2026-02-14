@@ -51,8 +51,15 @@ export default function Cases() {
     dueDate: '',
   });
   const [successMessage, setSuccessMessage] = useState('');
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    // Get current user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+    
     fetchCases();
     fetchClients();
   }, []);
@@ -283,15 +290,24 @@ export default function Cases() {
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary whitespace-nowrap"
-              >
-                + Neuer Fall
-              </button>
-              <button className="btn-secondary whitespace-nowrap">
-                📥 Export
-              </button>
+              {/* Only employees can create cases */}
+              {user && user.role !== 'Client' ? (
+                <>
+                  <button 
+                    onClick={() => setShowCreateModal(true)}
+                    className="btn-primary whitespace-nowrap"
+                  >
+                    + Neuer Fall
+                  </button>
+                  <button className="btn-secondary whitespace-nowrap">
+                    📥 Export
+                  </button>
+                </>
+              ) : (
+                <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  ℹ️ Sie können nur Ihre zugewiesenen Fälle ansehen
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -364,13 +380,19 @@ export default function Cases() {
               <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm text-center">
                 <div className="text-6xl mb-4">📁</div>
                 <h3 className="text-xl font-semibold text-textPrimary dark:text-white mb-2">Keine Fälle gefunden</h3>
-                <p className="text-textSecondary dark:text-gray-400 mb-4">Es gibt keine Fälle mit diesem Status.</p>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn-primary"
-                >
-                  + Neuer Fall erstellen
-                </button>
+                <p className="text-textSecondary dark:text-gray-400 mb-4">
+                  {user && user.role === 'Client' 
+                    ? 'Sie haben keine zugewiesenen Fälle.' 
+                    : 'Es gibt keine Fälle mit diesem Status.'}
+                </p>
+                {user && user.role !== 'Client' && (
+                  <button 
+                    onClick={() => setShowCreateModal(true)}
+                    className="btn-primary"
+                  >
+                    + Neuer Fall erstellen
+                  </button>
+                )}
               </div>
             )}
           </div>

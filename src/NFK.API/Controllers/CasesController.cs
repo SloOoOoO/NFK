@@ -160,6 +160,27 @@ public class CasesController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Get user role to check permissions
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+
+            // PERMISSION CHECK: Only employees can create cases, not clients
+            var allowedCreateRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            if (!allowedCreateRoles.Contains(userRole))
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur Mitarbeiter können Fälle erstellen" });
+            }
+
             var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == request.ClientId);
             if (client == null)
             {
@@ -180,7 +201,6 @@ public class CasesController : ControllerBase
             await _context.SaveChangesAsync();
 
             // Log case creation to audit trail
-            var currentUserId = GetCurrentUserId();
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var auditLog = new Domain.Entities.Audit.AuditLog
             {

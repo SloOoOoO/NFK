@@ -15,6 +15,7 @@ interface Document {
   icon?: string;
   mandant?: string;
   updated?: string;
+  uploadedByUserId?: number;
 }
 
 interface User {
@@ -223,6 +224,22 @@ export default function Documents() {
     }
   };
 
+  const handleDelete = async (documentId: number) => {
+    if (!confirm('Möchten Sie dieses Dokument wirklich löschen?')) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/documents/${documentId}`);
+      await fetchDocuments();
+      await fetchStats();
+      alert('Dokument erfolgreich gelöscht');
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      alert('Fehler beim Löschen des Dokuments: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   const getTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
       'Abschluss': 'bg-blue-100 text-blue-800',
@@ -413,7 +430,15 @@ export default function Documents() {
                   >
                     📥 Download
                   </button>
-                  <button className="flex-1 text-sm text-primary dark:text-blue-400 hover:underline">👁️ Vorschau</button>
+                  {/* Show Delete button for document owner or employees with view-all permissions */}
+                  {(user && (doc.uploadedByUserId === user.id || ['SuperAdmin', 'Admin', 'Consultant'].includes(user.role))) && (
+                    <button 
+                      onClick={() => handleDelete(doc.id)}
+                      className="flex-1 text-sm text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      🗑️ Löschen
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -455,7 +480,15 @@ export default function Documents() {
                       >
                         Download
                       </button>
-                      <button className="text-primary dark:text-blue-400 hover:underline">Vorschau</button>
+                      {/* Show Delete button for document owner or employees with view-all permissions */}
+                      {(user && (doc.uploadedByUserId === user.id || ['SuperAdmin', 'Admin', 'Consultant'].includes(user.role))) && (
+                        <button 
+                          onClick={() => handleDelete(doc.id)}
+                          className="text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Löschen
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
