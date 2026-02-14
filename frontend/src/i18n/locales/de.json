@@ -182,7 +182,17 @@
     "successUpdate": "Profil erfolgreich aktualisiert",
     "errorUpdate": "Fehler beim Aktualisieren des Profils",
     "loadingProfile": "Lade Profil...",
-    "errorLoading": "Profil konnte nicht geladen werden"
+    "errorLoading": "Profil konnte nicht geladen werden",
+    "dangerZone": "Gefahrenbereich",
+    "deleteProfile": "Profil löschen",
+    "deleteWarning": "Das Löschen Ihres Profils ist dauerhaft und kann nicht rückgängig gemacht werden.",
+    "deleteModalTitle": "⚠️ Profil unwiderruflich löschen",
+    "deleteModalDescription1": "Diese Aktion wird Ihr Profil <strong>dauerhaft löschen</strong> und kann <strong>nicht rückgängig</strong> gemacht werden.",
+    "deleteModalDescription2": "Alle Ihre hochgeladenen Dokumente werden ebenfalls gelöscht. Ihre Nachrichten und Termine werden storniert.",
+    "deleteModalDescription3": "Geben Sie zur Bestätigung das Wort <strong>\"delete\"</strong> <strong>rückwärts</strong> ein:",
+    "deleteConfirmationPlaceholder": "Bestätigung eingeben...",
+    "deleteConfirm": "Profil endgültig löschen",
+    "deleting": "Löschen..."
   },
   "clients": {
     "title": "Kunden",

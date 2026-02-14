@@ -182,7 +182,17 @@
     "successUpdate": "Profile updated successfully",
     "errorUpdate": "Error updating profile",
     "loadingProfile": "Loading profile...",
-    "errorLoading": "Could not load profile"
+    "errorLoading": "Could not load profile",
+    "dangerZone": "Danger Zone",
+    "deleteProfile": "Delete Profile",
+    "deleteWarning": "Deleting your profile is permanent and cannot be undone.",
+    "deleteModalTitle": "⚠️ Permanently Delete Profile",
+    "deleteModalDescription1": "This action will <strong>permanently delete</strong> your profile and <strong>cannot be undone</strong>.",
+    "deleteModalDescription2": "All your uploaded documents will also be deleted. Your messages and appointments will be cancelled.",
+    "deleteModalDescription3": "To confirm, type the word <strong>\"delete\"</strong> <strong>backwards</strong>:",
+    "deleteConfirmationPlaceholder": "Enter confirmation...",
+    "deleteConfirm": "Delete Profile Permanently",
+    "deleting": "Deleting..."
   },
   "clients": {
     "title": "Clients",
