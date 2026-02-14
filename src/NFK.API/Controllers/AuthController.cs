@@ -206,10 +206,9 @@ public class AuthController : ControllerBase
                 return Redirect(authUrl);
             }
             
-            // Fallback: Simulate OAuth flow for development
-            _logger.LogWarning("Google OAuth not configured - using simulation mode. Set GOOGLE_OAUTH_ENABLED=true and configure credentials.");
-            var redirectUri = $"{frontendUrl}/auth/register";
-            return Redirect($"{redirectUri}?source=google&email=user@example.com");
+            // Google OAuth not configured - show error instead of fallback
+            _logger.LogWarning("Google OAuth not configured - Set OAuth:Google:Enabled=true and configure credentials in appsettings.");
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("Google Sign-In ist nicht konfiguriert. Bitte verwenden Sie die E-Mail-Registrierung.")}");
         }
         catch (Exception ex)
         {
@@ -274,10 +273,9 @@ public class AuthController : ControllerBase
                 }
             }
             
-            // Fallback for development
-            _logger.LogWarning("Google OAuth service not available - using fallback");
-            var devRedirectUri = $"{frontendUrl}/auth/register";
-            return Redirect($"{devRedirectUri}?source=google&email=user@example.com");
+            // Google OAuth service not available - show error
+            _logger.LogError("Google OAuth service not available in callback");
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("Google Sign-In service ist nicht verfügbar")}");
         }
         catch (InvalidOperationException ex)
         {

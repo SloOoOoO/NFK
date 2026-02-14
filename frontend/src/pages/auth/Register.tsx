@@ -15,7 +15,11 @@ const registrationSchema = z.object({
     .string()
     .min(1, 'E-Mail ist erforderlich')
     .email('Ungültige E-Mail-Adresse')
-    .refine(isNotDisposableEmail, getDisposableEmailError()),
+    .refine(isNotDisposableEmail, getDisposableEmailError())
+    .refine(
+      (email) => !email.toLowerCase().includes('example.com'),
+      'Diese E-Mail-Adresse ist ungültig. Bitte verwenden Sie eine echte E-Mail-Adresse.'
+    ),
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `Passwort muss mindestens ${PASSWORD_MIN_LENGTH} Zeichen lang sein`)
@@ -174,10 +178,20 @@ export default function Register() {
       // Google pre-fills email
       const email = searchParams.get('email');
       
-      if (email) {
-        setValue('email', email);
-        setDisabledFields(prev => ({ ...prev, email: true }));
+      if (!email || !providerId) {
+        // Missing OAuth data - show error
+        setApiError('Google-Anmeldung fehlgeschlagen: Authentifizierungsdaten fehlen. Bitte versuchen Sie es erneut.');
+        return;
       }
+      
+      // Validate that email is not a placeholder
+      if (email.toLowerCase().includes('example.com')) {
+        setApiError('Google-Anmeldung fehlgeschlagen: Ungültige E-Mail-Adresse erhalten. Bitte verwenden Sie die normale Registrierung.');
+        return;
+      }
+      
+      setValue('email', email);
+      setDisabledFields(prev => ({ ...prev, email: true }));
     }
   }, [searchParams, setValue]);
   
