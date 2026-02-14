@@ -146,11 +146,11 @@ public class UsersController : ControllerBase
             if (dto.DateOfBirth.HasValue)
                 user.DateOfBirth = dto.DateOfBirth.Value;
             
-            // Handle both TaxNumber and TaxId
-            if (!string.IsNullOrEmpty(dto.TaxNumber))
-                user.TaxId = dto.TaxNumber;
+            // Handle both TaxNumber and TaxId fields separately
             if (!string.IsNullOrEmpty(dto.TaxId))
                 user.TaxId = dto.TaxId;
+            if (!string.IsNullOrEmpty(dto.TaxNumber))
+                user.TaxNumber = dto.TaxNumber;
 
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
@@ -170,8 +170,8 @@ public class UsersController : ControllerBase
                     user.PostalCode,
                     user.Country,
                     user.DateOfBirth,
-                    TaxNumber = user.TaxId,
-                    TaxId = user.TaxId,
+                    user.TaxId,
+                    user.TaxNumber,
                     user.Gender
                 }
             });

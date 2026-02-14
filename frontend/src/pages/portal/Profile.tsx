@@ -27,6 +27,7 @@ export default function Profile() {
         phoneNumber: response.data.phoneNumber || '',
         dateOfBirth: response.data.dateOfBirth ? response.data.dateOfBirth.split('T')[0] : '',
         taxId: response.data.taxId || '',
+        taxNumber: response.data.taxNumber || '',
         address: response.data.address || '',
         city: response.data.city || '',
         postalCode: response.data.postalCode || '',
@@ -62,8 +63,8 @@ export default function Profile() {
           postalCode: editForm.postalCode,
           country: editForm.country,
           dateOfBirth: editForm.dateOfBirth,
-          taxNumber: editForm.taxId,
-          taxId: editForm.taxId
+          taxId: editForm.taxId,
+          taxNumber: editForm.taxNumber
         })
       });
 
@@ -101,8 +102,8 @@ export default function Profile() {
 
   const isAdmin = user?.role === 'SuperAdmin';
   const canEditField = (field: string) => {
-    // For non-admin users, FullLegalName, Email, and TaxId are read-only
-    if (!isAdmin && ['fullLegalName', 'email', 'taxId'].includes(field)) {
+    // For non-admin users, FullLegalName, Email, TaxId, and TaxNumber are read-only
+    if (!isAdmin && ['fullLegalName', 'email', 'taxId', 'taxNumber'].includes(field)) {
       return false;
     }
     return isEditing;
@@ -281,6 +282,25 @@ export default function Profile() {
                     ) : (
                       <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
                         {user.taxId || t('profile.notSpecified')}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
+                      Steuernummer
+                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
+                    </label>
+                    {canEditField('taxNumber') ? (
+                      <input
+                        type="text"
+                        value={editForm.taxNumber}
+                        onChange={(e) => setEditForm({ ...editForm, taxNumber: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
+                      />
+                    ) : (
+                      <p className="text-textPrimary dark:text-gray-200 mt-1 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 rounded-md">
+                        {user.taxNumber || t('profile.notSpecified')}
                       </p>
                     )}
                   </div>

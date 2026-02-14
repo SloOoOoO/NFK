@@ -161,6 +161,10 @@ NFK/
 - ✅ Document management
 - ✅ Case notes and history
 - ✅ Timeline view
+- ✅ **Dual Tax ID System**:
+  - **Steuer-ID** (11-digit personal tax identifier) - Required for all users
+  - **Steuernummer** (business tax number) - Optional for businesses
+  - Both fields are separately tracked and displayed in user profiles
 
 ### Document Management
 - ✅ Upload/download documents

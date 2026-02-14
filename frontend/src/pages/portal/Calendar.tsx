@@ -175,7 +175,7 @@ export default function Calendar() {
             
             <button 
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-primary-600 text-white rounded-md"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-colors"
             >
               + Termin vereinbaren
             </button>
@@ -186,15 +186,15 @@ export default function Calendar() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Termine</p>
-            <p className="text-2xl font-bold text-primary-600">{events.length}</p>
+            <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{events.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Fristen</p>
-            <p className="text-2xl font-bold text-red-600">0</p>
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">0</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Aufgaben</p>
-            <p className="text-2xl font-bold text-yellow-600">0</p>
+            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">0</p>
           </div>
         </div>
 
@@ -287,11 +287,11 @@ export default function Calendar() {
                     value={formData.clientId || ''}
                     onChange={(e) => setFormData({ ...formData, clientId: e.target.value ? parseInt(e.target.value) : null })}
                     required
-                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                   >
-                    <option value="">Mandant auswählen</option>
+                    <option value="" className="text-gray-900 dark:text-gray-100">Mandant auswählen</option>
                     {clients.map(client => (
-                      <option key={client.id} value={client.id}>{client.companyName}</option>
+                      <option key={client.id} value={client.id} className="text-gray-900 dark:text-gray-100">{client.companyName}</option>
                     ))}
                   </select>
                 </div>
@@ -303,7 +303,7 @@ export default function Calendar() {
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                   />
                 </div>
                 
@@ -315,7 +315,7 @@ export default function Calendar() {
                       value={formData.startTime}
                       onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                      className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     />
                   </div>
                   
@@ -326,7 +326,7 @@ export default function Calendar() {
                       value={formData.endTime}
                       onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                      className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     />
                   </div>
                 </div>
@@ -336,7 +336,7 @@ export default function Calendar() {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     rows={3}
                   />
                 </div>
@@ -347,15 +347,15 @@ export default function Calendar() {
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                   />
                 </div>
                 
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg">
+                  <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     Abbrechen
                   </button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg">
+                  <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">
                     Erstellen
                   </button>
                 </div>

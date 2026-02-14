@@ -21,6 +21,7 @@ public record UpdateUserProfileRequest(
     string? FullLegalName = null,
     DateTime? DateOfBirth = null,
     string? TaxId = null,
+    string? TaxNumber = null,
     string? Address = null,
     string? City = null,
     string? PostalCode = null,

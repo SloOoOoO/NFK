@@ -15,7 +15,8 @@ public record RegisterRequest(
     string? City = null,
     string? PostalCode = null,
     string? Country = null,
-    string? TaxId = null,
+    string? TaxId = null, // Steuer-ID (11-digit personal tax identifier)
+    string? TaxNumber = null, // Steuernummer (business tax number)
     // Optional firm fields
     string? FirmLegalName = null,
     string? FirmTaxId = null,
@@ -76,7 +77,8 @@ public record UserResponse(
     string? City = null,
     string? PostalCode = null,
     string? Country = null,
-    string? TaxId = null,
+    string? TaxId = null, // Steuer-ID (11-digit personal tax identifier)
+    string? TaxNumber = null, // Steuernummer (business tax number)
     string? FirmLegalName = null,
     string? FirmTaxId = null,
     string? FirmChamberRegistration = null
