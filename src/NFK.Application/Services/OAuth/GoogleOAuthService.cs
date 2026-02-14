@@ -206,45 +206,6 @@ public class GoogleOAuthService : IGoogleOAuthService
         }
     }
 
-    public async Task<GoogleUserProfile> GetUserProfileFromCodeAsync(string code, string redirectUri)
-    {
-        try
-        {
-            // Exchange code for access token
-            var tokenRequest = new Dictionary<string, string>
-            {
-                ["code"] = code,
-                ["client_id"] = _clientId,
-                ["client_secret"] = _clientSecret,
-                ["redirect_uri"] = redirectUri,
-                ["grant_type"] = "authorization_code"
-            };
-
-            _logger.LogDebug("Requesting access token from Google to get user profile");
-            var tokenResponse = await _httpClient.PostAsync(TokenEndpoint, new FormUrlEncodedContent(tokenRequest));
-            
-            if (!tokenResponse.IsSuccessStatusCode)
-            {
-                var errorContent = await tokenResponse.Content.ReadAsStringAsync();
-                _logger.LogError("Failed to exchange code for token. Status: {StatusCode}, Error: {Error}", 
-                    tokenResponse.StatusCode, errorContent);
-                throw new InvalidOperationException($"Failed to exchange authorization code for token: {errorContent}");
-            }
-
-            var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
-            var accessToken = tokenData.GetProperty("access_token").GetString() 
-                ?? throw new InvalidOperationException("No access token received from Google");
-
-            // Get user profile
-            return await GetUserProfileAsync(accessToken);
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP error during Google profile fetch: {Message}", ex.Message);
-            throw new InvalidOperationException("Failed to communicate with Google OAuth service. Please try again later.", ex);
-        }
-    }
-
     public async Task<bool> UserExistsAsync(string email, string googleId)
     {
         var user = await _context.Users

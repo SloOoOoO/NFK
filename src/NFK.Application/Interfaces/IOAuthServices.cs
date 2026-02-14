@@ -31,14 +31,6 @@ public interface IGoogleOAuthService
     Task<GoogleUserProfile> GetUserProfileAsync(string accessToken);
 
     /// <summary>
-    /// Get user profile from authorization code (exchanges code for token first)
-    /// </summary>
-    /// <param name="code">Authorization code from Google</param>
-    /// <param name="redirectUri">The same redirect URI used in authorization</param>
-    /// <returns>Google user profile</returns>
-    Task<GoogleUserProfile> GetUserProfileFromCodeAsync(string code, string redirectUri);
-
-    /// <summary>
     /// Check if a user with the given email or Google ID exists
     /// </summary>
     /// <param name="email">User email</param>
