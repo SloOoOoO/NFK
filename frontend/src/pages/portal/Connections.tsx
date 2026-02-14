@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import apiClient from '../../services/api';
@@ -10,11 +10,7 @@ export default function Connections() {
   const [datevLastSync, setDatevLastSync] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchConnectionStatus();
-  }, []);
-
-  const fetchConnectionStatus = async () => {
+  const fetchConnectionStatus = useCallback(async () => {
     setLoading(true);
     try {
       // Fetch DATEV connection status
@@ -34,7 +30,11 @@ export default function Connections() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchConnectionStatus();
+  }, [fetchConnectionStatus]);
 
   const handleGoogleConnect = () => {
     // TODO: Implement Google SSO flow
