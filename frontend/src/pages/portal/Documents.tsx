@@ -15,6 +15,7 @@ interface Document {
   icon?: string;
   mandant?: string;
   updated?: string;
+  uploadedByUserId?: number;
 }
 
 interface User {
@@ -36,6 +37,9 @@ interface StorageStats {
 // Default limits for storage and documents
 const DEFAULT_MAX_DOCUMENTS = 10;
 const DEFAULT_MAX_STORAGE_MB = 100;
+
+// Roles allowed to delete any document
+const DOCUMENT_DELETE_ROLES = ['SuperAdmin', 'Admin', 'Consultant'];
 
 export default function Documents() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -220,6 +224,22 @@ export default function Documents() {
     } catch (error) {
       console.error('Download error:', error);
       alert('Fehler beim Herunterladen der Datei');
+    }
+  };
+
+  const handleDelete = async (documentId: number) => {
+    if (!confirm('Möchten Sie dieses Dokument wirklich löschen?')) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/documents/${documentId}`);
+      await fetchDocuments();
+      await fetchStats();
+      alert('Dokument erfolgreich gelöscht');
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      alert('Fehler beim Löschen des Dokuments: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -413,7 +433,15 @@ export default function Documents() {
                   >
                     📥 Download
                   </button>
-                  <button className="flex-1 text-sm text-primary dark:text-blue-400 hover:underline">👁️ Vorschau</button>
+                  {/* Show Delete button for document owner or employees with view-all permissions */}
+                  {(user && (doc.uploadedByUserId === user.id || DOCUMENT_DELETE_ROLES.includes(user.role))) && (
+                    <button 
+                      onClick={() => handleDelete(doc.id)}
+                      className="flex-1 text-sm text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      🗑️ Löschen
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -455,7 +483,15 @@ export default function Documents() {
                       >
                         Download
                       </button>
-                      <button className="text-primary dark:text-blue-400 hover:underline">Vorschau</button>
+                      {/* Show Delete button for document owner or employees with view-all permissions */}
+                      {(user && (doc.uploadedByUserId === user.id || DOCUMENT_DELETE_ROLES.includes(user.role))) && (
+                        <button 
+                          onClick={() => handleDelete(doc.id)}
+                          className="text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Löschen
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
