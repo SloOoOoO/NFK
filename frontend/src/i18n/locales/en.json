@@ -150,6 +150,7 @@
       "datevExport": "DATEV Export",
       "datevActivity": "DATEV Activity",
       "connectionsActivity": "Connections",
+      "manageConnections": "Manage Connections",
       "details": "Details",
       "exportCompleted": "Export completed",
       "syncStarted": "Synchronization started",

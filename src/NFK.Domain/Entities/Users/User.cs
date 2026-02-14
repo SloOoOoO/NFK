@@ -28,7 +28,14 @@ public class User : BaseEntity
     public string? Country { get; set; }
     public string? TaxId { get; set; } // Steuer-ID (11-digit personal tax identifier)
     public string? TaxNumber { get; set; } // Steuernummer (business tax number)
+    public string? VatId { get; set; } // USt-IdNr (VAT ID)
+    public string? CommercialRegister { get; set; } // Handelsregister
     public bool PhoneVerified { get; set; }
+    
+    // Client type and company fields
+    public string? ClientType { get; set; } // Privatperson, Einzelunternehmen, GmbH, UG, GbR
+    public string? CompanyName { get; set; }
+    public string? Salutation { get; set; } // Herr, Frau, Divers
     
     // Optional firm details
     public string? FirmLegalName { get; set; }

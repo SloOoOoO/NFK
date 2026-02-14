@@ -326,7 +326,7 @@ export default function Dashboard() {
 
               <Link to="/portal/connections">
                 <button className="w-full mt-2 px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
-                  Connections verwalten
+                  {t('dashboard.sections.manageConnections')}
                 </button>
               </Link>
             </div>

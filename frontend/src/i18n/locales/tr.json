@@ -150,6 +150,7 @@
       "datevExport": "DATEV Dışa Aktar",
       "datevActivity": "DATEV Etkinliği",
       "connectionsActivity": "Bağlantılar",
+      "manageConnections": "Bağlantıları Yönet",
       "details": "Detaylar",
       "exportCompleted": "Dışa aktarma tamamlandı",
       "syncStarted": "Senkronizasyon başladı",
