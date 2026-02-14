@@ -128,6 +128,7 @@ builder.Services.AddAuthorization();
 
 // Register application services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();

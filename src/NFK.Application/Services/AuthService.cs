@@ -16,19 +16,22 @@ public class AuthService : IAuthService
     private readonly PasswordHasher _passwordHasher;
     private readonly ILogger<AuthService> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailService _emailService;
 
     public AuthService(
         ApplicationDbContext context,
         JwtService jwtService,
         PasswordHasher passwordHasher,
         ILogger<AuthService> logger,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IEmailService emailService)
     {
         _context = context;
         _jwtService = jwtService;
         _passwordHasher = passwordHasher;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
+        _emailService = emailService;
     }
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
@@ -145,12 +148,39 @@ public class AuthService : IAuthService
             // Save password history and audit log together
             await _context.SaveChangesAsync();
 
+            // Generate email verification token for non-OAuth users
+            if (string.IsNullOrEmpty(request.GoogleId) && string.IsNullOrEmpty(request.DATEVId))
+            {
+                var verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+                var emailVerificationToken = new EmailVerificationToken
+                {
+                    UserId = user.Id,
+                    Token = verificationToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(24),
+                    IsUsed = false
+                };
+                _context.EmailVerificationTokens.Add(emailVerificationToken);
+                await _context.SaveChangesAsync();
+
+                // Send verification email
+                try
+                {
+                    await _emailService.SendEmailVerificationAsync(user.Email, user.FirstName, verificationToken);
+                    _logger.LogInformation("Verification email sent to: {Email}", user.Email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send verification email to: {Email}", user.Email);
+                    // Continue with registration even if email fails
+                }
+            }
+
             // Commit transaction
             await transaction.CommitAsync();
 
             _logger.LogInformation("User registered successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
 
-            return new RegisterResponse("Registration successful", user.Id);
+            return new RegisterResponse("Registration successful. Please check your email to verify your account.", user.Id);
         }
         catch (Exception ex)
         {
@@ -417,8 +447,17 @@ public class AuthService : IAuthService
         if (user == null)
         {
             _logger.LogWarning("Password reset request failed - user not found: {Email} from IP: {IP}", email, ipAddress);
-            // Return success even if user not found to prevent email enumeration
-            // But don't create a token
+            // Send notification that email is not in database
+            try
+            {
+                await _emailService.SendEmailNotFoundNotificationAsync(email);
+                _logger.LogInformation("Email not found notification sent to: {Email}", email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email not found notification to: {Email}", email);
+            }
+            // Return empty string to prevent email enumeration (frontend gets success message anyway)
             return string.Empty;
         }
 
@@ -446,10 +485,17 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Password reset token created for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
 
-        // TODO: Send email with reset link
-        // For now, log the token at debug level (placeholder for email functionality)
-        _logger.LogDebug("Password reset token for {Email}: {Token}", email, token);
-        _logger.LogDebug("Reset link: /reset-password?token={Token}", token);
+        // Send password reset email
+        try
+        {
+            await _emailService.SendPasswordResetEmailAsync(user.Email, user.FirstName, token);
+            _logger.LogInformation("Password reset email sent to: {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send password reset email to: {Email}", user.Email);
+            // Continue even if email fails - token is still valid
+        }
 
         return token;
     }
@@ -604,5 +650,60 @@ public class AuthService : IAuthService
         {
             _logger.LogError(ex, "Failed to log login attempt for email: {Email}", email);
         }
+    }
+    
+    public async Task VerifyEmailAsync(string token)
+    {
+        var ipAddress = GetClientIpAddress();
+        _logger.LogInformation("Email verification attempt from IP: {IP}", ipAddress);
+
+        // Find verification token
+        var verificationToken = await _context.EmailVerificationTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == token && !t.IsUsed);
+
+        if (verificationToken == null)
+        {
+            _logger.LogWarning("Email verification failed - invalid token from IP: {IP}", ipAddress);
+            throw new UnauthorizedAccessException("Invalid or expired verification token.");
+        }
+
+        // Check if token is expired
+        if (verificationToken.ExpiresAt < DateTime.UtcNow)
+        {
+            _logger.LogWarning("Email verification failed - token expired from IP: {IP}", ipAddress);
+            throw new UnauthorizedAccessException("Verification token has expired. Please request a new one.");
+        }
+
+        // Mark user as verified
+        var user = verificationToken.User;
+        if (user == null)
+        {
+            _logger.LogError("Email verification failed - user not found for token from IP: {IP}", ipAddress);
+            throw new InvalidOperationException("User not found.");
+        }
+
+        user.IsEmailConfirmed = true;
+        user.IsActive = true;
+        
+        // Mark token as used
+        verificationToken.IsUsed = true;
+        verificationToken.UsedAt = DateTime.UtcNow;
+        
+        await _context.SaveChangesAsync();
+
+        // Send welcome email
+        try
+        {
+            await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName);
+            _logger.LogInformation("Welcome email sent to: {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send welcome email to: {Email}", user.Email);
+            // Continue even if email fails
+        }
+
+        _logger.LogInformation("Email verified successfully for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
     }
 }

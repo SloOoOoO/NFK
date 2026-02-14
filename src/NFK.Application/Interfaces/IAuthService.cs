@@ -11,4 +11,5 @@ public interface IAuthService
     Task<UserResponse> GetUserByIdAsync(int userId);
     Task<string> RequestPasswordResetAsync(string email);
     Task ResetPasswordAsync(string token, string newPassword);
+    Task VerifyEmailAsync(string token);
 }
