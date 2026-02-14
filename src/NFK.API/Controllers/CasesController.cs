@@ -179,6 +179,23 @@ public class CasesController : ControllerBase
             _context.Cases.Add(caseEntity);
             await _context.SaveChangesAsync();
 
+            // Log case creation to audit trail
+            var currentUserId = GetCurrentUserId();
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = currentUserId,
+                Action = "CaseCreated",
+                EntityType = "Case",
+                EntityId = caseEntity.Id,
+                IpAddress = ipAddress,
+                Details = $"Case created: {caseEntity.Title} for client {client.CompanyName}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
             var caseDto = new CaseDto(
                 caseEntity.Id,
                 caseEntity.Title,
