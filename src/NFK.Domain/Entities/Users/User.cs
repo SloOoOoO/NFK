@@ -26,7 +26,8 @@ public class User : BaseEntity
     public string? City { get; set; }
     public string? PostalCode { get; set; }
     public string? Country { get; set; }
-    public string? TaxId { get; set; }
+    public string? TaxId { get; set; } // Steuer-ID (11-digit personal tax identifier)
+    public string? TaxNumber { get; set; } // Steuernummer (business tax number)
     public bool PhoneVerified { get; set; }
     
     // Optional firm details

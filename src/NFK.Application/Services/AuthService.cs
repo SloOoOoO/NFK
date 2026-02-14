@@ -82,6 +82,7 @@ public class AuthService : IAuthService
             PostalCode = request.PostalCode,
             Country = request.Country ?? "Germany",
             TaxId = request.TaxId,
+            TaxNumber = request.TaxNumber,
             PhoneVerified = false,
             // Firm details (optional)
             FirmLegalName = request.FirmLegalName,
@@ -358,6 +359,7 @@ public class AuthService : IAuthService
             user.PostalCode,
             user.Country,
             user.TaxId,
+            user.TaxNumber,
             user.FirmLegalName,
             user.FirmTaxId,
             user.FirmChamberRegistration
