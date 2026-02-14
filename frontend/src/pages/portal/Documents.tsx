@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import { documentsAPI } from '../../services/api';
 import apiClient from '../../services/api';
@@ -42,6 +43,7 @@ const DEFAULT_MAX_STORAGE_MB = 100;
 const DOCUMENT_DELETE_ROLES = ['SuperAdmin', 'Admin', 'Consultant'];
 
 export default function Documents() {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterType, setFilterType] = useState('all');
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -439,7 +441,7 @@ export default function Documents() {
                       onClick={() => handleDelete(doc.id)}
                       className="flex-1 text-sm text-red-600 dark:text-red-400 hover:underline"
                     >
-                      🗑️ Löschen
+                      🗑️ {t('common.delete')}
                     </button>
                   )}
                 </div>
@@ -489,7 +491,7 @@ export default function Documents() {
                           onClick={() => handleDelete(doc.id)}
                           className="text-red-600 dark:text-red-400 hover:underline"
                         >
-                          Löschen
+                          {t('common.delete')}
                         </button>
                       )}
                     </td>

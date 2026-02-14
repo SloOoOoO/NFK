@@ -98,7 +98,10 @@
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required",
       "loginFailed": "Login failed. Please check your credentials.",
-      "registerFailed": "Registration failed. Please try again."
+      "registerFailed": "Registration failed. Please try again.",
+      "oauthFailed": "OAuth login failed",
+      "googleFailed": "Google login failed",
+      "datevFailed": "DATEV login failed"
     }
   },
   "dashboard": {

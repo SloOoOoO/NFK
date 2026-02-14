@@ -98,7 +98,10 @@
       "firstNameRequired": "Ad gereklidir",
       "lastNameRequired": "Soyad gereklidir",
       "loginFailed": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
-      "registerFailed": "Kayıt başarısız. Lütfen tekrar deneyin."
+      "registerFailed": "Kayıt başarısız. Lütfen tekrar deneyin.",
+      "oauthFailed": "OAuth girişi başarısız oldu",
+      "googleFailed": "Google girişi başarısız oldu",
+      "datevFailed": "DATEV girişi başarısız oldu"
     }
   },
   "dashboard": {

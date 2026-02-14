@@ -16,6 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (userData: User, token: string, refreshToken?: string) => void;
+  loginWithTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -87,6 +88,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true);
   };
 
+  const loginWithTokens = async (accessToken: string, refreshToken: string) => {
+    // Store tokens
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    
+    // Fetch user data
+    try {
+      const response = await authAPI.getCurrentUser();
+      const userData = response.data;
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      setIsAuthenticated(true);
+    } catch (error) {
+      // Log OAuth login failure
+      if (error instanceof Error) {
+        console.error('[AuthContext] Failed to fetch user data after OAuth login:', error.message);
+      } else {
+        console.error('[AuthContext] Failed to fetch user data after OAuth login');
+      }
+      // Clear tokens if we can't get user data
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      throw error;
+    }
+  };
+
   const logout = () => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
@@ -123,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isLoading,
         login,
+        loginWithTokens,
         logout,
         refreshUser,
       }}

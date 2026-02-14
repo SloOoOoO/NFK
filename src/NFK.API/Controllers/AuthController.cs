@@ -201,20 +201,21 @@ public class AuthController : ControllerBase
             
             if (_googleOAuthService != null && _configuration.GetValue<bool>("OAuth:Google:Enabled"))
             {
+                _logger.LogInformation("Initiating Google OAuth flow with callback: {CallbackUri}", callbackUri);
                 var authUrl = _googleOAuthService.GetAuthorizationUrl(callbackUri);
                 return Redirect(authUrl);
             }
             
             // Fallback: Simulate OAuth flow for development
-            _logger.LogWarning("Google OAuth not configured - using simulation mode");
+            _logger.LogWarning("Google OAuth not configured - using simulation mode. Set GOOGLE_OAUTH_ENABLED=true and configure credentials.");
             var redirectUri = $"{frontendUrl}/auth/register";
             return Redirect($"{redirectUri}?source=google&email=user@example.com");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Google login error");
+            _logger.LogError(ex, "Google login initialization error: {Message}", ex.Message);
             var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
-            return Redirect($"{frontendUrl}/auth/login?error=google_failed");
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("OAuth configuration error")}");
         }
     }
 
@@ -222,34 +223,56 @@ public class AuthController : ControllerBase
     /// Google OAuth Callback - Handles the OAuth callback from Google
     /// </summary>
     [HttpGet("google/callback")]
-    public async Task<IActionResult> GoogleCallback([FromQuery] string code)
+    public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string? error, [FromQuery] string? error_description)
     {
+        var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+        
         try
         {
-            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
+            // Check for OAuth errors from Google
+            if (!string.IsNullOrEmpty(error))
+            {
+                _logger.LogWarning("Google OAuth error: {Error} - {Description}", error, error_description);
+                var errorMessage = error_description ?? error;
+                return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString(errorMessage)}");
+            }
             
-            if (_googleOAuthService != null && !string.IsNullOrEmpty(code))
+            if (string.IsNullOrEmpty(code))
+            {
+                _logger.LogWarning("Google OAuth callback missing authorization code");
+                return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("No authorization code received")}");
+            }
+            
+            if (_googleOAuthService != null)
             {
                 var callbackUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/google/callback";
+                
+                _logger.LogInformation("Processing Google OAuth callback with code");
                 
                 // Exchange code for tokens and get user profile
                 var response = await _googleOAuthService.LoginAsync(code, callbackUri);
                 
-                // If user exists and is fully registered, redirect to dashboard with tokens
-                // Otherwise, redirect to registration with data pre-filled
-                var redirectUri = $"{frontendUrl}/auth/register";
-                return Redirect($"{redirectUri}?source=google&email={Uri.EscapeDataString(response.User.Email)}&providerId={Uri.EscapeDataString(response.User.Email)}");
+                _logger.LogInformation("Google OAuth successful for user: {Email}", response.User.Email);
+                
+                // Redirect to dashboard with tokens in URL (they will be stored in localStorage by frontend)
+                var redirectUri = $"{frontendUrl}/auth/oauth-success";
+                return Redirect($"{redirectUri}?accessToken={Uri.EscapeDataString(response.AccessToken)}&refreshToken={Uri.EscapeDataString(response.RefreshToken)}");
             }
             
             // Fallback for development
+            _logger.LogWarning("Google OAuth service not available - using fallback");
             var devRedirectUri = $"{frontendUrl}/auth/register";
             return Redirect($"{devRedirectUri}?source=google&email=user@example.com");
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Google callback validation error: {Message}", ex.Message);
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString(ex.Message)}");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Google callback error");
-            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:5173";
-            return Redirect($"{frontendUrl}/auth/login?error=google_failed");
+            _logger.LogError(ex, "Google callback unexpected error: {Message}", ex.Message);
+            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("An unexpected error occurred during Google login")}");
         }
     }
 

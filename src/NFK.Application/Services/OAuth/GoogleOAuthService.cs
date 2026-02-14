@@ -66,81 +66,133 @@ public class GoogleOAuthService : IGoogleOAuthService
 
     public async Task<OAuthLoginResponse> LoginAsync(string code, string redirectUri)
     {
-        _logger.LogInformation("Google OAuth login attempt");
+        _logger.LogInformation("Google OAuth login attempt with redirect URI: {RedirectUri}", redirectUri);
 
-        // Exchange code for access token
-        var tokenRequest = new Dictionary<string, string>
+        try
         {
-            ["code"] = code,
-            ["client_id"] = _clientId,
-            ["client_secret"] = _clientSecret,
-            ["redirect_uri"] = redirectUri,
-            ["grant_type"] = "authorization_code"
-        };
+            // Exchange code for access token
+            var tokenRequest = new Dictionary<string, string>
+            {
+                ["code"] = code,
+                ["client_id"] = _clientId,
+                ["client_secret"] = _clientSecret,
+                ["redirect_uri"] = redirectUri,
+                ["grant_type"] = "authorization_code"
+            };
 
-        var tokenResponse = await _httpClient.PostAsync(TokenEndpoint, new FormUrlEncodedContent(tokenRequest));
-        tokenResponse.EnsureSuccessStatusCode();
+            _logger.LogDebug("Requesting access token from Google");
+            var tokenResponse = await _httpClient.PostAsync(TokenEndpoint, new FormUrlEncodedContent(tokenRequest));
+            
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await tokenResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to exchange code for token. Status: {StatusCode}, Error: {Error}", 
+                    tokenResponse.StatusCode, errorContent);
+                throw new InvalidOperationException($"Failed to exchange authorization code for token: {errorContent}");
+            }
 
-        var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
-        var accessToken = tokenData.GetProperty("access_token").GetString() 
-            ?? throw new InvalidOperationException("No access token received");
+            var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
+            var accessToken = tokenData.GetProperty("access_token").GetString() 
+                ?? throw new InvalidOperationException("No access token received from Google");
 
-        // Get user profile
-        var userProfile = await GetUserProfileAsync(accessToken);
+            _logger.LogDebug("Access token received, fetching user profile");
 
-        // Find or create user
-        var user = await FindOrCreateGoogleUserAsync(userProfile);
+            // Get user profile
+            var userProfile = await GetUserProfileAsync(accessToken);
+            _logger.LogInformation("User profile retrieved for email: {Email}", userProfile.Email);
 
-        // Generate JWT tokens
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-        var jwtToken = _jwtService.GenerateAccessToken(
-            user.Id,
-            user.Email,
-            user.FirstName,
-            user.LastName,
-            roles);
-        var refreshToken = _jwtService.GenerateRefreshToken();
+            // Find or create user
+            var user = await FindOrCreateGoogleUserAsync(userProfile);
+            _logger.LogInformation("User authenticated: {UserId}, Email: {Email}", user.Id, user.Email);
 
-        // Store refresh token
-        var refreshTokenEntity = new RefreshToken
-        {
-            UserId = user.Id,
-            Token = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(_jwtService.GetRefreshTokenExpirationDays()),
-            IsRevoked = false
-        };
-
-        _context.RefreshTokens.Add(refreshTokenEntity);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Google OAuth login successful for user: {UserId}", user.Id);
-
-        return new OAuthLoginResponse(
-            jwtToken,
-            refreshToken,
-            _jwtService.GetAccessTokenExpirationSeconds(),
-            "Bearer",
-            new OAuthUserInfo(
+            // Generate JWT tokens
+            var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
+            var jwtToken = _jwtService.GenerateAccessToken(
                 user.Id,
                 user.Email,
                 user.FirstName,
                 user.LastName,
-                roles.FirstOrDefault() ?? "Client",
-                "Google"
-            )
-        );
+                roles);
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            // Store refresh token
+            var refreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(_jwtService.GetRefreshTokenExpirationDays()),
+                IsRevoked = false
+            };
+
+            _context.RefreshTokens.Add(refreshTokenEntity);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Google OAuth login successful for user: {UserId}", user.Id);
+
+            return new OAuthLoginResponse(
+                jwtToken,
+                refreshToken,
+                _jwtService.GetAccessTokenExpirationSeconds(),
+                "Bearer",
+                new OAuthUserInfo(
+                    user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    roles.FirstOrDefault() ?? "Client",
+                    "Google"
+                )
+            );
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error during Google OAuth: {Message}", ex.Message);
+            throw new InvalidOperationException("Failed to communicate with Google OAuth service. Please try again later.", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse Google OAuth response: {Message}", ex.Message);
+            throw new InvalidOperationException("Invalid response from Google OAuth service.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during Google OAuth login: {Message}", ex.Message);
+            throw;
+        }
     }
 
     public async Task<GoogleUserProfile> GetUserProfileAsync(string accessToken)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, UserInfoEndpoint);
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-        
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, UserInfoEndpoint);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+            
+            var response = await _httpClient.SendAsync(request);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to fetch user profile. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                throw new InvalidOperationException($"Failed to retrieve user profile from Google: {errorContent}");
+            }
 
-        var profile = await response.Content.ReadFromJsonAsync<GoogleUserProfile>();
-        return profile ?? throw new InvalidOperationException("Failed to retrieve user profile");
+            var profile = await response.Content.ReadFromJsonAsync<GoogleUserProfile>();
+            
+            if (profile == null)
+            {
+                _logger.LogError("Received null profile from Google");
+                throw new InvalidOperationException("Failed to parse user profile from Google");
+            }
+            
+            return profile;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error fetching Google user profile: {Message}", ex.Message);
+            throw new InvalidOperationException("Failed to fetch user profile from Google. Please try again later.", ex);
+        }
     }
 
     private async Task<User> FindOrCreateGoogleUserAsync(GoogleUserProfile profile)
