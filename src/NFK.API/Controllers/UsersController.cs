@@ -182,4 +182,111 @@ public class UsersController : ControllerBase
             return StatusCode(500, new { success = false, error = "internal_error", message = "Fehler beim Aktualisieren des Profils" });
         }
     }
+
+    [HttpDelete("profile")]
+    [Authorize]
+    public async Task<IActionResult> DeleteProfile([FromBody] DeleteProfileRequest request)
+    {
+        try
+        {
+            // Validate confirmation text
+            if (string.IsNullOrEmpty(request.ConfirmationText))
+            {
+                return BadRequest(new { error = "invalid_request", message = "Bestätigungstext ist erforderlich" });
+            }
+
+            // Check if confirmation text is "delete" reversed (eteled)
+            var reversedDelete = new string("delete".Reverse().ToArray());
+            if (request.ConfirmationText.ToLower() != reversedDelete)
+            {
+                return BadRequest(new { error = "invalid_confirmation", message = "Bestätigungstext ist ungültig. Bitte geben Sie 'delete' rückwärts ein." });
+            }
+
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "not_found", message = "Benutzer nicht gefunden" });
+            }
+
+            // Soft delete user
+            user.IsDeleted = true;
+            user.IsActive = false;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Delete all user's documents
+            var userDocuments = await _context.Documents
+                .Where(d => d.UploadedByUserId == userId && !d.IsDeleted)
+                .ToListAsync();
+
+            foreach (var doc in userDocuments)
+            {
+                doc.IsDeleted = true;
+                
+                // Delete physical file if it exists
+                if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(doc.FilePath);
+                    }
+                    catch (Exception fileEx)
+                    {
+                        _logger.LogWarning(fileEx, "Failed to delete physical file {FilePath}", doc.FilePath);
+                    }
+                }
+            }
+
+            // Soft delete user's messages (sender and receiver)
+            var userMessages = await _context.Set<Domain.Entities.Messaging.Message>()
+                .Where(m => m.SenderUserId == userId || m.RecipientUserId == userId)
+                .ToListAsync();
+
+            foreach (var message in userMessages)
+            {
+                message.IsDeleted = true;
+            }
+
+            // Cancel user's appointments
+            var userAppointments = await _context.Set<Domain.Entities.Other.Appointment>()
+                .Where(a => a.ClientId == userId || a.ConsultantUserId == userId)
+                .ToListAsync();
+
+            foreach (var appointment in userAppointments)
+            {
+                appointment.Status = "Cancelled";
+                appointment.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Log the deletion event
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = userId,
+                Action = "ProfileDeletion",
+                EntityType = "User",
+                EntityId = userId,
+                IpAddress = ipAddress,
+                Details = $"User {user.Email} deleted their profile",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { 
+                success = true,
+                message = "Profil erfolgreich gelöscht"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile");
+            return StatusCode(500, new { success = false, error = "internal_error", message = "Fehler beim Löschen des Profils" });
+        }
+    }
 }

@@ -54,18 +54,31 @@ public class DocumentsController : ControllerBase
 
             // ROLE-BASED FILTERING:
             // Clients: Only see their own documents (uploaded by them)
-            // Employees (SuperAdmin, DATEVManager, Consultant): See all documents
+            // Admin/SuperAdmin/Consultant: See all documents or filtered by clientId/userId
+            // Other roles (Receptionist, DATEVManager): No access to documents
+            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
+            var canViewAllDocuments = allowedViewRoles.Contains(userRole);
+
             if (userRole == "Client")
             {
                 query = query.Where(d => d.UploadedByUserId == currentUserId.Value);
             }
-            else if (clientId.HasValue || userId.HasValue)
+            else if (canViewAllDocuments)
             {
-                var filterUserId = clientId ?? userId;
-                if (filterUserId.HasValue)
+                // Admins/Consultants can filter by clientId or userId
+                if (clientId.HasValue || userId.HasValue)
                 {
-                    query = query.Where(d => d.UploadedByUserId == filterUserId.Value);
+                    var filterUserId = clientId ?? userId;
+                    if (filterUserId.HasValue)
+                    {
+                        query = query.Where(d => d.UploadedByUserId == filterUserId.Value);
+                    }
                 }
+            }
+            else
+            {
+                // Other roles have no access to documents
+                return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Dokumenten" });
             }
 
             var documents = await query
@@ -132,25 +145,25 @@ public class DocumentsController : ControllerBase
                 return StatusCode(403, new { error = "forbidden", message = "Nur Klienten können Dokumente hochladen" });
             }
 
-            // 1. Validate file type - allow PDF, PNG, JPG, JPEG, DOCX, XLSX, TXT
-            var allowedExtensions = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".docx", ".xlsx", ".txt" };
+            // 1. Validate file type - allow PDF, PNG, JPG, JPEG, DOCX, XLSX, TXT, ZIP, DOC
+            var allowedExtensions = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".docx", ".xlsx", ".txt", ".zip", ".doc" };
             var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
             
             if (!allowedExtensions.Contains(fileExtension))
             {
                 return BadRequest(new { 
                     error = "invalid_file_type", 
-                    message = $"Dateityp {fileExtension} nicht erlaubt. Erlaubt: PDF, PNG, JPG, DOCX, XLSX, TXT" 
+                    message = $"Dateityp {fileExtension} nicht erlaubt. Erlaubt: PDF, PNG, JPG, DOCX, XLSX, TXT, ZIP, DOC" 
                 });
             }
 
-            // 2. Validate file size (max 50 MB)
-            const long maxFileSize = 50 * 1024 * 1024; // 50MB in bytes
+            // 2. Validate file size (max 100 MB)
+            const long maxFileSize = 100 * 1024 * 1024; // 100MB in bytes
             if (file.Length > maxFileSize)
             {
                 return BadRequest(new { 
                     error = "file_too_large", 
-                    message = "Datei zu groß (max. 50 MB)" 
+                    message = "Datei zu groß (max. 100 MB)" 
                 });
             }
 
@@ -219,6 +232,22 @@ public class DocumentsController : ControllerBase
             };
 
             _context.Documents.Add(document);
+            await _context.SaveChangesAsync();
+
+            // Log document upload to audit trail
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = currentUserId.Value,
+                Action = "DocumentUpload",
+                EntityType = "Document",
+                EntityId = document.Id,
+                IpAddress = ipAddress,
+                Details = $"Uploaded document: {document.FileName} ({document.FileSize} bytes)",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
             await _context.SaveChangesAsync();
 
             var response = new UploadDocumentResponse(

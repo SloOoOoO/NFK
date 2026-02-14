@@ -37,3 +37,44 @@ public record UpdateHeaderTextRequest(
     string WelcomeTitle,
     string WelcomeSubtitle
 );
+
+public record UserStatisticsDto(
+    int TotalUsers,
+    int TotalClients,
+    int ActiveUsers,
+    DailyActiveUsersDto DailyActive,
+    WeeklyActiveUsersDto WeeklyActive,
+    MonthlyActiveUsersDto MonthlyActive,
+    NewSignupsDto NewSignups,
+    KeyEventsDto KeyEvents
+);
+
+public record DailyActiveUsersDto(
+    int Count,
+    DateTime Date
+);
+
+public record WeeklyActiveUsersDto(
+    int Count,
+    DateTime WeekStart
+);
+
+public record MonthlyActiveUsersDto(
+    int Count,
+    DateTime MonthStart
+);
+
+public record NewSignupsDto(
+    int Today,
+    int ThisWeek,
+    int ThisMonth
+);
+
+public record KeyEventsDto(
+    int LoginsToday,
+    int LoginsThisWeek,
+    int DocumentUploadsToday,
+    int DocumentUploadsThisWeek,
+    int DATEVSyncsCompletedToday,
+    int DATEVSyncsCompletedThisWeek
+);
