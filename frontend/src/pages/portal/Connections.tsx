@@ -1,11 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
+import apiClient from '../../services/api';
 
 export default function Connections() {
   const { t } = useTranslation();
-  const [googleConnected] = useState(false);
-  const [datevConnected] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [datevConnected, setDatevConnected] = useState(false);
+  const [datevLastSync, setDatevLastSync] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchConnectionStatus = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Fetch DATEV connection status
+      const datevResponse = await apiClient.get('/datev/status');
+      if (datevResponse.data) {
+        setDatevConnected(datevResponse.data.connected || false);
+        setDatevLastSync(datevResponse.data.lastSync || null);
+      }
+      
+      // Google connection is not yet implemented, so it remains false
+      setGoogleConnected(false);
+    } catch (error) {
+      console.error('Error fetching connection status:', error);
+      // On error, assume not connected
+      setDatevConnected(false);
+      setGoogleConnected(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchConnectionStatus();
+  }, [fetchConnectionStatus]);
 
   const handleGoogleConnect = () => {
     // TODO: Implement Google SSO flow
@@ -59,7 +88,7 @@ export default function Connections() {
             
             <div className="mb-6">
               <p className="text-sm text-textSecondary dark:text-gray-400 mb-2">
-                {t('connections.status.active')}: {googleConnected ? t('connections.google.connected') : t('connections.google.notConnected')}
+                {t('connections.status.active')}: {loading ? t('common.loading') : googleConnected ? t('connections.google.connected') : t('connections.google.notConnected')}
               </p>
               {googleConnected && (
                 <p className="text-xs text-textSecondary dark:text-gray-500">
@@ -104,11 +133,11 @@ export default function Connections() {
             
             <div className="mb-6">
               <p className="text-sm text-textSecondary dark:text-gray-400 mb-2">
-                {t('connections.status.active')}: {datevConnected ? t('connections.datev.connected') : t('connections.datev.notConnected')}
+                {t('connections.status.active')}: {loading ? t('common.loading') : datevConnected ? t('connections.datev.connected') : t('connections.datev.notConnected')}
               </p>
-              {datevConnected && (
+              {datevConnected && datevLastSync && (
                 <p className="text-xs text-textSecondary dark:text-gray-500">
-                  {t('connections.status.lastSync')}: {new Date().toLocaleString('de-DE')}
+                  {t('connections.status.lastSync')}: {new Date(datevLastSync).toLocaleString('de-DE')}
                 </p>
               )}
             </div>

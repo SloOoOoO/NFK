@@ -252,7 +252,7 @@
     "status": "Status"
   },
   "connections": {
-    "title": "Connections",
+    "title": "Verbindungen",
     "subtitle": "Verwalten Sie Ihre Integrationen",
     "google": {
       "title": "Google",
