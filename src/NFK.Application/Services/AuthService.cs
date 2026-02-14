@@ -112,7 +112,10 @@ public class AuthService : IAuthService
 
         _context.Users.Add(user);
         
-        // Add to password history before first save
+        // Save user first to get the generated Id
+        await _context.SaveChangesAsync();
+        
+        // Now create password history with the persisted user.Id
         var passwordHistory = new PasswordHistory
         {
             UserId = user.Id,
