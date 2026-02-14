@@ -67,12 +67,13 @@ public class AdminController : ControllerBase
                     .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == currentUserId);
 
-            var currentUserRole = currentUser?.UserRoles.FirstOrDefault()?.Role.Name;
+            // Get current user's role - check all roles for admin access
+            var currentUserRoles = currentUser?.UserRoles.Select(ur => ur.Role.Name).ToList() ?? new List<string>();
             
             // Check if user is authorized to view this user's details
             // SuperAdmin, Admin, and Consultant can view any user
             // Other roles can only view their own info
-            var isAdminRole = currentUserRole == "SuperAdmin" || currentUserRole == "Admin" || currentUserRole == "Consultant";
+            var isAdminRole = currentUserRoles.Any(r => r == "SuperAdmin" || r == "Admin" || r == "Consultant");
             
             if (!isAdminRole && currentUserId != id)
             {

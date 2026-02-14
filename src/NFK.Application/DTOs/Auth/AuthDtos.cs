@@ -12,7 +12,7 @@ public record RegisterRequest(
     string? PhoneNumber = null,
     DateTime? DateOfBirth = null,
     string? Address = null,
-    string? Street = null, // Frontend sends 'street' instead of 'address'
+    string? Street = null, // Frontend compatibility: Use Street if Address not provided (temporary)
     string? City = null,
     string? PostalCode = null,
     string? Country = null,
