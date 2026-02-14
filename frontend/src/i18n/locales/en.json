@@ -103,6 +103,7 @@
       "googleFailed": "Google login failed",
       "datevFailed": "DATEV login failed",
       "googleNotConfigured": "Google Sign-In is not configured. Please use email registration.",
+      "googleServiceUnavailable": "Google Sign-In service is currently unavailable. Please use email registration.",
       "googleOAuthDataMissing": "Google login failed: Authentication data is missing. Please try again.",
       "googleInvalidEmail": "Google login failed: Invalid email address received. Please use normal registration."
     }

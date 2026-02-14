@@ -39,6 +39,16 @@ export default function Login() {
         console.error('[DATEV Auth Error]', errorMessage || 'Unknown error');
       }
       setError(msg);
+    } else if (ssoError === 'google_not_configured') {
+      setError(t('auth.errors.googleNotConfigured'));
+      if (import.meta.env.DEV) {
+        console.error('[Google Auth Error]', 'OAuth not configured');
+      }
+    } else if (ssoError === 'google_service_unavailable') {
+      setError(t('auth.errors.googleServiceUnavailable'));
+      if (import.meta.env.DEV) {
+        console.error('[Google Auth Error]', 'Service unavailable');
+      }
     } else if (ssoError === 'google_failed') {
       const msg = errorMessage 
         ? `${t('auth.errors.googleFailed')}: ${errorMessage}` 

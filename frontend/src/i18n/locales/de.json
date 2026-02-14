@@ -103,6 +103,7 @@
       "googleFailed": "Google-Anmeldung fehlgeschlagen",
       "datevFailed": "DATEV-Anmeldung fehlgeschlagen",
       "googleNotConfigured": "Google Sign-In ist nicht konfiguriert. Bitte verwenden Sie die E-Mail-Registrierung.",
+      "googleServiceUnavailable": "Google Sign-In Service ist derzeit nicht verfügbar. Bitte verwenden Sie die E-Mail-Registrierung.",
       "googleOAuthDataMissing": "Google-Anmeldung fehlgeschlagen: Authentifizierungsdaten fehlen. Bitte versuchen Sie es erneut.",
       "googleInvalidEmail": "Google-Anmeldung fehlgeschlagen: Ungültige E-Mail-Adresse erhalten. Bitte verwenden Sie die normale Registrierung."
     }

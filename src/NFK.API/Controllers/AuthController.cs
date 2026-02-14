@@ -208,7 +208,7 @@ public class AuthController : ControllerBase
             
             // Google OAuth not configured - show error instead of fallback
             _logger.LogWarning("Google OAuth not configured - Set OAuth:Google:Enabled=true and configure credentials in appsettings.");
-            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("Google Sign-In ist nicht konfiguriert. Bitte verwenden Sie die E-Mail-Registrierung.")}");
+            return Redirect($"{frontendUrl}/auth/login?error=google_not_configured");
         }
         catch (Exception ex)
         {
@@ -275,7 +275,7 @@ public class AuthController : ControllerBase
             
             // Google OAuth service not available - show error
             _logger.LogError("Google OAuth service not available in callback");
-            return Redirect($"{frontendUrl}/auth/login?error=google_failed&message={Uri.EscapeDataString("Google Sign-In service ist nicht verfügbar")}");
+            return Redirect($"{frontendUrl}/auth/login?error=google_service_unavailable");
         }
         catch (InvalidOperationException ex)
         {

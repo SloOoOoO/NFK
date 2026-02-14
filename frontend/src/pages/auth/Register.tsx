@@ -195,7 +195,7 @@ export default function Register() {
       setValue('email', email);
       setDisabledFields(prev => ({ ...prev, email: true }));
     }
-  }, [searchParams, setValue]);
+  }, [searchParams, setValue, t]);
   
   const clientType = watch('clientType');
   const password = watch('password');
