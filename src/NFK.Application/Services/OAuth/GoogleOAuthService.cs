@@ -101,8 +101,16 @@ public class GoogleOAuthService : IGoogleOAuthService
             var userProfile = await GetUserProfileAsync(accessToken);
             _logger.LogInformation("User profile retrieved for email: {Email}", userProfile.Email);
 
-            // Find or create user
-            var user = await FindOrCreateGoogleUserAsync(userProfile);
+            // Find existing user (do not create new users)
+            var user = await FindGoogleUserAsync(userProfile);
+            
+            if (user == null)
+            {
+                // User does not exist - this should not happen in LoginAsync
+                _logger.LogWarning("Attempted login for non-existent Google user: {Email}", userProfile.Email);
+                throw new InvalidOperationException("User account not found. Please complete registration first.");
+            }
+
             _logger.LogInformation("User authenticated: {UserId}, Email: {Email}", user.Id, user.Email);
 
             // Generate JWT tokens
@@ -125,6 +133,9 @@ public class GoogleOAuthService : IGoogleOAuthService
             };
 
             _context.RefreshTokens.Add(refreshTokenEntity);
+            
+            // Update last login time
+            user.LastLoginAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Google OAuth login successful for user: {UserId}", user.Id);
@@ -193,6 +204,193 @@ public class GoogleOAuthService : IGoogleOAuthService
             _logger.LogError(ex, "HTTP error fetching Google user profile: {Message}", ex.Message);
             throw new InvalidOperationException("Failed to fetch user profile from Google. Please try again later.", ex);
         }
+    }
+
+    public async Task<GoogleUserProfile> GetUserProfileFromCodeAsync(string code, string redirectUri)
+    {
+        try
+        {
+            // Exchange code for access token
+            var tokenRequest = new Dictionary<string, string>
+            {
+                ["code"] = code,
+                ["client_id"] = _clientId,
+                ["client_secret"] = _clientSecret,
+                ["redirect_uri"] = redirectUri,
+                ["grant_type"] = "authorization_code"
+            };
+
+            _logger.LogDebug("Requesting access token from Google to get user profile");
+            var tokenResponse = await _httpClient.PostAsync(TokenEndpoint, new FormUrlEncodedContent(tokenRequest));
+            
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await tokenResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to exchange code for token. Status: {StatusCode}, Error: {Error}", 
+                    tokenResponse.StatusCode, errorContent);
+                throw new InvalidOperationException($"Failed to exchange authorization code for token: {errorContent}");
+            }
+
+            var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
+            var accessToken = tokenData.GetProperty("access_token").GetString() 
+                ?? throw new InvalidOperationException("No access token received from Google");
+
+            // Get user profile
+            return await GetUserProfileAsync(accessToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error during Google profile fetch: {Message}", ex.Message);
+            throw new InvalidOperationException("Failed to communicate with Google OAuth service. Please try again later.", ex);
+        }
+    }
+
+    public async Task<bool> UserExistsAsync(string email, string googleId)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.GoogleId == googleId || u.Email == email);
+        return user != null;
+    }
+
+    public async Task<OAuthAuthenticationResult> AuthenticateAsync(string code, string redirectUri)
+    {
+        _logger.LogInformation("Google OAuth authentication attempt with redirect URI: {RedirectUri}", redirectUri);
+
+        try
+        {
+            // Exchange code for access token
+            var tokenRequest = new Dictionary<string, string>
+            {
+                ["code"] = code,
+                ["client_id"] = _clientId,
+                ["client_secret"] = _clientSecret,
+                ["redirect_uri"] = redirectUri,
+                ["grant_type"] = "authorization_code"
+            };
+
+            _logger.LogDebug("Requesting access token from Google");
+            var tokenResponse = await _httpClient.PostAsync(TokenEndpoint, new FormUrlEncodedContent(tokenRequest));
+            
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await tokenResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to exchange code for token. Status: {StatusCode}, Error: {Error}", 
+                    tokenResponse.StatusCode, errorContent);
+                throw new InvalidOperationException($"Failed to exchange authorization code for token: {errorContent}");
+            }
+
+            var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
+            var accessToken = tokenData.GetProperty("access_token").GetString() 
+                ?? throw new InvalidOperationException("No access token received from Google");
+
+            _logger.LogDebug("Access token received, fetching user profile");
+
+            // Get user profile
+            var userProfile = await GetUserProfileAsync(accessToken);
+            _logger.LogInformation("User profile retrieved for email: {Email}", userProfile.Email);
+
+            // Check if user exists
+            var user = await FindGoogleUserAsync(userProfile);
+            
+            if (user == null)
+            {
+                // New user - return profile for registration
+                _logger.LogInformation("New Google user - needs registration: {Email}", userProfile.Email);
+                return new OAuthAuthenticationResult(
+                    UserExists: false,
+                    Profile: userProfile,
+                    LoginResponse: null
+                );
+            }
+
+            // Existing user - generate tokens and return login response
+            _logger.LogInformation("Existing user authenticated: {UserId}, Email: {Email}", user.Id, user.Email);
+
+            var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
+            var jwtToken = _jwtService.GenerateAccessToken(
+                user.Id,
+                user.Email,
+                user.FirstName,
+                user.LastName,
+                roles);
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            // Store refresh token
+            var refreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+                Token = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(_jwtService.GetRefreshTokenExpirationDays()),
+                IsRevoked = false
+            };
+
+            _context.RefreshTokens.Add(refreshTokenEntity);
+            
+            // Update last login time
+            user.LastLoginAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Google OAuth login successful for user: {UserId}", user.Id);
+
+            var loginResponse = new OAuthLoginResponse(
+                jwtToken,
+                refreshToken,
+                _jwtService.GetAccessTokenExpirationSeconds(),
+                "Bearer",
+                new OAuthUserInfo(
+                    user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    roles.FirstOrDefault() ?? "Client",
+                    "Google"
+                )
+            );
+
+            return new OAuthAuthenticationResult(
+                UserExists: true,
+                Profile: userProfile,
+                LoginResponse: loginResponse
+            );
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error during Google OAuth: {Message}", ex.Message);
+            throw new InvalidOperationException("Failed to communicate with Google OAuth service. Please try again later.", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse Google OAuth response: {Message}", ex.Message);
+            throw new InvalidOperationException("Invalid response from Google OAuth service.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during Google OAuth authentication: {Message}", ex.Message);
+            throw;
+        }
+    }
+
+    private async Task<User?> FindGoogleUserAsync(GoogleUserProfile profile)
+    {
+        // Find user by Google ID or email, include roles
+        var user = await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.GoogleId == profile.Sub || u.Email == profile.Email);
+
+        if (user != null)
+        {
+            // If user exists but GoogleId is not set, link the account
+            if (string.IsNullOrEmpty(user.GoogleId))
+            {
+                user.GoogleId = profile.Sub;
+                user.IsEmailConfirmed = profile.EmailVerified;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Existing user linked to Google: {Email}", user.Email);
+            }
+        }
+
+        return user;
     }
 
     private async Task<User> FindOrCreateGoogleUserAsync(GoogleUserProfile profile)

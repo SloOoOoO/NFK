@@ -43,3 +43,13 @@ public record DATEVUserProfile(
     string? CompanyId,
     string? ConsultantNumber
 );
+
+/// <summary>
+/// Result of OAuth authentication attempt
+/// Indicates whether user exists or needs to complete registration
+/// </summary>
+public record OAuthAuthenticationResult(
+    bool UserExists,
+    GoogleUserProfile? Profile,
+    OAuthLoginResponse? LoginResponse
+);
