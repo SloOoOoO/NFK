@@ -129,6 +129,7 @@ builder.Services.AddAuthorization();
 // Register application services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<UnverifiedUserCleanupService>();
 builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();
@@ -278,6 +279,12 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = new[] { new HangfireAuthorizationFilter() }
 });
+
+// Schedule recurring background jobs
+RecurringJob.AddOrUpdate<UnverifiedUserCleanupService>(
+    "delete-expired-unverified-users",
+    svc => svc.DeleteExpiredUnverifiedUsersAsync(),
+    Cron.Hourly);
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
