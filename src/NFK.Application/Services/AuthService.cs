@@ -247,6 +247,14 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Account is not active.");
         }
 
+        // Check if email has been verified
+        if (!user.IsEmailConfirmed)
+        {
+            _logger.LogWarning("Login failed - email not verified: {Email} from IP: {IP}", request.Email, ipAddress);
+            await LogFailedLoginAttempt(request.Email, ipAddress, "Email not verified");
+            throw new UnauthorizedAccessException("Please verify your email address before logging in. Check your inbox for the verification email.");
+        }
+
         // Verify password
         if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {

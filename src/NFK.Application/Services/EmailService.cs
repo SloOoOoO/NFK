@@ -20,7 +20,7 @@ public class EmailService : IEmailService
     {
         _configuration = configuration;
         _logger = logger;
-        _fromEmail = configuration["Email:Smtp:FromEmail"] ?? "info@nfk-buchhaltung.de";
+        _fromEmail = configuration["Email:Smtp:FromEmail"] ?? "security@nfk-buchhaltung.de";
         _fromName = configuration["Email:Smtp:FromName"] ?? "NFK Buchhaltung";
         _frontendUrl = configuration["Frontend:Url"] ?? "http://localhost:5173";
     }
@@ -61,7 +61,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>security@nfk-buchhaltung.de</p>
         </div>
     </div>
 </body>
@@ -108,7 +108,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>security@nfk-buchhaltung.de</p>
         </div>
     </div>
 </body>
@@ -150,7 +150,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>security@nfk-buchhaltung.de</p>
         </div>
     </div>
 </body>
@@ -190,7 +190,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>security@nfk-buchhaltung.de</p>
         </div>
     </div>
 </body>
