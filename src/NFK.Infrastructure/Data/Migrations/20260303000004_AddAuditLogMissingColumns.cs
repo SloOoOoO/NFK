@@ -1,10 +1,14 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using NFK.Infrastructure.Data;
 
 #nullable disable
 
 namespace NFK.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260303000004_AddAuditLogMissingColumns")]
     public partial class AddAuditLogMissingColumns : Migration
     {
         /// <inheritdoc />
