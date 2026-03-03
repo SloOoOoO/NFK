@@ -349,6 +349,40 @@ public class AdminController : ControllerBase
             var datevSyncsThisWeek = await _context.Set<Domain.Entities.DATEV.DATEVJob>()
                 .CountAsync(j => j.CompletedAt.HasValue && j.CompletedAt.Value >= weekStart && j.Status == "Completed");
 
+            // Login activity: daily, monthly, yearly counts and last 30 days series
+            var yearStart = new DateTime(now.Year, 1, 1);
+            var thirtyDaysAgo = today.AddDays(-29);
+
+            var loginCountsDaily = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= today);
+            var loginCountsMonthly = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= monthStart);
+            var loginCountsYearly = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= yearStart);
+
+            var loginsByDay = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .Where(la => la.IsSuccessful && la.CreatedAt >= thirtyDaysAgo)
+                .GroupBy(la => la.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            // Fill in missing days with 0
+            var loginsByDayDict = loginsByDay.ToDictionary(x => x.Date, x => x.Count);
+            var last30DaysSeries = Enumerable.Range(0, 30)
+                .Select(i => today.AddDays(-(29 - i)))
+                .Select(date => new LoginDayDto(
+                    date.ToString("yyyy-MM-dd"),
+                    loginsByDayDict.TryGetValue(date, out var count) ? count : 0
+                ))
+                .ToList();
+
+            var loginActivity = new LoginActivityDto(
+                loginCountsDaily,
+                loginCountsMonthly,
+                loginCountsYearly,
+                last30DaysSeries
+            );
+
             var statistics = new UserStatisticsDto(
                 TotalUsers: totalUsers,
                 TotalClients: totalClients,
@@ -364,7 +398,8 @@ public class AdminController : ControllerBase
                     documentUploadsThisWeek,
                     datevSyncsToday,
                     datevSyncsThisWeek
-                )
+                ),
+                LoginActivity: loginActivity
             );
 
             return Ok(statistics);

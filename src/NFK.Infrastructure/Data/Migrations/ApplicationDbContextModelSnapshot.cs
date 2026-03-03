@@ -541,6 +541,52 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.ToTable("DATEVLogs");
                 });
 
+            modelBuilder.Entity("NFK.Domain.Entities.Users.EmailVerificationToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EmailVerificationTokens");
+                });
+
             modelBuilder.Entity("NFK.Domain.Entities.Documents.Document", b =>
                 {
                     b.Property<int>("Id")
@@ -1744,6 +1790,17 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NFK.Domain.Entities.Users.EmailVerificationToken", b =>
+                {
+                    b.HasOne("NFK.Domain.Entities.Users.User", "User")
+                        .WithMany("EmailVerificationTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NFK.Domain.Entities.Users.PasswordHistory", b =>
                 {
                     b.HasOne("NFK.Domain.Entities.Users.User", "User")
@@ -1901,6 +1958,8 @@ namespace NFK.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("NFK.Domain.Entities.Users.User", b =>
                 {
+                    b.Navigation("EmailVerificationTokens");
+
                     b.Navigation("PasswordHistories");
 
                     b.Navigation("PasswordResetTokens");

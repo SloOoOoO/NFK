@@ -46,7 +46,8 @@ public record UserStatisticsDto(
     WeeklyActiveUsersDto WeeklyActive,
     MonthlyActiveUsersDto MonthlyActive,
     NewSignupsDto NewSignups,
-    KeyEventsDto KeyEvents
+    KeyEventsDto KeyEvents,
+    LoginActivityDto LoginActivity
 );
 
 public record DailyActiveUsersDto(
@@ -77,4 +78,16 @@ public record KeyEventsDto(
     int DocumentUploadsThisWeek,
     int DATEVSyncsCompletedToday,
     int DATEVSyncsCompletedThisWeek
+);
+
+public record LoginActivityDto(
+    int Daily,
+    int Monthly,
+    int Yearly,
+    List<LoginDayDto> Last30Days
+);
+
+public record LoginDayDto(
+    string Date,
+    int Count
 );

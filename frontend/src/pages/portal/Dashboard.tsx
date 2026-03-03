@@ -283,10 +283,10 @@ export default function Dashboard() {
         {/* Bottom Grid - Connections and Recent Activity */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Connections Status */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md opacity-60">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">🔄 {t('dashboard.sections.connectionsActivity')}</h2>
-              <Link to="/portal/connections" className="text-primary dark:text-blue-400 hover:underline text-sm">{t('dashboard.sections.details')} →</Link>
+              <span className="text-gray-400 dark:text-gray-500 text-sm cursor-not-allowed">{t('dashboard.sections.details')} →</span>
             </div>
             
             <div className="space-y-4">
@@ -324,11 +324,12 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <Link to="/portal/connections">
-                <button className="w-full mt-2 px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
-                  {t('dashboard.sections.manageConnections')}
-                </button>
-              </Link>
+              <button
+                disabled
+                className="w-full mt-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg text-sm cursor-not-allowed"
+              >
+                {t('dashboard.sections.manageConnections')}
+              </button>
             </div>
           </div>
 
