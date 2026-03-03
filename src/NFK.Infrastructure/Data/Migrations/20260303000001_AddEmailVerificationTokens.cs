@@ -1,10 +1,14 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using NFK.Infrastructure.Data;
 
 #nullable disable
 
 namespace NFK.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260303000001_AddEmailVerificationTokens")]
     public partial class AddEmailVerificationTokens : Migration
     {
         /// <inheritdoc />
