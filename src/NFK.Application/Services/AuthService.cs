@@ -305,6 +305,17 @@ public class AuthService : IAuthService
         };
 
         _context.RefreshTokens.Add(refreshTokenEntity);
+
+        // Record successful login in LoginAttempts for statistics tracking
+        var successfulLogin = new Domain.Entities.Audit.LoginAttempt
+        {
+            Email = user.Email,
+            IsSuccessful = true,
+            IpAddress = ipAddress,
+            UserAgent = userAgent
+        };
+        _context.LoginAttempts.Add(successfulLogin);
+
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("User logged in successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
@@ -457,6 +468,12 @@ public class AuthService : IAuthService
             user.Country,
             user.TaxId,
             user.TaxNumber,
+            user.VatId,
+            user.CommercialRegister,
+            user.ClientType,
+            user.CompanyName,
+            user.Salutation,
+            user.Gender,
             user.FirmLegalName,
             user.FirmTaxId,
             user.FirmChamberRegistration

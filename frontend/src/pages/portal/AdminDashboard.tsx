@@ -5,6 +5,15 @@ import { adminAPI } from '../../services/api';
 import apiClient from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
@@ -283,8 +292,118 @@ export default function AdminDashboard() {
 
           {/* Analytics/Statistics Tab */}
           {activeTab === 'analytics' && (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-6 dark:text-white">Statistiken</h2>
+            <div className="space-y-8">
+              {/* Login Activity Section */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-6 dark:text-white">Login-Statistiken</h2>
+
+                {loading ? (
+                  <div className="text-center py-8 text-textSecondary dark:text-gray-400">Lädt...</div>
+                ) : !statistics ? (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    Keine Statistiken verfügbar
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Login count summary cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.loginActivity?.daily ?? 0}
+                        </div>
+                        <div className="text-blue-100 font-medium">Anmeldungen heute</div>
+                        <div className="text-blue-200 text-sm mt-1">Tagesstatistik</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.loginActivity?.monthly ?? 0}
+                        </div>
+                        <div className="text-green-100 font-medium">Anmeldungen diesen Monat</div>
+                        <div className="text-green-200 text-sm mt-1">Monatsstatistik</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-lg shadow text-white">
+                        <div className="text-4xl font-bold mb-2">
+                          {statistics.loginActivity?.yearly ?? 0}
+                        </div>
+                        <div className="text-purple-100 font-medium">Anmeldungen dieses Jahr</div>
+                        <div className="text-purple-200 text-sm mt-1">Jahresstatistik</div>
+                      </div>
+                    </div>
+
+                    {/* Login Activity Chart */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">
+                        📈 Anmeldungsaktivität – letzte 30 Tage
+                      </h3>
+                      <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+                        {statistics.loginActivity?.last30Days?.length > 0 ? (
+                          <ResponsiveContainer width="100%" height={280}>
+                            <AreaChart
+                              data={statistics.loginActivity.last30Days}
+                              margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                            >
+                              <defs>
+                                <linearGradient id="loginGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis
+                                dataKey="date"
+                                tick={{ fontSize: 11, fill: '#6b7280' }}
+                                tickFormatter={(value: string) => {
+                                  const d = new Date(value);
+                                  return `${d.getDate()}.${d.getMonth() + 1}`;
+                                }}
+                                interval={4}
+                              />
+                              <YAxis
+                                tick={{ fontSize: 11, fill: '#6b7280' }}
+                                allowDecimals={false}
+                                width={30}
+                              />
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: '#1f2937',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  color: '#f9fafb',
+                                }}
+                                labelFormatter={(label) =>
+                                  new Date(String(label)).toLocaleDateString('de-DE', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                  })
+                                }
+                                formatter={(value) => [Number(value), 'Anmeldungen'] as [number, string]}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="count"
+                                stroke="#3b82f6"
+                                strokeWidth={2}
+                                fill="url(#loginGradient)"
+                                dot={false}
+                                activeDot={{ r: 5, fill: '#3b82f6' }}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-48 flex items-center justify-center text-gray-400 dark:text-gray-500">
+                            Noch keine Anmeldedaten vorhanden
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User Statistics */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-6 dark:text-white">Statistiken</h2>
               
               {loading ? (
                 <div className="text-center py-8 text-textSecondary dark:text-gray-400">Lädt...</div>
@@ -422,6 +541,7 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          </div>
           )}
         </div>
       </main>
