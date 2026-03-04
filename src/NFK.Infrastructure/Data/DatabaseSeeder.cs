@@ -48,6 +48,19 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         // Seed Users
+        // In development, admin credentials can be overridden via environment variables:
+        //   SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD
+        // Defaults are only suitable for local development – override in staging/production.
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        var isDevelopment = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+
+        var adminEmail = (isDevelopment
+            ? (Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL") ?? "admin@nfk.local")
+            : "admin@nfk.local");
+        var adminPassword = (isDevelopment
+            ? (Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD") ?? "Admin123!")
+            : "Admin123!");
+
         var suheylUser = new User
         {
             Email = "karatas@nfk-buchhaltung.de",
@@ -62,8 +75,8 @@ public static class DatabaseSeeder
 
         var testUser = new User
         {
-            Email = "test@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
+            Email = adminEmail,
+            PasswordHash = passwordHasher.HashPassword(adminPassword),
             FirstName = "Max",
             LastName = "Berater",
             FullLegalName = "Max Berater",
