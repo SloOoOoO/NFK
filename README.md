@@ -258,7 +258,46 @@ DATEV_SFTP_HOST=sftp.datev.de
 
 # Email
 SENDGRID_API_KEY=your_sendgrid_key
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=security@nfk-buchhaltung.de
+SMTP_PASSWORD=your_smtp_password
+SMTP_FROM=security@nfk-buchhaltung.de
+SMTP_ENABLE_SSL=true
 ```
+
+### SMTP Local Setup & Verification (Registration + Forgot Password)
+
+1. Copy environment template and set SMTP values:
+   ```bash
+   cp .env.example .env
+   ```
+   Required variables:
+   - `SMTP_HOST`
+   - `SMTP_PORT`
+   - `SMTP_USERNAME`
+   - `SMTP_PASSWORD`
+   - `SMTP_FROM` (use `security@nfk-buchhaltung.de`)
+   - `SMTP_ENABLE_SSL`
+
+2. Start stack with rebuild:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. Verify API started with SMTP variables and no missing-config warning:
+   ```bash
+   docker-compose logs api | grep "SMTP configuration is incomplete"
+   ```
+   Expected: no output when all SMTP variables are set.
+
+4. Test registration email:
+   - Create a new user via UI (`/auth/register`) or `POST /api/v1/auth/register`
+   - Confirm verification email is delivered and sender is `security@nfk-buchhaltung.de`
+
+5. Test forgot-password email:
+   - Trigger forgot-password via UI (`/auth/forgot-password`) or `POST /api/v1/auth/forgot-password`
+   - Confirm reset email is delivered and sender is `security@nfk-buchhaltung.de`
 
 ### OAuth Setup
 

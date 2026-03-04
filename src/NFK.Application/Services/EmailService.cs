@@ -10,7 +10,6 @@ public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
-    private readonly string _fromEmail;
     private readonly string _fromName;
     private readonly string _frontendUrl;
 
@@ -20,7 +19,6 @@ public class EmailService : IEmailService
     {
         _configuration = configuration;
         _logger = logger;
-        _fromEmail = configuration["Email:Smtp:FromEmail"] ?? "security@nfk-buchhaltung.de";
         _fromName = configuration["Email:Smtp:FromName"] ?? "NFK Buchhaltung";
         _frontendUrl = configuration["Frontend:Url"] ?? "http://localhost:5173";
     }
@@ -225,18 +223,35 @@ public class EmailService : IEmailService
 
     private async Task SendViaSmtpAsync(string toEmail, string subject, string htmlBody)
     {
-        var smtpHost = _configuration["Email:Smtp:Host"];
-        var smtpPort = int.Parse(_configuration["Email:Smtp:Port"] ?? "587");
-        var smtpUsername = _configuration["Email:Smtp:Username"];
-        var smtpPassword = _configuration["Email:Smtp:Password"];
-        var enableSsl = bool.Parse(_configuration["Email:Smtp:EnableSsl"] ?? "true");
+        var smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST");
+        var smtpPortValue = Environment.GetEnvironmentVariable("SMTP_PORT");
+        var smtpUsername = Environment.GetEnvironmentVariable("SMTP_USERNAME");
+        var smtpPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+        var smtpFrom = Environment.GetEnvironmentVariable("SMTP_FROM");
+        var enableSslValue = Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL");
 
-        if (string.IsNullOrEmpty(smtpHost) || string.IsNullOrEmpty(smtpUsername) || string.IsNullOrEmpty(smtpPassword))
+        var missingVariables = new List<string>();
+        if (string.IsNullOrWhiteSpace(smtpHost)) missingVariables.Add("SMTP_HOST");
+        if (string.IsNullOrWhiteSpace(smtpPortValue)) missingVariables.Add("SMTP_PORT");
+        if (string.IsNullOrWhiteSpace(smtpUsername)) missingVariables.Add("SMTP_USERNAME");
+        if (string.IsNullOrWhiteSpace(smtpPassword)) missingVariables.Add("SMTP_PASSWORD");
+        if (string.IsNullOrWhiteSpace(smtpFrom)) missingVariables.Add("SMTP_FROM");
+
+        if (missingVariables.Count > 0)
         {
-            _logger.LogWarning("SMTP configuration is incomplete. Email not sent to {Email}", toEmail);
+            _logger.LogWarning("SMTP configuration is incomplete. Missing variables: {MissingVariables}. Email not sent to {Email}", string.Join(", ", missingVariables), toEmail);
             _logger.LogInformation("Email would have been sent: To={Email}, Subject={Subject}", toEmail, subject);
             return;
         }
+
+        if (!int.TryParse(smtpPortValue, out var smtpPort))
+        {
+            _logger.LogWarning("SMTP configuration is invalid. SMTP_PORT is not a valid integer. Email not sent to {Email}", toEmail);
+            _logger.LogInformation("Email would have been sent: To={Email}, Subject={Subject}", toEmail, subject);
+            return;
+        }
+
+        var enableSsl = bool.TryParse(enableSslValue, out var parsedEnableSsl) ? parsedEnableSsl : true;
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
@@ -246,7 +261,7 @@ public class EmailService : IEmailService
 
         var message = new MailMessage
         {
-            From = new MailAddress(_fromEmail, _fromName),
+            From = new MailAddress(smtpFrom!, _fromName),
             Subject = subject,
             Body = htmlBody,
             IsBodyHtml = true
