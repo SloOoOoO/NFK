@@ -11,96 +11,11 @@ namespace NFK.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Address",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "City",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "Country",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "DateOfBirth",
-                table: "Users",
-                type: "datetime2",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmAddress",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmChamberRegistration",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmCity",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmCountry",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmLegalName",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmPostalCode",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FirmTaxId",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "FullLegalName",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "PhoneVerified",
-                table: "Users",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<string>(
-                name: "PostalCode",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "TaxId",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
+            // User profile fields (Address, City, Country, DateOfBirth, Firm*, FullLegalName,
+            // PhoneVerified, PostalCode, TaxId) are now owned by the earlier
+            // ExtendUserFields migration (20260111170000) which uses IF NOT EXISTS guards.
+            // Keeping them here would produce a duplicate-column error when both migrations
+            // run in order on a fresh database.
 
             migrationBuilder.CreateTable(
                 name: "PasswordResetTokens",
@@ -141,65 +56,8 @@ namespace NFK.Infrastructure.Data.Migrations
             migrationBuilder.DropTable(
                 name: "PasswordResetTokens");
 
-            migrationBuilder.DropColumn(
-                name: "Address",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "City",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "Country",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "DateOfBirth",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmAddress",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmChamberRegistration",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmCity",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmCountry",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmLegalName",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmPostalCode",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FirmTaxId",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "FullLegalName",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "PhoneVerified",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "PostalCode",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "TaxId",
-                table: "Users");
+            // User profile columns are owned by ExtendUserFields (20260111170000);
+            // they must not be dropped here to avoid leaving the DB in an inconsistent state.
         }
     }
 }
