@@ -15,6 +15,18 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context, PasswordHasher passwordHasher)
     {
+        // Always ensure the RegisteredUser role exists (idempotent – migration may have added it already)
+        if (!await context.Roles.AnyAsync(r => r.Name == "RegisteredUser"))
+        {
+            context.Roles.Add(new Role
+            {
+                Name = "RegisteredUser",
+                Description = "New users who have registered but are not yet assigned a specific role",
+                IsSystemRole = true
+            });
+            await context.SaveChangesAsync();
+        }
+
         // Check if already seeded
         if (await context.Users.AnyAsync())
         {
