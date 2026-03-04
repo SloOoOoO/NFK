@@ -20,7 +20,7 @@ public class EmailService : IEmailService
     {
         _configuration = configuration;
         _logger = logger;
-        _fromEmail = configuration["Email:Smtp:FromEmail"] ?? "security@nfk-buchhaltung.de";
+        _fromEmail = Environment.GetEnvironmentVariable("SMTP_FROM") ?? string.Empty;
         _fromName = configuration["Email:Smtp:FromName"] ?? "NFK Buchhaltung";
         _frontendUrl = configuration["Frontend:Url"] ?? "http://localhost:5173";
     }
@@ -61,7 +61,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>security@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -108,7 +108,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>security@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -150,7 +150,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>security@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -190,7 +190,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>security@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -225,18 +225,30 @@ public class EmailService : IEmailService
 
     private async Task SendViaSmtpAsync(string toEmail, string subject, string htmlBody)
     {
-        var smtpHost = _configuration["Email:Smtp:Host"];
-        var smtpPort = int.Parse(_configuration["Email:Smtp:Port"] ?? "587");
-        var smtpUsername = _configuration["Email:Smtp:Username"];
-        var smtpPassword = _configuration["Email:Smtp:Password"];
-        var enableSsl = bool.Parse(_configuration["Email:Smtp:EnableSsl"] ?? "true");
+        var smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST");
+        var smtpPortValue = Environment.GetEnvironmentVariable("SMTP_PORT");
+        var smtpUsername = Environment.GetEnvironmentVariable("SMTP_USERNAME");
+        var smtpPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+        var enableSslValue = Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL");
 
-        if (string.IsNullOrEmpty(smtpHost) || string.IsNullOrEmpty(smtpUsername) || string.IsNullOrEmpty(smtpPassword))
+        if (string.IsNullOrEmpty(smtpHost)
+            || string.IsNullOrEmpty(smtpPortValue)
+            || string.IsNullOrEmpty(smtpUsername)
+            || string.IsNullOrEmpty(smtpPassword)
+            || string.IsNullOrEmpty(_fromEmail))
         {
             _logger.LogWarning("SMTP configuration is incomplete. Email not sent to {Email}", toEmail);
             _logger.LogInformation("Email would have been sent: To={Email}, Subject={Subject}", toEmail, subject);
             return;
         }
+
+        if (!int.TryParse(smtpPortValue, out var smtpPort))
+        {
+            _logger.LogWarning("SMTP configuration is invalid. Email not sent to {Email}", toEmail);
+            return;
+        }
+
+        var enableSsl = !bool.TryParse(enableSslValue, out var parsedEnableSsl) || parsedEnableSsl;
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
