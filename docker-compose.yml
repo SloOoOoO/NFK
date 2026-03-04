@@ -59,8 +59,8 @@ services:
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NFK;User Id=sa;Password=SqlServer2025;TrustServerCertificate=True;MultipleActiveResultSets=true
       - ConnectionStrings__Redis=redis:6379
       - Jwt__Secret=ThisIsAVeryLongSecretKeyForJWTTokenGenerationAtLeast32CharactersLong2025
-      - Jwt__Issuer=NFK. API
-      - Jwt__Audience=NFK. Client
+      - Jwt__Issuer=NFK.API
+      - Jwt__Audience=NFK.Client
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USERNAME=${SMTP_USERNAME}

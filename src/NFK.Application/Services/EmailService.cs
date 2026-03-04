@@ -251,6 +251,7 @@ public class EmailService : IEmailService
             return;
         }
 
+        var smtpFromAddress = smtpFrom ?? throw new InvalidOperationException("SMTP_FROM is required");
         var enableSsl = bool.TryParse(enableSslValue, out var parsedEnableSsl) ? parsedEnableSsl : true;
 
         using var client = new SmtpClient(smtpHost, smtpPort)
@@ -261,7 +262,7 @@ public class EmailService : IEmailService
 
         var message = new MailMessage
         {
-            From = new MailAddress(smtpFrom!, _fromName),
+            From = new MailAddress(smtpFromAddress, _fromName),
             Subject = subject,
             Body = htmlBody,
             IsBodyHtml = true
