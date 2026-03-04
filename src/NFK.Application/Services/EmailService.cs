@@ -248,7 +248,15 @@ public class EmailService : IEmailService
             return;
         }
 
-        var enableSsl = !bool.TryParse(enableSslValue, out var parsedEnableSsl) || parsedEnableSsl;
+        var enableSsl = true;
+        if (!string.IsNullOrWhiteSpace(enableSslValue))
+        {
+            if (!bool.TryParse(enableSslValue, out enableSsl))
+            {
+                _logger.LogWarning("SMTP_ENABLE_SSL is invalid. Defaulting SSL to enabled for {Email}", toEmail);
+                enableSsl = true;
+            }
+        }
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {

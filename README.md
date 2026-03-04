@@ -279,8 +279,8 @@ docker-compose up -d --build
 docker-compose logs api | grep "SMTP configuration is incomplete"
 ```
 
-- Register a new user (`POST /api/v1/auth/register`) and verify the verification email is delivered from `security@nfk-buchhaltung.de`.
-- Trigger forgot-password (`POST /api/v1/auth/forgot-password`) and verify the reset email is delivered from `security@nfk-buchhaltung.de`.
+- Register a new user (`POST /api/v1/auth/register`) and verify the verification email is delivered from the configured `SMTP_FROM` address (`security@nfk-buchhaltung.de`).
+- Trigger forgot-password (`POST /api/v1/auth/forgot-password`) and verify the reset email is delivered from the configured `SMTP_FROM` address (`security@nfk-buchhaltung.de`).
 - If SMTP variables are set correctly, API logs should not contain `SMTP configuration is incomplete`.
 
 ### OAuth Setup
