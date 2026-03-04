@@ -1,13 +1,16 @@
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MimeKit;
 using NFK.Application.Interfaces;
-using System.Net;
-using System.Net.Mail;
 
 namespace NFK.Application.Services;
 
 public class EmailService : IEmailService
 {
+    private const int SmtpTimeoutSeconds = 30;
+
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
     private readonly string _fromEmail;
@@ -256,27 +259,79 @@ public class EmailService : IEmailService
             }
         }
 
-        using var client = new SmtpClient(smtpHost, smtpPort)
+        // Determine the correct TLS option to avoid protocol mismatches:
+        //   port 465 (or SMTP_ENABLE_SSL=true + 465)  → SSL on connect
+        //   port 587                                    → STARTTLS
+        //   anything else (e.g. 1025 for Mailpit)      → plaintext
+        SecureSocketOptions socketOptions;
+        if (enableSsl && smtpPort == 465)
         {
-            EnableSsl = enableSsl
-        };
-
-        // Only set credentials when both username and password are provided (not needed for local mail catchers)
-        if (!string.IsNullOrEmpty(smtpUsername) && !string.IsNullOrEmpty(smtpPassword))
+            socketOptions = SecureSocketOptions.SslOnConnect;
+        }
+        else if (smtpPort == 587)
         {
-            client.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+            socketOptions = SecureSocketOptions.StartTls;
+        }
+        else
+        {
+            socketOptions = SecureSocketOptions.None;
         }
 
-        var message = new MailMessage
-        {
-            From = new MailAddress(_fromEmail, _fromName),
-            Subject = subject,
-            Body = htmlBody,
-            IsBodyHtml = true
-        };
-        message.To.Add(toEmail);
+        var hasCredentials = !string.IsNullOrEmpty(smtpUsername) && !string.IsNullOrEmpty(smtpPassword);
 
-        await client.SendMailAsync(message);
+        _logger.LogDebug("SMTP connecting to {Host}:{Port} mode={Mode} auth={Auth}",
+            smtpHost, smtpPort, socketOptions, hasCredentials ? "yes" : "no");
+
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(_fromName, _fromEmail));
+        message.To.Add(MailboxAddress.Parse(toEmail));
+        message.Subject = subject;
+        message.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = htmlBody };
+
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(SmtpTimeoutSeconds));
+        using var client = new SmtpClient();
+
+        try
+        {
+            await client.ConnectAsync(smtpHost, smtpPort, socketOptions, cts.Token);
+
+            // Only authenticate when credentials are provided (not needed for Mailpit / local catchers)
+            if (hasCredentials)
+            {
+                await client.AuthenticateAsync(smtpUsername, smtpPassword, cts.Token);
+            }
+
+            await client.SendAsync(message, cts.Token);
+            await client.DisconnectAsync(true, cts.Token);
+        }
+        catch (MailKit.Security.AuthenticationException ex)
+        {
+            _logger.LogError("SMTP authentication failed for {Host}:{Port} (user={User}): {Message}",
+                smtpHost, smtpPort, smtpUsername, ex.Message);
+            throw;
+        }
+        catch (MailKit.Net.Smtp.SmtpCommandException ex)
+        {
+            _logger.LogError("SMTP protocol error sending to {Recipient} via {Host}:{Port} – status={Status} message={Message}",
+                toEmail, smtpHost, smtpPort, ex.StatusCode, ex.Message);
+            throw;
+        }
+        catch (MailKit.Net.Smtp.SmtpProtocolException ex)
+        {
+            _logger.LogError("SMTP protocol exception sending to {Recipient} via {Host}:{Port}: {Message}",
+                toEmail, smtpHost, smtpPort, ex.Message);
+            throw;
+        }
+        catch (System.Net.Sockets.SocketException ex)
+        {
+            _logger.LogError("SMTP DNS/connect error for {Host}:{Port}: {Message}", smtpHost, smtpPort, ex.Message);
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("SMTP send timed out after {Timeout} s for {Host}:{Port} recipient={Recipient}", SmtpTimeoutSeconds, smtpHost, smtpPort, toEmail);
+            throw;
+        }
     }
 
     private async Task SendViaSendGridAsync(string toEmail, string subject, string htmlBody)

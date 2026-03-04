@@ -300,22 +300,66 @@ SMTP_FROM=security@nfk-buchhaltung.de
 SMTP_ENABLE_SSL=true
 ```
 
-### SMTP local setup & verification (registration + forgot-password)
+### SMTP configuration
+
+The application uses **MailKit** to deliver email, which correctly negotiates STARTTLS (port 587) and SSL-on-connect (port 465) without the protocol mismatches that affected the earlier `System.Net.Mail` implementation.
+
+#### Local Mailpit (default, no credentials)
 
 ```bash
-# 1) copy template and set SMTP values
+# These values are already set in docker-compose.yml – no .env needed
+SMTP_HOST=mailpit
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@nfk-buchhaltung.de
+SMTP_ENABLE_SSL=false
+```
+
+Emails appear at **http://localhost:8025** immediately.
+
+#### Gmail SMTP with app password
+
+> **Prerequisites**
+> 1. Enable **2-Step Verification** on the Gmail account:
+>    https://myaccount.google.com/security
+> 2. Generate an **App Password** at https://myaccount.google.com/apppasswords  
+>    (category: *Mail*, device: *Other (custom name)*).  
+>    Copy the 16-character password **without spaces**.
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-address@gmail.com
+SMTP_PASSWORD=aaaa1bbb2ccc3ddd   # 16-char app password, no spaces
+SMTP_FROM=your-address@gmail.com
+SMTP_ENABLE_SSL=false             # STARTTLS is used automatically on port 587
+```
+
+Connection behaviour by port:
+
+| Port | TLS mode |
+|------|----------|
+| 587 | STARTTLS (recommended for Gmail / most providers) |
+| 465 | SSL-on-connect (requires `SMTP_ENABLE_SSL=true`) |
+| 1025 | Plaintext (Mailpit / local catchers) |
+
+#### Local setup & verification
+
+```bash
+# 1) copy template and edit SMTP values
 cp .env.example .env
 
-# 2) start the stack with rebuilt API container
+# 2) start the stack
 docker-compose up -d --build
 
-# 3) verify API did not log missing SMTP config warning
+# 3) confirm no config warning in logs
 docker-compose logs api | grep "SMTP configuration is incomplete"
 ```
 
-- Register a new user (`POST /api/v1/auth/register`) and verify the verification email is delivered from the configured `SMTP_FROM` address (`security@nfk-buchhaltung.de`).
-- Trigger forgot-password (`POST /api/v1/auth/forgot-password`) and verify the reset email is delivered from the configured `SMTP_FROM` address (`security@nfk-buchhaltung.de`).
-- If SMTP variables are set correctly, API logs should not contain `SMTP configuration is incomplete`.
+- Register a new user (`POST /api/v1/auth/register`) and verify the verification email is delivered.
+- Trigger forgot-password (`POST /api/v1/auth/forgot-password`) and verify the reset email is delivered.
+- With Gmail, check the sender's **Sent** folder and the recipient's inbox/spam.
 
 ### OAuth Setup
 
@@ -437,6 +481,17 @@ If emails are not appearing:
 - Confirm `nfk-mailpit` container is running: `docker-compose ps mailpit`
 - Check API logs: `docker-compose logs api | grep -i smtp`
 - Ensure `SMTP_HOST` is not overridden in your `.env` to an external server.
+
+### Gmail SMTP troubleshooting
+
+| Error in API logs | Cause | Fix |
+|---|---|---|
+| `SMTP authentication failed` | Wrong credentials or app password not enabled | Re-generate app password; ensure 2-Step Verification is ON |
+| `SMTP DNS/connect error` | Wrong host / firewall blocking port 587 | Verify `SMTP_HOST=smtp.gmail.com` and outbound port 587 is open |
+| `SMTP protocol error` | TLS mismatch (e.g. SSL on port 587) | Set `SMTP_ENABLE_SSL=false`; STARTTLS is negotiated automatically |
+| Email ends up in spam | No SPF/DKIM for sender domain | Use a `From` address matching your verified Gmail account |
+
+> **Note:** Gmail app passwords are 16 characters with no spaces. Do not wrap them in quotes in `.env`.
 
 ### DataProtection keys warning
 The API emits a warning about DataProtection keys not being persisted.
