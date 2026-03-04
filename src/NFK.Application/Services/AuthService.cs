@@ -514,9 +514,13 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Account is not active.");
         }
 
-        // Generate secure random token (URL-safe Base64 to avoid + / = characters in query strings)
+        // Generate secure random token using Base64Url (RFC 4648 URL-safe alphabet):
+        // replaces '+' with '-' and '/' with '_', and strips '=' padding so the token
+        // contains only unreserved URL characters and never needs percent-encoding.
         var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
             .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+        _logger.LogDebug("Password reset token created: format=url-safe, length={Length}", token.Length);
 
         // Create password reset token
         var resetToken = new PasswordResetToken
@@ -559,10 +563,24 @@ public class AuthService : IAuthService
             throw new ArgumentException("Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number.");
         }
 
+        // Classify and normalise the incoming token to handle transport corruption.
+        // URL-safe Base64Url tokens (current format) use only A-Za-z0-9, '-', '_'.
+        // Legacy standard-Base64 tokens contain '+', '/' and/or '=' padding.
+        // Browser URLSearchParams.get() follows application/x-www-form-urlencoded
+        // semantics and silently decodes '+' as a space.  Other characters ('/', '=')
+        // are NOT decoded by URLSearchParams, so only space→'+' normalisation is needed.
+        string lookupToken = token.Contains(' ')
+            ? token.Replace(' ', '+')   // space→'+' backward-compat for legacy tokens
+            : token;
+        bool isUrlSafeFormat = !lookupToken.Contains('+') && !lookupToken.Contains('/') && !lookupToken.Contains('=');
+
+        _logger.LogDebug("Password reset token format: {Format}, length={Length}",
+            isUrlSafeFormat ? "url-safe" : "legacy", token.Length);
+
         // Find reset token
         var resetToken = await _context.PasswordResetTokens
             .Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt => rt.Token == token);
+            .FirstOrDefaultAsync(rt => rt.Token == lookupToken);
 
         if (resetToken == null)
         {
