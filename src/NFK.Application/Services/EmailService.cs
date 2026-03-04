@@ -233,36 +233,39 @@ public class EmailService : IEmailService
 
         if (string.IsNullOrEmpty(smtpHost)
             || string.IsNullOrEmpty(smtpPortValue)
-            || string.IsNullOrEmpty(smtpUsername)
-            || string.IsNullOrEmpty(smtpPassword)
             || string.IsNullOrEmpty(_fromEmail))
         {
-            _logger.LogWarning("SMTP configuration is incomplete. Email not sent to {Email}", toEmail);
+            _logger.LogWarning("SMTP configuration is incomplete (missing host, port, or from address). Email not sent to {Email}", toEmail);
             _logger.LogInformation("Email would have been sent: To={Email}, Subject={Subject}", toEmail, subject);
             return;
         }
 
         if (!int.TryParse(smtpPortValue, out var smtpPort))
         {
-            _logger.LogWarning("SMTP configuration is invalid. Email not sent to {Email}", toEmail);
+            _logger.LogWarning("SMTP_PORT is not a valid integer ({Value}). Email not sent to {Email}", smtpPortValue, toEmail);
             return;
         }
 
-        var enableSsl = true;
+        var enableSsl = false;
         if (!string.IsNullOrWhiteSpace(enableSslValue))
         {
             if (!bool.TryParse(enableSslValue, out enableSsl))
             {
-                _logger.LogWarning("SMTP_ENABLE_SSL is invalid. Defaulting SSL to enabled for {Email}", toEmail);
-                enableSsl = true;
+                _logger.LogWarning("SMTP_ENABLE_SSL value '{Value}' is not a valid boolean. Defaulting SSL to disabled", enableSslValue);
+                enableSsl = false;
             }
         }
 
         using var client = new SmtpClient(smtpHost, smtpPort)
         {
-            EnableSsl = enableSsl,
-            Credentials = new NetworkCredential(smtpUsername, smtpPassword)
+            EnableSsl = enableSsl
         };
+
+        // Only set credentials when both username and password are provided (not needed for local mail catchers)
+        if (!string.IsNullOrEmpty(smtpUsername) && !string.IsNullOrEmpty(smtpPassword))
+        {
+            client.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+        }
 
         var message = new MailMessage
         {
