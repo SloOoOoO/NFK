@@ -30,7 +30,7 @@ public class EmailService : IEmailService
 
     public async Task SendEmailVerificationAsync(string email, string firstName, string verificationToken)
     {
-        var verificationLink = $"{_frontendUrl}/auth/verify-email?token={verificationToken}";
+        var verificationLink = $"{_frontendUrl}/auth/verify-email?token={Uri.EscapeDataString(verificationToken)}";
         var subject = "Bestätigen Sie Ihre E-Mail-Adresse - NFK Buchhaltung";
         var body = $@"
 <!DOCTYPE html>
@@ -75,7 +75,7 @@ public class EmailService : IEmailService
 
     public async Task SendPasswordResetEmailAsync(string email, string firstName, string resetToken)
     {
-        var resetLink = $"{_frontendUrl}/auth/reset-password?token={resetToken}";
+        var resetLink = $"{_frontendUrl}/auth/reset-password?token={Uri.EscapeDataString(resetToken)}";
         var subject = "Passwort zurücksetzen - NFK Buchhaltung";
         var body = $@"
 <!DOCTYPE html>

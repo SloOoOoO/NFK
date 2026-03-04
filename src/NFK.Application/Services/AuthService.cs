@@ -171,7 +171,8 @@ public class AuthService : IAuthService
             // Generate email verification token for non-OAuth users
             if (string.IsNullOrEmpty(request.GoogleId) && string.IsNullOrEmpty(request.DATEVId))
             {
-                var verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+                var verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+                    .Replace('+', '-').Replace('/', '_').TrimEnd('=');
                 var emailVerificationToken = new EmailVerificationToken
                 {
                     UserId = user.Id,
@@ -513,8 +514,9 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Account is not active.");
         }
 
-        // Generate secure random token
-        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        // Generate secure random token (URL-safe Base64 to avoid + / = characters in query strings)
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
         // Create password reset token
         var resetToken = new PasswordResetToken
