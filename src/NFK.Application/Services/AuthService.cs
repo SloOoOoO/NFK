@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using NFK.Application.DTOs.Auth;
 using NFK.Application.Interfaces;
+using NFK.Application.Utils;
 using NFK.Domain.Entities.Users;
 using NFK.Infrastructure.Data;
 using NFK.Infrastructure.Security;
@@ -41,12 +42,16 @@ public class AuthService : IAuthService
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
     {
         var ipAddress = GetClientIpAddress();
-        _logger.LogInformation("Registration attempt for email: {Email} from IP: {IP}", request.Email, ipAddress);
 
-        // Validate email format
-        if (!IsValidEmail(request.Email))
+        // Normalize email to canonical form (trim + lowercase) before any validation or storage
+        var normalizedEmail = EmailNormalizer.Normalize(request.Email);
+
+        _logger.LogInformation("Registration attempt for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+
+        // Validate email format against the already-normalized value
+        if (!IsValidEmail(normalizedEmail))
         {
-            _logger.LogWarning("Registration failed - invalid email format: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Registration failed - invalid email format: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new ArgumentException("Invalid email format.");
         }
 
@@ -54,17 +59,17 @@ public class AuthService : IAuthService
         var passwordValidation = PasswordPolicy.Validate(request.Password);
         if (!passwordValidation.IsValid)
         {
-            _logger.LogWarning("Registration failed - password policy violation for: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Registration failed - password policy violation for: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new ArgumentException(string.Join(" ", passwordValidation.Errors));
         }
 
-        // Check if user already exists
+        // Check if user already exists (using normalized email for reliable case/whitespace-insensitive lookup)
         var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == request.Email);
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
         if (existingUser != null)
         {
-            _logger.LogWarning("Registration failed - user exists: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Registration failed - user exists: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new InvalidOperationException("User with this email already exists.");
         }
 
@@ -78,10 +83,10 @@ public class AuthService : IAuthService
         using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         try
         {
-            // Create user
+            // Create user – always store the normalized (canonical) email
             var user = new User
             {
-                Email = request.Email,
+                Email = normalizedEmail,
                 PasswordHash = passwordHash,
                 FirstName = SanitizeInput(request.FirstName),
                 LastName = SanitizeInput(request.LastName),
@@ -207,10 +212,20 @@ public class AuthService : IAuthService
 
             return new RegisterResponse("Registration successful. Please check your email to verify your account.", user.Id);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+            when (dbEx.InnerException?.Message.Contains("IX_Users_Email") == true
+               || dbEx.InnerException?.Message.Contains("duplicate key") == true
+               || dbEx.InnerException?.Message.Contains("Duplicate entry") == true)
+        {
+            // Race condition: another request inserted the same email between our
+            // pre-check and SaveChanges.  Surface as a domain conflict, not a 500.
+            _logger.LogWarning("Registration failed - duplicate email (race condition): {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            throw new InvalidOperationException("User with this email already exists.");
+        }
         catch (Exception ex)
         {
             // Transaction will auto-rollback on disposal if not committed
-            _logger.LogError(ex, "Registration failed for email: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogError(ex, "Registration failed for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw;
         }
     }
@@ -219,19 +234,23 @@ public class AuthService : IAuthService
     {
         var ipAddress = GetClientIpAddress();
         var userAgent = GetUserAgent();
-        _logger.LogInformation("Login attempt for email: {Email} from IP: {IP}", request.Email, ipAddress);
 
-        // Find user by email
+        // Normalize email so login works regardless of case or surrounding whitespace
+        var normalizedEmail = EmailNormalizer.Normalize(request.Email);
+
+        _logger.LogInformation("Login attempt for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+
+        // Find user by normalized email
         var user = await _context.Users
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Email == request.Email);
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
         if (user == null)
         {
-            _logger.LogWarning("Login failed - user not found: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Login failed - user not found: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             // Log failed attempt for security monitoring
-            await LogFailedLoginAttempt(request.Email, ipAddress, "User not found");
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "User not found");
             throw new UnauthorizedAccessException("Invalid email or password");
         }
 
@@ -239,24 +258,24 @@ public class AuthService : IAuthService
         if (user.IsLocked && user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
         {
             _logger.LogWarning("Login failed - account locked: {Email} from IP: {IP}, Locked until: {LockedUntil}", 
-                request.Email, ipAddress, user.LockedUntil.Value);
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Account locked");
+                normalizedEmail, ipAddress, user.LockedUntil.Value);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Account locked");
             throw new UnauthorizedAccessException("Account is locked. Please try again later.");
         }
 
         // Check if account is active
         if (!user.IsActive)
         {
-            _logger.LogWarning("Login failed - account inactive: {Email} from IP: {IP}", request.Email, ipAddress);
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Account inactive");
+            _logger.LogWarning("Login failed - account inactive: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Account inactive");
             throw new UnauthorizedAccessException("Account is not active.");
         }
 
         // Check if email has been verified
         if (!user.IsEmailConfirmed)
         {
-            _logger.LogWarning("Login failed - email not verified: {Email} from IP: {IP}", request.Email, ipAddress);
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Email not verified");
+            _logger.LogWarning("Login failed - email not verified: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Email not verified");
             throw new UnauthorizedAccessException("Please verify your email address before logging in. Check your inbox for the verification email.");
         }
 
@@ -269,13 +288,13 @@ public class AuthService : IAuthService
             {
                 user.IsLocked = true;
                 user.LockedUntil = DateTime.UtcNow.AddMinutes(30);
-                _logger.LogWarning("Account locked due to multiple failed attempts: {Email} from IP: {IP}", request.Email, ipAddress);
+                _logger.LogWarning("Account locked due to multiple failed attempts: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             }
             await _context.SaveChangesAsync();
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Invalid password");
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Invalid password");
 
             _logger.LogWarning("Login failed - invalid password: {Email} from IP: {IP}, Failed attempts: {Attempts}", 
-                request.Email, ipAddress, user.FailedLoginAttempts);
+                normalizedEmail, ipAddress, user.FailedLoginAttempts);
             throw new UnauthorizedAccessException("Invalid email or password");
         }
 
@@ -488,9 +507,13 @@ public class AuthService : IAuthService
     public async Task<string> RequestPasswordResetAsync(string email)
     {
         var ipAddress = GetClientIpAddress();
+
+        // Normalize so forgot-password works for any case/whitespace variant
+        email = EmailNormalizer.Normalize(email);
+
         _logger.LogInformation("Password reset request for email: {Email} from IP: {IP}", email, ipAddress);
 
-        // Find user by email
+        // Find user by normalized email
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == email);
 
@@ -786,8 +809,11 @@ public class AuthService : IAuthService
     {
         var ipAddress = GetClientIpAddress();
 
-        // Per-email cooldown: one resend every 60 seconds
-        var emailCacheKey = $"resendverif:email:{email.ToLowerInvariant()}";
+        // Normalize so resend works for any case/whitespace variant
+        email = EmailNormalizer.Normalize(email);
+
+        // Per-email cooldown: one resend every 60 seconds (key uses already-normalized value)
+        var emailCacheKey = $"resendverif:email:{email}";
         var emailCooldown = await _cache.GetStringAsync(emailCacheKey);
         if (emailCooldown != null)
         {
@@ -819,7 +845,7 @@ public class AuthService : IAuthService
         };
         await _cache.SetStringAsync(ipCacheKey, (ipCount + 1).ToString(), ipCountOptions);
 
-        // Find user – silent return if not found or already verified
+        // Find user – silent return if not found or already verified (email is already normalized above)
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == email);
 

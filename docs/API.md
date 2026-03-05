@@ -171,7 +171,38 @@ Resend the email verification link to a given address.
 5. A fresh 24-hour verification link is sent (old unused tokens are invalidated).
 6. User clicks the link in their inbox and is redirected to login.
 
-### Client Endpoints
+---
+
+## Email Normalization Policy
+
+All email addresses are normalized to a **canonical form** before any storage or lookup:
+
+1. **Trim** leading and trailing whitespace.
+2. **Lowercase** using the invariant culture.
+
+This normalization is applied consistently in every auth flow:
+- `POST /auth/register` – stored email is always normalized.
+- `POST /auth/login` – lookup uses normalized email; mixed-case or padded input always matches the stored address.
+- `POST /auth/forgot-password` – lookup uses normalized email.
+- `POST /auth/resend-verification` – lookup uses normalized email.
+- Admin user-update paths – any email update is normalized before persistence.
+
+### Duplicate registration behavior
+
+If a client attempts to register with an email that already exists (including case/whitespace variants), the API returns:
+
+```
+HTTP 409 Conflict
+{"error": "user_exists", "message": "User with this email already exists."}
+```
+
+This prevents the raw SQL duplicate-key exception from surfacing as a `500 Internal Server Error`.
+
+### Data migration caveat
+
+A one-time data remediation migration (`NormalizeExistingEmails`) normalizes all existing rows in the `Users` table.  
+If two rows would resolve to the same normalized email (a collision), the migration aborts with a structured error message and operator instructions for manual remediation.  
+**Always take a database backup before running migrations.**
 
 #### GET /clients
 Get all clients (Admin/Consultant only).
