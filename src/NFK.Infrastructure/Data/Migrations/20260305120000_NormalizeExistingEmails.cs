@@ -41,14 +41,12 @@ namespace NFK.Infrastructure.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // 1. Detect collisions: two rows that normalize to the same email.
-            //    If any exist the migration aborts; the diagnostic query is embedded in
-            //    the error message so the operator can run it immediately from the log.
+            //    If any exist the migration aborts with a clear actionable message.
+            //    Diagnostic query to identify duplicates:
+            //      SELECT LOWER(LTRIM(RTRIM(Email))) AS NormalizedEmail, COUNT(*) AS Cnt,
+            //             STRING_AGG(CAST(Id AS VARCHAR), ', ') AS UserIds
+            //      FROM Users GROUP BY LOWER(LTRIM(RTRIM(Email))) HAVING COUNT(*) > 1;
             migrationBuilder.Sql(@"
-DECLARE @DiagQuery NVARCHAR(MAX) =
-    'SELECT LOWER(LTRIM(RTRIM(Email))) AS NormalizedEmail, COUNT(*) AS Cnt, ' +
-    'STRING_AGG(CAST(Id AS VARCHAR), '', '') AS UserIds ' +
-    'FROM Users GROUP BY LOWER(LTRIM(RTRIM(Email))) HAVING COUNT(*) > 1;';
-
 IF EXISTS (
     SELECT 1
     FROM Users
@@ -56,11 +54,8 @@ IF EXISTS (
     HAVING COUNT(*) > 1
 )
 BEGIN
-    RAISERROR(
-        'Email normalization collision detected: two or more rows in [Users] would map to the same ' +
-        'normalized email. Identify the duplicates by running: %s ' +
-        'Merge or remove the duplicate rows, then re-apply this migration.',
-        16, 1, @DiagQuery);
+    DECLARE @msg NVARCHAR(2048) = N'Email normalization collision detected: two or more rows in [Users] would map to the same normalized email. Merge or remove the duplicate rows, then re-apply this migration. Run diagnostic: SELECT LOWER(LTRIM(RTRIM(Email))) AS NormalizedEmail, COUNT(*) AS Cnt FROM Users GROUP BY LOWER(LTRIM(RTRIM(Email))) HAVING COUNT(*) > 1';
+    THROW 50000, @msg, 1;
 END
 ");
 
