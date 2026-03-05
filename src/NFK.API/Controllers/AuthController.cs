@@ -354,6 +354,22 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Failed to verify email" });
         }
     }
+
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request)
+    {
+        try
+        {
+            await _authService.ResendVerificationEmailAsync(request.Email);
+            // Always return generic success to prevent account enumeration
+            return Ok(new { message = "If an account exists and is not yet verified, a verification email has been sent." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Resend verification failed");
+            return StatusCode(500, new { error = "internal_error", message = "Failed to process request" });
+        }
+    }
 }
 
 public record RefreshTokenRequest(string RefreshToken);

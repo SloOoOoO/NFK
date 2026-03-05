@@ -13,6 +13,7 @@ interface ApiError {
 
 // Rate limiting constants
 const DEFAULT_RATE_LIMIT_SECONDS = 900; // 15 minutes
+const RESEND_COOLDOWN_SECONDS = 60; // 1 minute local cooldown
 
 export default function Login() {
   const { t } = useTranslation();
@@ -25,6 +26,14 @@ export default function Login() {
   const [retryAfter, setRetryAfter] = useState(0);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Resend verification state
+  const [showResend, setShowResend] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendError, setResendError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
     // Check for SSO errors
@@ -83,6 +92,45 @@ export default function Login() {
       return () => clearInterval(timer);
     }
   }, [retryAfter]);
+
+  // Countdown timer for resend verification cooldown
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleResendSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (resendLoading || resendCooldown > 0) return;
+
+    setResendError('');
+    setResendMessage('');
+    setResendLoading(true);
+
+    try {
+      await authAPI.resendVerification(resendEmail);
+      setResendMessage(
+        'Falls ein Konto existiert und noch nicht bestätigt ist, wurde eine Bestätigungs-E-Mail gesendet.'
+      );
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (err) {
+      // Show the same generic message regardless of outcome to prevent enumeration.
+      // In development, log the raw error for diagnostics.
+      if (import.meta.env.DEV) {
+        console.error('[ResendVerification]', err);
+      }
+      setResendMessage(
+        'Falls ein Konto existiert und noch nicht bestätigt ist, wurde eine Bestätigungs-E-Mail gesendet.'
+      );
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,6 +322,66 @@ export default function Login() {
           <Link to="/auth/register" className="text-primary hover:underline">
             {t('auth.noAccount')} {t('auth.registerHere')}
           </Link>
+        </div>
+
+        {/* Resend verification email section */}
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setShowResend(!showResend);
+              setResendMessage('');
+              setResendError('');
+            }}
+            className="w-full text-sm text-gray-500 hover:text-primary text-center underline-offset-2 hover:underline"
+          >
+            Keine Bestätigungs-E-Mail erhalten?
+          </button>
+
+          {showResend && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 mb-3 text-center">
+                Geben Sie Ihre E-Mail-Adresse ein, um die Bestätigungs-E-Mail erneut zu senden.
+              </p>
+
+              {resendMessage && (
+                <div className="mb-3 p-3 rounded-md bg-green-50 border border-green-200">
+                  <p className="text-sm text-green-800">{resendMessage}</p>
+                </div>
+              )}
+
+              {resendError && (
+                <div className="mb-3 p-3 rounded-md bg-red-50 border border-red-200">
+                  <p className="text-sm text-red-800">{resendError}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleResendSubmit} className="space-y-3">
+                <input
+                  type="email"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                  placeholder="ihre@email.de"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                  required
+                  disabled={resendLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={resendLoading || resendCooldown > 0}
+                  className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {resendLoading ? (
+                    'Sende...'
+                  ) : resendCooldown > 0 ? (
+                    `Erneut senden in ${resendCooldown}s`
+                  ) : (
+                    'Bestätigungs-E-Mail erneut senden'
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>

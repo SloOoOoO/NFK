@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NFK.Application.Interfaces;
@@ -33,9 +34,14 @@ public class PasswordResetTokenTests : IDisposable
         var httpContext = new Mock<IHttpContextAccessor>();
         // HttpContext is null in tests; GetClientIpAddress() handles null gracefully
         var emailMock = new Mock<IEmailService>();
+        var cacheMock = new Mock<IDistributedCache>();
+        // Return null (no cached entry) for all cache reads so rate limiting never triggers in tests
+        cacheMock
+            .Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((byte[]?)null);
 
         _authService = new AuthService(
-            _db, jwtService, passwordHasher, logger, httpContext.Object, emailMock.Object);
+            _db, jwtService, passwordHasher, logger, httpContext.Object, emailMock.Object, cacheMock.Object);
     }
 
     public void Dispose() => _db.Dispose();
