@@ -87,6 +87,90 @@ Logout and invalidate tokens.
 
 **Response:** `200 OK`
 
+#### POST /auth/forgot-password
+Request a password reset email.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** `200 OK` (always, to prevent account enumeration)
+```json
+{
+  "message": "If an account with that email exists, a password reset link has been sent."
+}
+```
+
+#### POST /auth/reset-password
+Reset password using a token from the reset email.
+
+**Request Body:**
+```json
+{
+  "token": "<url-safe-base64url-token>",
+  "newPassword": "NewSecurePassword1!"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Password has been reset successfully"
+}
+```
+
+#### POST /auth/verify-email
+Verify an email address using a token from the verification email.
+
+**Request Body:**
+```json
+{
+  "token": "<url-safe-base64url-token>"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Email verified successfully"
+}
+```
+
+#### POST /auth/resend-verification
+Resend the email verification link to a given address.
+
+> **Security note:** The response is always the same generic success message regardless of
+> whether the account exists or is already verified. This prevents account enumeration.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** `200 OK` (always)
+```json
+{
+  "message": "If an account exists and is not yet verified, a verification email has been sent."
+}
+```
+
+**Rate limiting:**
+- Per-email cooldown: one request per 60 seconds.
+- Per-IP limit: 5 requests per 10-minute window.
+
+**User flow:**
+1. User registers but never receives the verification email (e.g. due to an SMTP outage).
+2. User tries to log in and sees "Please verify your email address before logging in."
+3. User clicks **"Keine Bestätigungs-E-Mail erhalten?"** on the login page.
+4. User enters their email address and clicks **"Bestätigungs-E-Mail erneut senden"**.
+5. A fresh 24-hour verification link is sent (old unused tokens are invalidated).
+6. User clicks the link in their inbox and is redirected to login.
+
 ### Client Endpoints
 
 #### GET /clients

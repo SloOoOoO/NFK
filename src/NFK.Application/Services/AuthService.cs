@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using NFK.Application.DTOs.Auth;
@@ -17,6 +18,7 @@ public class AuthService : IAuthService
     private readonly ILogger<AuthService> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailService _emailService;
+    private readonly IDistributedCache _cache;
 
     public AuthService(
         ApplicationDbContext context,
@@ -24,7 +26,8 @@ public class AuthService : IAuthService
         PasswordHasher passwordHasher,
         ILogger<AuthService> logger,
         IHttpContextAccessor httpContextAccessor,
-        IEmailService emailService)
+        IEmailService emailService,
+        IDistributedCache cache)
     {
         _context = context;
         _jwtService = jwtService;
@@ -32,6 +35,7 @@ public class AuthService : IAuthService
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
         _emailService = emailService;
+        _cache = cache;
     }
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
@@ -770,5 +774,97 @@ public class AuthService : IAuthService
         }
 
         _logger.LogInformation("Email verified successfully for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
+    }
+
+    /// <summary>
+    /// Resend verification email for a given email address.
+    /// Always returns without revealing whether the account exists or is already verified,
+    /// to prevent account enumeration. Per-email (60 s) and per-IP (5 / 10 min) cooldowns
+    /// are enforced via the distributed cache.
+    /// </summary>
+    public async Task ResendVerificationEmailAsync(string email)
+    {
+        var ipAddress = GetClientIpAddress();
+
+        // Per-email cooldown: one resend every 60 seconds
+        var emailCacheKey = $"resendverif:email:{email.ToLowerInvariant()}";
+        var emailCooldown = await _cache.GetStringAsync(emailCacheKey);
+        if (emailCooldown != null)
+        {
+            _logger.LogInformation("Resend verification email cooldown active from IP: {IP}", ipAddress);
+            return; // Generic return – no enumeration leak
+        }
+
+        // Per-IP rate limit: 5 resend attempts per 10-minute window
+        var ipCacheKey = $"resendverif:ip:{ipAddress}";
+        var ipCountStr = await _cache.GetStringAsync(ipCacheKey);
+        var ipCount = int.TryParse(ipCountStr, out var c) ? c : 0;
+        if (ipCount >= 5)
+        {
+            _logger.LogWarning("Resend verification IP rate limit exceeded for IP: {IP}", ipAddress);
+            return; // Generic return – no enumeration leak
+        }
+
+        // Always set cooldowns before touching the DB so timing attacks reveal nothing
+        var emailCooldownOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
+        };
+        await _cache.SetStringAsync(emailCacheKey, "1", emailCooldownOptions);
+
+        // Increment IP counter; keep the same absolute window on the first set
+        var ipCountOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+        };
+        await _cache.SetStringAsync(ipCacheKey, (ipCount + 1).ToString(), ipCountOptions);
+
+        // Find user – silent return if not found or already verified
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null)
+        {
+            _logger.LogInformation("Resend verification: no account for provided email from IP: {IP}", ipAddress);
+            return;
+        }
+
+        if (user.IsEmailConfirmed)
+        {
+            _logger.LogInformation("Resend verification: account already verified for user: {UserId} from IP: {IP}", user.Id, ipAddress);
+            return;
+        }
+
+        // Invalidate all unused verification tokens for this user before issuing a fresh one
+        var oldTokens = await _context.EmailVerificationTokens
+            .Where(t => t.UserId == user.Id && !t.IsUsed)
+            .ToListAsync();
+        _context.EmailVerificationTokens.RemoveRange(oldTokens);
+
+        // Generate a new URL-safe Base64Url token (same approach as registration & password reset)
+        var verificationToken = Convert.ToBase64String(
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+        var tokenEntity = new EmailVerificationToken
+        {
+            UserId = user.Id,
+            Token = verificationToken,
+            ExpiresAt = DateTime.UtcNow.AddHours(24),
+            IsUsed = false
+        };
+        _context.EmailVerificationTokens.Add(tokenEntity);
+        await _context.SaveChangesAsync();
+
+        // Attempt to send the email; failures are logged but do not surface to the caller
+        try
+        {
+            await _emailService.SendEmailVerificationAsync(user.Email, user.FirstName, verificationToken);
+            _logger.LogInformation("Resend verification email sent for user: {UserId} from IP: {IP}", user.Id, ipAddress);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send resend verification email for user: {UserId} from IP: {IP}", user.Id, ipAddress);
+        }
     }
 }

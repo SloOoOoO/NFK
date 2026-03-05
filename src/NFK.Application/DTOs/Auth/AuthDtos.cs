@@ -119,3 +119,9 @@ public record VerifyEmailRequest(
     [MinLength(1, ErrorMessage = "Token is required")]
     string Token
 );
+
+public record ResendVerificationRequest(
+    [Required(ErrorMessage = "Email is required")]
+    [EmailAddress(ErrorMessage = "Invalid email format")]
+    string Email
+);
