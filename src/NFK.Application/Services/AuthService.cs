@@ -213,9 +213,7 @@ public class AuthService : IAuthService
             return new RegisterResponse("Registration successful. Please check your email to verify your account.", user.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
-            when (dbEx.InnerException?.Message.Contains("IX_Users_Email") == true
-               || dbEx.InnerException?.Message.Contains("duplicate key") == true
-               || dbEx.InnerException?.Message.Contains("Duplicate entry") == true)
+            when (IsDuplicateEmailException(dbEx))
         {
             // Race condition: another request inserted the same email between our
             // pre-check and SaveChanges.  Surface as a domain conflict, not a 500.
@@ -663,6 +661,49 @@ public class AuthService : IAuthService
         }
 
         return hasUpper && hasLower && hasDigit;
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="ex"/> represents a unique-constraint violation
+    /// on the <c>IX_Users_Email</c> index.
+    /// <para>
+    /// The check uses a combination of strategies ordered from most-precise to broadest:
+    /// <list type="number">
+    ///   <item>Index name in the inner exception message (<c>IX_Users_Email</c>) – SQL Server 2627/2601.</item>
+    ///   <item>The SqlException error number (2627 = unique constraint, 2601 = duplicate key) accessed
+    ///         via the inner exception type name, to avoid a hard compile-time dependency on
+    ///         <c>Microsoft.Data.SqlClient</c> in the Application layer.</item>
+    ///   <item>Generic "duplicate key" / "Duplicate entry" text as a last-resort fallback for
+    ///         non-SQL-Server providers (e.g. MySQL, SQLite).</item>
+    /// </list>
+    /// </para>
+    /// </summary>
+    private static bool IsDuplicateEmailException(Microsoft.EntityFrameworkCore.DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        if (inner == null)
+            return false;
+
+        // Most precise: our specific unique index name appears in the SQL Server error message.
+        if (inner.Message.Contains("IX_Users_Email", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // SQL Server SqlException error numbers: 2627 = unique constraint violated, 2601 = cannot insert duplicate key.
+        // Access via reflection to avoid a hard reference to Microsoft.Data.SqlClient from this layer.
+        if (inner.GetType().Name == "SqlException")
+        {
+            var numberProp = inner.GetType().GetProperty("Number");
+            if (numberProp?.GetValue(inner) is int sqlErrorNumber
+                && (sqlErrorNumber == 2627 || sqlErrorNumber == 2601))
+                return true;
+        }
+
+        // Fallback: generic duplicate-key message text (covers MySQL "Duplicate entry" and others).
+        if (inner.Message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase)
+            || inner.Message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 
     private bool IsValidEmail(string email)
