@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Admin;
+using NFK.Application.Utils;
 using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
@@ -237,7 +238,7 @@ public class AdminController : ControllerBase
             // Update personal information
             if (request.FirstName != null) user.FirstName = request.FirstName;
             if (request.LastName != null) user.LastName = request.LastName;
-            if (request.Email != null) user.Email = request.Email;
+            if (request.Email != null) user.Email = EmailNormalizer.Normalize(request.Email);
             if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
             if (request.FullLegalName != null) user.FullLegalName = request.FullLegalName;
             if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
