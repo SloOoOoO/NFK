@@ -128,7 +128,7 @@ export default function Calendar() {
           <div className="flex items-center justify-between">
             {/* ONLY MONAT - NO WOCHE BUTTON */}
             <div className="flex gap-2">
-              <button className="px-4 py-2 rounded-md bg-primary-600 text-white">
+              <button className="px-4 py-2 rounded-md bg-primary text-white">
                 {t('calendar.month')}
               </button>
             </div>
@@ -154,7 +154,7 @@ export default function Calendar() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.appointments')}</p>
-            <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{events.length}</p>
+            <p className="text-2xl font-bold text-primary dark:text-primary/70">{events.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.deadlines')}</p>
@@ -205,12 +205,12 @@ export default function Calendar() {
                       {dayEvents.length > 0 && (
                         <div className="absolute top-1 right-1 group">
                           {/* Cute calendar badge */}
-                          <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform hover:scale-110 transition-transform">
+                          <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform hover:scale-110 transition-transform">
                             📅
                           </div>
                           
                           {/* Hover Tooltip */}
-                          <div className="absolute hidden group-hover:block top-8 right-0 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary-200 dark:border-primary-700">
+                          <div className="absolute hidden group-hover:block top-8 right-0 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary/20 dark:border-primary/70">
                             {dayEvents.slice(0, 3).map(event => (
                               <div key={event.id} className="mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -332,7 +332,7 @@ export default function Calendar() {
                   <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     {t('common.cancel')}
                   </button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">
+                  <button type="submit" className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg">
                     {t('calendar.create')}
                   </button>
                 </div>
