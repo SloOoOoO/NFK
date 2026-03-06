@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import * as Dialog from '@radix-ui/react-dialog';
 import apiClient from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Event {
   id: number;
@@ -22,10 +23,13 @@ interface Client {
 
 export default function Calendar() {
   const { t, i18n } = useTranslation();
+  const { user: currentUser } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<Event[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [showModal, setShowModal] = useState(false);
+
+  const isClientRole = currentUser?.role === 'Client' || currentUser?.role === 'RegisteredUser';
   const [formData, setFormData] = useState({
     clientId: null as number | null,
     title: '',
@@ -141,12 +145,14 @@ export default function Calendar() {
               <button onClick={nextMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">{t('calendar.next')} →</button>
             </div>
             
-            <button 
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors font-medium"
-            >
-              + {t('calendar.addEvent')}
-            </button>
+            {!isClientRole && (
+              <button 
+                onClick={() => setShowModal(true)}
+                className="px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors font-medium"
+              >
+                + {t('calendar.addEvent')}
+              </button>
+            )}
           </div>
         </div>
 
@@ -247,7 +253,8 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Create Modal */}
+        {/* Create Modal - only for employee roles */}
+        {!isClientRole && (
         <Dialog.Root open={showModal} onOpenChange={setShowModal}>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
@@ -340,6 +347,7 @@ export default function Calendar() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
+        )}
       </main>
     </div>
   );

@@ -12,6 +12,7 @@ namespace NFK.API.Controllers;
 [Authorize]
 public class DocumentsController : ControllerBase
 {
+    private static readonly string[] ClientRoles = ["Client", "RegisteredUser"];
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DocumentsController> _logger;
 
@@ -59,7 +60,7 @@ public class DocumentsController : ControllerBase
             var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
             var canViewAllDocuments = allowedViewRoles.Contains(userRole);
 
-            if (userRole == "Client")
+            if (ClientRoles.Contains(userRole))
             {
                 query = query.Where(d => d.UploadedByUserId == currentUserId.Value);
             }
@@ -139,8 +140,8 @@ public class DocumentsController : ControllerBase
 
             var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
 
-            // PERMISSION CHECK: Only Clients can upload documents
-            if (userRole != "Client")
+            // PERMISSION CHECK: Only Clients and RegisteredUsers can upload documents
+            if (!ClientRoles.Contains(userRole))
             {
                 return StatusCode(403, new { error = "forbidden", message = "Nur Klienten können Dokumente hochladen" });
             }
@@ -170,9 +171,9 @@ public class DocumentsController : ControllerBase
             // 3. Get user's client ID for document count and storage checks
             int? userClientId = clientId;
 
-            if (userRole == "Client")
+            // For Client/RegisteredUser, get their client record
+            if (ClientRoles.Contains(userRole))
             {
-                // For clients, get their client record
                 var clientRecord = await _context.Clients
                     .FirstOrDefaultAsync(c => c.UserId == currentUserId.Value);
                 if (clientRecord != null)
@@ -352,9 +353,9 @@ public class DocumentsController : ControllerBase
             var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
 
             // PERMISSION CHECK:
-            // Clients: Only download their own documents
+            // Clients/RegisteredUsers: Only download their own documents
             // Employees: Download any document
-            if (userRole == "Client" && document.UploadedByUserId != currentUserId.Value)
+            if (ClientRoles.Contains(userRole) && document.UploadedByUserId != currentUserId.Value)
             {
                 return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung für dieses Dokument" });
             }

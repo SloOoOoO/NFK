@@ -63,6 +63,8 @@ export default function Documents() {
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
 
+  const isClientRole = (role?: string) => role === 'Client' || role === 'RegisteredUser';
+
   useEffect(() => {
     // Get current user from localStorage
     const userData = localStorage.getItem('user');
@@ -71,7 +73,7 @@ export default function Documents() {
       setUser(parsedUser);
       
       // Fetch users with Client role if current user is an employee
-      if (parsedUser.role !== 'Client') {
+      if (!isClientRole(parsedUser.role)) {
         fetchClientUsers();
       }
     }
@@ -82,7 +84,7 @@ export default function Documents() {
 
   // Refetch documents when user filter changes
   useEffect(() => {
-    if (user && user.role !== 'Client') {
+    if (user && !isClientRole(user.role)) {
       fetchDocuments();
     }
   }, [selectedUserId]);
@@ -103,7 +105,7 @@ export default function Documents() {
     try {
       // Build URL with optional userId filter
       let url = '/documents';
-      if (user && user.role !== 'Client' && selectedUserId) {
+      if (user && !isClientRole(user.role) && selectedUserId) {
         url += `?userId=${selectedUserId}`;
       }
       
@@ -308,6 +310,8 @@ export default function Documents() {
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-2 items-center flex-wrap">
+              {/* Type filter - only for employees */}
+              {user && !isClientRole(user.role) && (
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -318,9 +322,10 @@ export default function Documents() {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+              )}
               
               {/* User filter for employees */}
-              {user && user.role !== 'Client' && (
+              {user && !isClientRole(user.role) && (
                 <select
                   value={selectedUserId || ''}
                   onChange={(e) => setSelectedUserId(e.target.value ? parseInt(e.target.value) : null)}
@@ -359,8 +364,8 @@ export default function Documents() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 md:flex-none md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
-              {/* Upload button - ONLY for Clients */}
-              {user && user.role === 'Client' && (
+              {/* Upload button - for Client/RegisteredUser */}
+              {user && isClientRole(user.role) && (
                 <label className="btn-primary whitespace-nowrap cursor-pointer">
                   {uploading ? '⏳ Lädt hoch...' : '📤 Hochladen'}
                   <input
@@ -373,7 +378,7 @@ export default function Documents() {
                 </label>
               )}
               {/* For employees - show info message */}
-              {user && user.role !== 'Client' && (
+              {user && !isClientRole(user.role) && (
                 <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                   ℹ️ Als Mitarbeiter können Sie Dokumente nur ansehen
                 </div>

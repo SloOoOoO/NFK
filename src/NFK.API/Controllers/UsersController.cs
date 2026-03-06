@@ -74,12 +74,17 @@ public class UsersController : ControllerBase
                 return Ok(new List<object>());
             }
 
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? currentUserIdInt = currentUserId != null && int.TryParse(currentUserId, out var parsedId) ? parsedId : null;
+
             var searchTerm = query.ToLower().Trim();
             
             var users = await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .Where(u => u.IsActive && !u.IsDeleted)
+                // Exclude the current user from search results (don't send messages to yourself)
+                .Where(u => currentUserIdInt == null || u.Id != currentUserIdInt.Value)
                 .Where(u => 
                     u.FirstName.ToLower().Contains(searchTerm) ||
                     u.LastName.ToLower().Contains(searchTerm) ||
