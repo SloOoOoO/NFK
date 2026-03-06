@@ -130,6 +130,7 @@ export default function Register() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [isEmailConflict, setIsEmailConflict] = useState(false);
   const [success, setSuccess] = useState(false);
   const [passwordValue, setPasswordValue] = useState('');
   const navigate = useNavigate();
@@ -246,11 +247,26 @@ export default function Register() {
       }, 2000);
     } catch (err: unknown) {
       console.error('Registration failed:', err);
-      const error = err as { response?: { data?: { message?: string } } };
-      setApiError(
-        error.response?.data?.message || 
-        'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      );
+      const axiosError = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
+
+      if (axiosError.response?.status === 409 || axiosError.response?.data?.error === 'user_exists') {
+        setIsEmailConflict(true);
+        setApiError(
+          'Ein Konto mit dieser E-Mail-Adresse existiert bereits. Bitte melden Sie sich an oder nutzen Sie die Passwort-Zurücksetzen-Funktion.'
+        );
+      } else if (axiosError.response?.status === 400) {
+        setIsEmailConflict(false);
+        setApiError(
+          axiosError.response?.data?.message ||
+          'Ungültige Eingabe. Bitte überprüfen Sie Ihre Angaben.'
+        );
+      } else {
+        setIsEmailConflict(false);
+        setApiError(
+          axiosError.response?.data?.message ||
+          'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -316,6 +332,17 @@ export default function Register() {
           {apiError && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
               <p className="text-sm text-red-800 dark:text-red-300">{apiError}</p>
+              {isEmailConflict && (
+                <p className="text-sm mt-2">
+                  <Link to="/auth/login" className="text-primary hover:underline font-medium" aria-label="Zur Anmeldung mit bestehender E-Mail-Adresse">
+                    Zur Anmeldung
+                  </Link>
+                  {' · '}
+                  <Link to="/auth/forgot-password" className="text-primary hover:underline font-medium" aria-label="Passwort für bestehendes Konto zurücksetzen">
+                    Passwort vergessen?
+                  </Link>
+                </p>
+              )}
             </div>
           )}
           
