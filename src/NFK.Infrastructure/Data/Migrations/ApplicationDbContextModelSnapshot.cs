@@ -1429,7 +1429,8 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Users");
                 });

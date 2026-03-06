@@ -63,11 +63,15 @@ public class AuthService : IAuthService
             throw new ArgumentException(string.Join(" ", passwordValidation.Errors));
         }
 
-        // Check if user already exists (using normalized email for reliable case/whitespace-insensitive lookup)
+        // Check if user already exists – use IgnoreQueryFilters() so soft-deleted rows
+        // are also found; without this the unique index on Email blocks a new INSERT
+        // while EF's global soft-delete filter makes the old row invisible, leaving
+        // the user unable to register OR log in.
         var existingUser = await _context.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
-        if (existingUser != null)
+        if (existingUser != null && !existingUser.IsDeleted)
         {
             _logger.LogWarning("Registration failed - user exists: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new InvalidOperationException("User with this email already exists.");
@@ -83,53 +87,105 @@ public class AuthService : IAuthService
         using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         try
         {
-            // Create user – always store the normalized (canonical) email
-            var user = new User
-            {
-                Email = normalizedEmail,
-                PasswordHash = passwordHash,
-                FirstName = SanitizeInput(request.FirstName),
-                LastName = SanitizeInput(request.LastName),
-                PhoneNumber = request.PhoneNumber,
-                FullLegalName = request.FullLegalName,
-                DateOfBirth = request.DateOfBirth,
-                Address = request.Address ?? request.Street, // Use Street if Address not provided
-                City = request.City,
-                PostalCode = request.PostalCode,
-                Country = request.Country ?? "Germany",
-                TaxId = request.TaxId,
-                TaxNumber = request.TaxNumber,
-                VatId = request.VatId,
-                CommercialRegister = request.CommercialRegister,
-                PhoneVerified = false,
-                // Client type and company fields
-                ClientType = request.ClientType,
-                CompanyName = request.CompanyName,
-                Salutation = request.Salutation,
-                Gender = request.Gender,
-                // Firm details (optional)
-                FirmLegalName = request.FirmLegalName,
-                FirmTaxId = request.FirmTaxId,
-                FirmChamberRegistration = request.FirmChamberRegistration,
-                FirmAddress = request.FirmAddress,
-                FirmCity = request.FirmCity,
-                FirmPostalCode = request.FirmPostalCode,
-                FirmCountry = request.FirmCountry,
-                // OAuth IDs
-                GoogleId = request.GoogleId,
-                DATEVId = request.DATEVId,
-                IsActive = true,
-                IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
-                FailedLoginAttempts = 0,
-                // Security fields
-                PasswordChangedAt = DateTime.UtcNow,
-                PasswordExpiresAt = passwordExpiresAt
-            };
+            User user;
+            var isReactivation = existingUser != null && existingUser.IsDeleted;
 
-            _context.Users.Add(user);
-            
-            // Save user first to get the generated Id
-            await _context.SaveChangesAsync();
+            if (isReactivation)
+            {
+                // Reactivate the soft-deleted account: update all fields from the new
+                // registration request instead of creating a new row, which would conflict
+                // with the unique index on Email.
+                _logger.LogInformation("Reactivating soft-deleted account for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+                user = existingUser!;
+                user.PasswordHash = passwordHash;
+                user.FirstName = SanitizeInput(request.FirstName);
+                user.LastName = SanitizeInput(request.LastName);
+                user.PhoneNumber = request.PhoneNumber;
+                user.FullLegalName = request.FullLegalName;
+                user.DateOfBirth = request.DateOfBirth;
+                user.Address = request.Address ?? request.Street;
+                user.City = request.City;
+                user.PostalCode = request.PostalCode;
+                user.Country = request.Country ?? "Germany";
+                user.TaxId = request.TaxId;
+                user.TaxNumber = request.TaxNumber;
+                user.VatId = request.VatId;
+                user.CommercialRegister = request.CommercialRegister;
+                user.PhoneVerified = false;
+                user.ClientType = request.ClientType;
+                user.CompanyName = request.CompanyName;
+                user.Salutation = request.Salutation;
+                user.Gender = request.Gender;
+                user.FirmLegalName = request.FirmLegalName;
+                user.FirmTaxId = request.FirmTaxId;
+                user.FirmChamberRegistration = request.FirmChamberRegistration;
+                user.FirmAddress = request.FirmAddress;
+                user.FirmCity = request.FirmCity;
+                user.FirmPostalCode = request.FirmPostalCode;
+                user.FirmCountry = request.FirmCountry;
+                user.GoogleId = request.GoogleId;
+                user.DATEVId = request.DATEVId;
+                user.IsActive = true;
+                user.IsDeleted = false;
+                user.IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true;
+                user.FailedLoginAttempts = 0;
+                user.IsLocked = false;
+                user.LockedUntil = null;
+                user.PasswordChangedAt = DateTime.UtcNow;
+                user.PasswordExpiresAt = passwordExpiresAt;
+
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Create user – always store the normalized (canonical) email
+                user = new User
+                {
+                    Email = normalizedEmail,
+                    PasswordHash = passwordHash,
+                    FirstName = SanitizeInput(request.FirstName),
+                    LastName = SanitizeInput(request.LastName),
+                    PhoneNumber = request.PhoneNumber,
+                    FullLegalName = request.FullLegalName,
+                    DateOfBirth = request.DateOfBirth,
+                    Address = request.Address ?? request.Street, // Use Street if Address not provided
+                    City = request.City,
+                    PostalCode = request.PostalCode,
+                    Country = request.Country ?? "Germany",
+                    TaxId = request.TaxId,
+                    TaxNumber = request.TaxNumber,
+                    VatId = request.VatId,
+                    CommercialRegister = request.CommercialRegister,
+                    PhoneVerified = false,
+                    // Client type and company fields
+                    ClientType = request.ClientType,
+                    CompanyName = request.CompanyName,
+                    Salutation = request.Salutation,
+                    Gender = request.Gender,
+                    // Firm details (optional)
+                    FirmLegalName = request.FirmLegalName,
+                    FirmTaxId = request.FirmTaxId,
+                    FirmChamberRegistration = request.FirmChamberRegistration,
+                    FirmAddress = request.FirmAddress,
+                    FirmCity = request.FirmCity,
+                    FirmPostalCode = request.FirmPostalCode,
+                    FirmCountry = request.FirmCountry,
+                    // OAuth IDs
+                    GoogleId = request.GoogleId,
+                    DATEVId = request.DATEVId,
+                    IsActive = true,
+                    IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
+                    FailedLoginAttempts = 0,
+                    // Security fields
+                    PasswordChangedAt = DateTime.UtcNow,
+                    PasswordExpiresAt = passwordExpiresAt
+                };
+
+                _context.Users.Add(user);
+
+                // Save user first to get the generated Id
+                await _context.SaveChangesAsync();
+            }
             
             // Now create password history and audit log with the persisted user.Id
             var passwordHistory = new PasswordHistory
@@ -164,11 +220,11 @@ public class AuthService : IAuthService
             var auditLog = new Domain.Entities.Audit.AuditLog
             {
                 UserId = user.Id,
-                Action = "UserRegistration",
+                Action = isReactivation ? "UserReactivation" : "UserRegistration",
                 EntityType = "User",
                 EntityId = user.Id,
                 IpAddress = ipAddress,
-                Details = $"New user registered: {user.Email}",
+                Details = isReactivation ? $"User account reactivated: {user.Email}" : $"New user registered: {user.Email}",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -180,6 +236,15 @@ public class AuthService : IAuthService
             // Generate email verification token for non-OAuth users
             if (string.IsNullOrEmpty(request.GoogleId) && string.IsNullOrEmpty(request.DATEVId))
             {
+                // For reactivated accounts, invalidate any old unused verification tokens first
+                if (isReactivation)
+                {
+                    var oldTokens = await _context.EmailVerificationTokens
+                        .Where(t => t.UserId == user.Id && !t.IsUsed)
+                        .ToListAsync();
+                    _context.EmailVerificationTokens.RemoveRange(oldTokens);
+                }
+
                 var verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
                     .Replace('+', '-').Replace('/', '_').TrimEnd('=');
                 var emailVerificationToken = new EmailVerificationToken
@@ -238,8 +303,11 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Login attempt for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
 
-        // Find user by normalized email
+        // Find user by normalized email – use IgnoreQueryFilters() so soft-deleted users
+        // are also found; this allows us to return an informative error rather than
+        // "user not found" when the account was soft-deleted.
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
@@ -250,6 +318,14 @@ public class AuthService : IAuthService
             // Log failed attempt for security monitoring
             await LogFailedLoginAttempt(normalizedEmail, ipAddress, "User not found");
             throw new UnauthorizedAccessException("Invalid email or password");
+        }
+
+        // Check if the account has been soft-deleted (deactivated)
+        if (user.IsDeleted)
+        {
+            _logger.LogWarning("Login failed - account deactivated: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Account deactivated");
+            throw new UnauthorizedAccessException("This account has been deactivated. Please register again.");
         }
 
         // Check if account is locked
@@ -511,13 +587,17 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Password reset request for email: {Email} from IP: {IP}", email, ipAddress);
 
-        // Find user by normalized email
+        // Find user by normalized email – use IgnoreQueryFilters() so soft-deleted
+        // accounts are also found; for a soft-deleted account we send the "not found"
+        // notification (same behaviour as a truly non-existent address) so there is
+        // no information leak about the deletion state.
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == email);
 
-        if (user == null)
+        if (user == null || user.IsDeleted)
         {
-            _logger.LogWarning("Password reset request failed - user not found: {Email} from IP: {IP}", email, ipAddress);
+            _logger.LogWarning("Password reset request failed - user not found or deactivated: {Email} from IP: {IP}", email, ipAddress);
             // Send notification that email is not in database
             try
             {
@@ -886,11 +966,14 @@ public class AuthService : IAuthService
         };
         await _cache.SetStringAsync(ipCacheKey, (ipCount + 1).ToString(), ipCountOptions);
 
-        // Find user – silent return if not found or already verified (email is already normalized above)
+        // Find user – use IgnoreQueryFilters() so soft-deleted accounts are also found.
+        // Soft-deleted users are treated the same as non-existent ones: silent return
+        // with no email sent, to prevent account enumeration.
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == email);
 
-        if (user == null)
+        if (user == null || user.IsDeleted)
         {
             _logger.LogInformation("Resend verification: no account for email: {Email} from IP: {IP}", email, ipAddress);
             return;
