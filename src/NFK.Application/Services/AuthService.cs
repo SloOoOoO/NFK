@@ -892,13 +892,13 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            _logger.LogInformation("Resend verification: no account for provided email from IP: {IP}", ipAddress);
+            _logger.LogInformation("Resend verification: no account for email: {Email} from IP: {IP}", email, ipAddress);
             return;
         }
 
         if (user.IsEmailConfirmed)
         {
-            _logger.LogInformation("Resend verification: account already verified for user: {UserId} from IP: {IP}", user.Id, ipAddress);
+            _logger.LogInformation("Resend verification: account already verified for email: {Email} user: {UserId} from IP: {IP}", email, user.Id, ipAddress);
             return;
         }
 
