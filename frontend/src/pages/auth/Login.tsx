@@ -161,6 +161,11 @@ export default function Login() {
           setRateLimited(true);
           setRetryAfter(retrySeconds);
           setError(`Zu viele Anmeldeversuche. Bitte versuchen Sie es in ${Math.ceil(retrySeconds / 60)} Minuten erneut.`);
+        } else if (err.response?.status === 401 && (err.response.data as ApiError)?.error === 'email_not_verified') {
+          // Email not verified – show German message and auto-open the resend section
+          setError('Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden. Überprüfen Sie Ihren Posteingang auf die Bestätigungs-E-Mail.');
+          setShowResend(true);
+          setResendEmail(email);
         } else if (err.response?.data) {
           const apiError = err.response.data as ApiError;
           setError(apiError.message || apiError.error || t('auth.errors.loginFailed'));

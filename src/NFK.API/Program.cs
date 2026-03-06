@@ -265,7 +265,10 @@ app.Use(async (context, next) =>
 
 app.UseSerilogRequestLogging();
 app.UseResponseCompression();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowFrontend");
 app.UseMiddleware<NFK.Infrastructure.Middleware.RateLimitingMiddleware>();
 app.UseAuthentication();
