@@ -273,7 +273,7 @@ public class EmailNormalizationTests : IDisposable
         //    not yet verified – NOT because "user not found".
         //    The expected message confirms the account was found and the verification
         //    branch was reached.
-        var loginEx = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        var loginEx = await Assert.ThrowsAsync<NFK.Application.Exceptions.EmailNotVerifiedException>(
             () => _authService.LoginAsync(new NFK.Application.DTOs.Auth.LoginRequest(inputEmail, "Password1!Abcd")));
         Assert.Contains("verify your email", loginEx.Message, StringComparison.OrdinalIgnoreCase);
 

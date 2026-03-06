@@ -59,6 +59,10 @@ public class AuthController : ControllerBase
             var result = await _authService.LoginAsync(request);
             return Ok(result);
         }
+        catch (NFK.Application.Exceptions.EmailNotVerifiedException ex)
+        {
+            return Unauthorized(new { error = "email_not_verified", message = ex.Message });
+        }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(new { error = "invalid_credentials", message = ex.Message });
