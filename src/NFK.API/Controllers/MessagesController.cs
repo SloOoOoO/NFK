@@ -11,6 +11,7 @@ namespace NFK.API.Controllers;
 [Authorize]
 public class MessagesController : ControllerBase
 {
+    private static readonly string[] ClientRoles = ["Client", "RegisteredUser"];
     private readonly ApplicationDbContext _context;
     private readonly ILogger<MessagesController> _logger;
 
@@ -39,9 +40,9 @@ public class MessagesController : ControllerBase
                 .AsQueryable();
 
             // Role-based filtering
-            if (userRole == "Client")
+            if (ClientRoles.Contains(userRole))
             {
-                // Clients can see messages sent to them OR messages they sent
+                // Clients/RegisteredUsers can see messages sent to them OR messages they sent
                 query = query.Where(m => 
                     (m.RecipientUserId == currentUserId.Value || m.SenderUserId == currentUserId.Value) 
                     && !m.IsPoolEmail);
@@ -194,8 +195,8 @@ public class MessagesController : ControllerBase
                 return BadRequest(new { error = "invalid_recipient", message = "Recipient user not found or inactive" });
             }
 
-            // If sender is a Client, validate they can only reply to users who previously messaged them
-            if (userRole == "Client")
+            // If sender is a Client/RegisteredUser, validate they can only reply to users who previously messaged them
+            if (ClientRoles.Contains(userRole))
             {
                 var hasReceivedMessage = await _context.Messages
                     .AnyAsync(m => m.SenderUserId == request.RecipientUserId && m.RecipientUserId == currentUserId.Value);

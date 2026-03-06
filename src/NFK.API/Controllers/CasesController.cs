@@ -51,10 +51,11 @@ public class CasesController : ControllerBase
             // Admin/SuperAdmin/Consultant/Receptionist: See all cases
             var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
             var canViewAllCases = allowedViewRoles.Contains(userRole);
+            var clientRoles = new[] { "Client", "RegisteredUser" };
 
-            if (userRole == "Client")
+            if (clientRoles.Contains(userRole))
             {
-                // Client can only see cases where they are the client
+                // Client/RegisteredUser can only see cases where they are the client
                 query = query.Where(c => c.Client.UserId == currentUserId.Value);
             }
             else if (!canViewAllCases)
