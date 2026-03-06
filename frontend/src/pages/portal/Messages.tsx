@@ -185,7 +185,7 @@ export default function Messages() {
   };
 
   const selectedMsg = messages.find(m => m.id === selectedMessage);
-  const isClient = currentUser?.role === 'Client';
+  const isClient = currentUser?.role === 'Client' || currentUser?.role === 'RegisteredUser';
 
   // Filter messages based on active tab
   const filteredMessages = messages; // For now, show all messages in both tabs

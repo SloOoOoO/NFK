@@ -15,6 +15,18 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context, PasswordHasher passwordHasher)
     {
+        // Always ensure the RegisteredUser role exists (idempotent – migration may have added it already)
+        if (!await context.Roles.AnyAsync(r => r.Name == "RegisteredUser"))
+        {
+            context.Roles.Add(new Role
+            {
+                Name = "RegisteredUser",
+                Description = "New users who have registered but are not yet assigned a specific role",
+                IsSystemRole = true
+            });
+            await context.SaveChangesAsync();
+        }
+
         // Check if already seeded
         if (await context.Users.AnyAsync())
         {
@@ -36,6 +48,19 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         // Seed Users
+        // In development, admin credentials can be overridden via environment variables:
+        //   SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD
+        // Defaults are only suitable for local development – override in staging/production.
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        var isDevelopment = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+
+        var adminEmail = (isDevelopment
+            ? (Environment.GetEnvironmentVariable("SEED_ADMIN_EMAIL") ?? "admin@nfk.local")
+            : "admin@nfk.local");
+        var adminPassword = (isDevelopment
+            ? (Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD") ?? "Admin123!")
+            : "Admin123!");
+
         var suheylUser = new User
         {
             Email = "karatas@nfk-buchhaltung.de",
@@ -50,11 +75,11 @@ public static class DatabaseSeeder
 
         var testUser = new User
         {
-            Email = "test@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
-            FirstName = "Max",
-            LastName = "Berater",
-            FullLegalName = "Max Berater",
+            Email = adminEmail,
+            PasswordHash = passwordHasher.HashPassword(adminPassword),
+            FirstName = "IT",
+            LastName = "Admin",
+            FullLegalName = "IT Admin",
             PhoneNumber = "+49 30 12345678",
             IsActive = true,
             IsEmailConfirmed = true
@@ -288,7 +313,7 @@ public static class DatabaseSeeder
                 SenderUserId = testUser.Id,
                 RecipientUserId = testUser2.Id,
                 Subject = "Rückfrage zu Belegen Q4",
-                Content = "Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nMax Berater",
+                Content = "Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nIT Admin",
                 IsRead = true,
                 ReadAt = DateTime.UtcNow.AddHours(-2)
             },
@@ -297,7 +322,7 @@ public static class DatabaseSeeder
                 SenderUserId = testUser.Id,
                 RecipientUserId = testUser.Id,
                 Subject = "Fall-Update: Umsatzsteuervoranmeldung Q4",
-                Content = "Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: M. Berater\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"),
+                Content = "Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: IT Admin\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"),
                 IsRead = false
             }
         };

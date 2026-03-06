@@ -70,6 +70,12 @@
   "auth": {
     "emailLabel": "E-posta",
     "emailPlaceholder": "email@ornek.com",
+    "forgotPasswordTitle": "Şifrenizi mi unuttunuz?",
+    "forgotPasswordSubtitle": "E-posta adresinizi girin. Şifrenizi sıfırlamak için bir bağlantı göndereceğiz.",
+    "forgotPasswordSuccessTitle": "E-posta gönderildi",
+    "forgotPasswordSuccessMessage": "Bu e-posta adresine kayıtlı bir hesap varsa, şifrenizi sıfırlamak için kısa süre içinde bir e-posta alacaksınız.",
+    "forgotPasswordSuccessNote": "Lütfen spam klasörünüzü de kontrol edin.",
+    "forgotPasswordSend": "Bağlantı talep et",
     "passwordLabel": "Şifre",
     "passwordPlaceholder": "Şifreniz",
     "firstNameLabel": "Ad",

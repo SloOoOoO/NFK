@@ -1,4 +1,3 @@
-﻿version: '3.8'
 
 services:
   sqlserver:
@@ -49,7 +48,23 @@ services:
       - nfk-network
     command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data --debug /data/debug.log"
 
+<<<<<<< HEAD
   api:
+=======
+  # Local mail catcher for development – captures all outgoing emails.
+  # Web UI: http://localhost:8025  |  SMTP: mailpit:1025 (no auth, no TLS)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: nfk-mailpit
+    ports:
+      - "8025:8025"   # Web UI
+      - "1025:1025"   # SMTP
+    networks:
+      - nfk-network
+    restart: unless-stopped
+
+  api: 
+>>>>>>> 18fa9361aabbddc1180d1aef9ce1972f712410af
     build:
       context: .
       dockerfile: src/NFK.API/Dockerfile
@@ -64,14 +79,37 @@ services:
       - Jwt__Secret=ThisIsAVeryLongSecretKeyForJWTTokenGenerationAtLeast32CharactersLong2025
       - Jwt__Issuer=NFK. API
       - Jwt__Audience=NFK. Client
+<<<<<<< HEAD
     ports:
+=======
+      # SMTP – uses local Mailpit in dev so email works out of the box.
+      # Override via .env file or environment for staging/production.
+      - SMTP_HOST=${SMTP_HOST:-mailpit}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-noreply@nfk-buchhaltung.de}
+      - SMTP_ENABLE_SSL=${SMTP_ENABLE_SSL:-false}
+      # Seeded admin account credentials (development only)
+      - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-admin@nfk.local}
+      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-Admin123!}
+    ports: 
+>>>>>>> 18fa9361aabbddc1180d1aef9ce1972f712410af
       - "8080:8080"
     depends_on:
       sqlserver:
         condition: service_healthy
       redis:
         condition: service_healthy
+<<<<<<< HEAD
     networks:
+=======
+      mailpit:
+        condition: service_started
+    volumes:
+      - dataprotection-keys:/root/.aspnet/DataProtection-Keys
+    networks: 
+>>>>>>> 18fa9361aabbddc1180d1aef9ce1972f712410af
       - nfk-network
 
   frontend:
@@ -98,4 +136,9 @@ networks:
 volumes:
   sqlserver-data:
   redis-data:
+<<<<<<< HEAD
   azurite-data:
+=======
+  azurite-data:
+  dataprotection-keys:
+>>>>>>> 18fa9361aabbddc1180d1aef9ce1972f712410af

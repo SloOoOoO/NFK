@@ -58,14 +58,18 @@ Secure, scalable Steuerberatung platform featuring:
 git clone https://github.com/SloOoOoO/NFK.git
 cd NFK
 
-# Start all services
-docker-compose up -d
+# (Optional) copy and edit environment overrides
+cp .env.example .env
+# Edit .env for staging/production SMTP, OAuth keys, etc.
+
+# Start all services (builds images on first run)
+docker-compose up -d --build
 
 # Check status
 docker-compose ps
 
 # View logs
-docker-compose logs -f
+docker-compose logs -f api
 ```
 
 **Services will be available at:**
@@ -73,6 +77,36 @@ docker-compose logs -f
 - Swagger UI: http://localhost:8080/swagger
 - Frontend: http://localhost:5173
 - Hangfire Dashboard: http://localhost:8080/hangfire
+- **Mailpit (email UI)**: http://localhost:8025
+
+#### Local email / Mailpit
+
+In Docker Compose development mode, all outgoing emails are intercepted by
+[Mailpit](https://mailpit.axllent.org/) – a local mail catcher that requires no
+external SMTP credentials.
+
+- Open **http://localhost:8025** in your browser to view captured emails.
+- Password-reset links appear there immediately after triggering a forgot-password request.
+- No `.env` changes are needed; the compose file wires the API to Mailpit automatically.
+
+To test the forgot-password flow end-to-end:
+1. `docker-compose up -d --build`
+2. Navigate to http://localhost:5173/auth/forgot-password
+3. Enter the seeded admin email (default: `admin@nfk.local`)
+4. Open http://localhost:8025 and click the reset link in the captured email.
+
+#### Seeded admin account
+
+On the first run (empty database), the API seeds a default admin user in
+**Development** mode.  Credentials are controlled by environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `SEED_ADMIN_EMAIL` | `admin@nfk.local` | Admin login email |
+| `SEED_ADMIN_PASSWORD` | `Admin123!` | Admin login password |
+
+Override them in your `.env` file before the first `docker-compose up`.
+These variables are ignored when `ASPNETCORE_ENVIRONMENT` is not `Development`.
 
 ### Local Development
 
@@ -258,7 +292,74 @@ DATEV_SFTP_HOST=sftp.datev.de
 
 # Email
 SENDGRID_API_KEY=your_sendgrid_key
+SMTP_HOST=smtp.nfk-buchhaltung.de
+SMTP_PORT=587
+SMTP_USERNAME=security@nfk-buchhaltung.de
+SMTP_PASSWORD=your_smtp_password
+SMTP_FROM=security@nfk-buchhaltung.de
+SMTP_ENABLE_SSL=true
 ```
+
+### SMTP configuration
+
+The application uses **MailKit** to deliver email, which correctly negotiates STARTTLS (port 587) and SSL-on-connect (port 465) without the protocol mismatches that affected the earlier `System.Net.Mail` implementation.
+
+#### Local Mailpit (default, no credentials)
+
+```bash
+# These values are already set in docker-compose.yml – no .env needed
+SMTP_HOST=mailpit
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@nfk-buchhaltung.de
+SMTP_ENABLE_SSL=false
+```
+
+Emails appear at **http://localhost:8025** immediately.
+
+#### Gmail SMTP with app password
+
+> **Prerequisites**
+> 1. Enable **2-Step Verification** on the Gmail account:
+>    https://myaccount.google.com/security
+> 2. Generate an **App Password** at https://myaccount.google.com/apppasswords  
+>    (category: *Mail*, device: *Other (custom name)*).  
+>    Copy the 16-character password **without spaces**.
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-address@gmail.com
+SMTP_PASSWORD=aaaa1bbb2ccc3ddd   # 16-char app password, no spaces
+SMTP_FROM=your-address@gmail.com
+SMTP_ENABLE_SSL=false             # STARTTLS is used automatically on port 587
+```
+
+Connection behaviour by port:
+
+| Port | TLS mode |
+|------|----------|
+| 587 | STARTTLS (recommended for Gmail / most providers) |
+| 465 | SSL-on-connect (requires `SMTP_ENABLE_SSL=true`) |
+| 1025 | Plaintext (Mailpit / local catchers) |
+
+#### Local setup & verification
+
+```bash
+# 1) copy template and edit SMTP values
+cp .env.example .env
+
+# 2) start the stack
+docker-compose up -d --build
+
+# 3) confirm no config warning in logs
+docker-compose logs api | grep "SMTP configuration is incomplete"
+```
+
+- Register a new user (`POST /api/v1/auth/register`) and verify the verification email is delivered.
+- Trigger forgot-password (`POST /api/v1/auth/forgot-password`) and verify the reset email is delivered.
+- With Gmail, check the sender's **Sent** folder and the recipient's inbox/spam.
 
 ### OAuth Setup
 
@@ -369,6 +470,54 @@ npm run lint
 ## Contributing
 
 This is a proprietary project. Contributions are managed internally.
+
+## Troubleshooting
+
+### SMTP / email not working in local Docker
+By default, Docker Compose routes all emails to **Mailpit** (no credentials required).
+View captured emails at **http://localhost:8025**.
+
+If emails are not appearing:
+- Confirm `nfk-mailpit` container is running: `docker-compose ps mailpit`
+- Check API logs: `docker-compose logs api | grep -i smtp`
+- Ensure `SMTP_HOST` is not overridden in your `.env` to an external server.
+
+### Gmail SMTP troubleshooting
+
+| Error in API logs | Cause | Fix |
+|---|---|---|
+| `SMTP authentication failed` | Wrong credentials or app password not enabled | Re-generate app password; ensure 2-Step Verification is ON |
+| `SMTP DNS/connect error` | Wrong host / firewall blocking port 587 | Verify `SMTP_HOST=smtp.gmail.com` and outbound port 587 is open |
+| `SMTP protocol error` | TLS mismatch (e.g. SSL on port 587) | Set `SMTP_ENABLE_SSL=false`; STARTTLS is negotiated automatically |
+| Email ends up in spam | No SPF/DKIM for sender domain | Use a `From` address matching your verified Gmail account |
+
+> **Note:** Gmail app passwords are 16 characters with no spaces. Do not wrap them in quotes in `.env`.
+
+### DataProtection keys warning
+The API emits a warning about DataProtection keys not being persisted.
+In Docker Compose, a named volume (`dataprotection-keys`) is mounted at
+`/root/.aspnet/DataProtection-Keys` to persist keys across container restarts.
+
+In production, store keys in Azure Key Vault, AWS KMS, or another durable store.
+
+### Duplicate log lines
+Serilog is configured exclusively from `appsettings.json`/`appsettings.Development.json`.
+The `WriteTo.Console` sink in those files is the only console output pipeline.
+If you see duplicates, check that no additional `WriteTo.Console()` calls exist in
+`Program.cs`.
+
+### Forgot-password shows generic contact form text
+This was a bug where the success modal displayed `contact.form.message` ("Nachricht")
+twice. It is fixed; the success screen now shows the correct password-reset message.
+
+### Admin account not seeded
+The seed runs only when the database is **empty** and
+`ASPNETCORE_ENVIRONMENT=Development`. If the DB already has data, the seed is
+skipped (idempotent). To re-seed, drop the database:
+```bash
+docker-compose down -v   # destroys all volumes including database
+docker-compose up -d --build
+```
 
 ## Support
 

@@ -19,7 +19,6 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -129,6 +128,7 @@ builder.Services.AddAuthorization();
 // Register application services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<UnverifiedUserCleanupService>();
 builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();
@@ -265,7 +265,13 @@ app.Use(async (context, next) =>
 
 app.UseSerilogRequestLogging();
 app.UseResponseCompression();
-app.UseHttpsRedirection();
+// HTTPS redirection is only needed in non-development environments.
+// In Docker dev the API listens on HTTP only, so the middleware produces
+// "Failed to determine the https port for redirect" warnings on every request.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowFrontend");
 app.UseMiddleware<NFK.Infrastructure.Middleware.RateLimitingMiddleware>();
 app.UseAuthentication();
@@ -278,6 +284,12 @@ app.MapHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = new[] { new HangfireAuthorizationFilter() }
 });
+
+// Schedule recurring background jobs
+RecurringJob.AddOrUpdate<UnverifiedUserCleanupService>(
+    "delete-expired-unverified-users",
+    svc => svc.DeleteExpiredUnverifiedUsersAsync(),
+    Cron.Hourly);
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));

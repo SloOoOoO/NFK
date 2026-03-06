@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+import apiClient from '../../services/api';
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -18,7 +16,7 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await axios.post(`${API_BASE_URL}/api/v1/auth/forgot-password`, { email });
+      await apiClient.post('/auth/forgot-password', { email });
       setSuccess(true);
     } catch (err: any) {
       console.error('Forgot password failed:', err);
@@ -37,12 +35,12 @@ export default function ForgotPassword() {
         <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
           <div className="text-center">
             <div className="text-6xl mb-4">✅</div>
-            <h1 className="text-2xl font-bold text-center mb-4 dark:text-white">{t('contact.form.success')}</h1>
-            <p className="text-textSecondary dark:text-gray-400 mb-6">
-              {t('contact.form.message')}
+            <h1 className="text-2xl font-bold text-center mb-4 dark:text-white">{t('auth.forgotPasswordSuccessTitle')}</h1>
+            <p className="text-textSecondary dark:text-gray-400 mb-4">
+              {t('auth.forgotPasswordSuccessMessage')}
             </p>
             <p className="text-sm text-textSecondary dark:text-gray-400 mb-8">
-              {t('contact.form.message')}
+              {t('auth.forgotPasswordSuccessNote')}
             </p>
             <Link to="/auth/login" className="btn-primary inline-block w-full text-center">
               {t('common.back')}
@@ -56,9 +54,9 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-secondary dark:bg-gray-900 flex items-center justify-center px-4">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 dark:text-white">{t('auth.forgotPassword')}</h1>
+        <h1 className="text-3xl font-bold text-center mb-2 dark:text-white">{t('auth.forgotPasswordTitle')}</h1>
         <p className="text-center text-textSecondary dark:text-gray-400 mb-8">
-          {t('auth.emailPlaceholder')}
+          {t('auth.forgotPasswordSubtitle')}
         </p>
         
         {error && (
@@ -95,7 +93,7 @@ export default function ForgotPassword() {
                 <span>{t('common.loading')}</span>
               </>
             ) : (
-              t('contact.form.send')
+              t('auth.forgotPasswordSend')
             )}
           </button>
         </form>

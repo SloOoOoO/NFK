@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import * as Dialog from '@radix-ui/react-dialog';
+import apiClient from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Event {
   id: number;
@@ -21,10 +23,13 @@ interface Client {
 
 export default function Calendar() {
   const { t, i18n } = useTranslation();
+  const { user: currentUser } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<Event[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [showModal, setShowModal] = useState(false);
+
+  const isClientRole = currentUser?.role === 'Client' || currentUser?.role === 'RegisteredUser';
   const [formData, setFormData] = useState({
     clientId: null as number | null,
     title: '',
@@ -41,16 +46,8 @@ export default function Calendar() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/appointments', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setEvents(data);
+      const response = await apiClient.get('/appointments');
+      setEvents(response.data);
     } catch (error) {
       console.error('Error fetching events:', error);
       setEvents([]);
@@ -59,16 +56,8 @@ export default function Calendar() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/clients', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setClients(data);
+      const response = await apiClient.get('/clients');
+      setClients(response.data);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -76,35 +65,16 @@ export default function Calendar() {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.clientId) {
       alert(t('calendar.selectClient'));
       return;
     }
-    
+
     try {
-      const response = await fetch('http://localhost:8080/api/v1/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
+      await apiClient.post('/appointments', formData);
       setShowModal(false);
-      setFormData({
-        clientId: null,
-        title: '',
-        startTime: '',
-        endTime: '',
-        description: '',
-        location: ''
-      });
+      setFormData({ clientId: null, title: '', startTime: '', endTime: '', description: '', location: '' });
       fetchEvents();
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -162,7 +132,7 @@ export default function Calendar() {
           <div className="flex items-center justify-between">
             {/* ONLY MONAT - NO WOCHE BUTTON */}
             <div className="flex gap-2">
-              <button className="px-4 py-2 rounded-md bg-primary-600 text-white">
+              <button className="px-4 py-2 rounded-md bg-primary text-white">
                 {t('calendar.month')}
               </button>
             </div>
@@ -175,12 +145,14 @@ export default function Calendar() {
               <button onClick={nextMonth} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md">{t('calendar.next')} →</button>
             </div>
             
-            <button 
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors font-medium"
-            >
-              + {t('calendar.addEvent')}
-            </button>
+            {!isClientRole && (
+              <button 
+                onClick={() => setShowModal(true)}
+                className="px-4 py-2 bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md shadow-sm transition-colors font-medium"
+              >
+                + {t('calendar.addEvent')}
+              </button>
+            )}
           </div>
         </div>
 
@@ -188,7 +160,7 @@ export default function Calendar() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.appointments')}</p>
-            <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{events.length}</p>
+            <p className="text-2xl font-bold text-primary dark:text-primary/70">{events.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('calendar.deadlines')}</p>
@@ -239,12 +211,12 @@ export default function Calendar() {
                       {dayEvents.length > 0 && (
                         <div className="absolute top-1 right-1 group">
                           {/* Cute calendar badge */}
-                          <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform hover:scale-110 transition-transform">
+                          <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg cursor-pointer transform hover:scale-110 transition-transform">
                             📅
                           </div>
                           
                           {/* Hover Tooltip */}
-                          <div className="absolute hidden group-hover:block top-8 right-0 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary-200 dark:border-primary-700">
+                          <div className="absolute hidden group-hover:block top-8 right-0 bg-white dark:bg-gray-800 shadow-2xl rounded-lg p-3 z-50 w-64 border-2 border-primary/20 dark:border-primary/70">
                             {dayEvents.slice(0, 3).map(event => (
                               <div key={event.id} className="mb-2 pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -281,7 +253,8 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Create Modal */}
+        {/* Create Modal - only for employee roles */}
+        {!isClientRole && (
         <Dialog.Root open={showModal} onOpenChange={setShowModal}>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
@@ -366,7 +339,7 @@ export default function Calendar() {
                   <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     {t('common.cancel')}
                   </button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">
+                  <button type="submit" className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg">
                     {t('calendar.create')}
                   </button>
                 </div>
@@ -374,6 +347,7 @@ export default function Calendar() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
+        )}
       </main>
     </div>
   );

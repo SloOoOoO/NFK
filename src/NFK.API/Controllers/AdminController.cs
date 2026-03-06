@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Admin;
+using NFK.Application.Utils;
 using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
@@ -181,6 +182,13 @@ public class AdminController : ControllerBase
                 return BadRequest(new { error = "invalid_request", message = $"Role {request.Role} not found" });
             }
 
+            // Block manual assignment of system-managed roles
+            var restrictedRoles = new[] { "Client", "RegisteredUser" };
+            if (restrictedRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { error = "invalid_request", message = $"Die Rolle '{role.Name}' kann nicht manuell zugewiesen werden. Client-Rollen werden ausschließlich über die Mandantenverwaltung vergeben." });
+            }
+
             // Remove existing roles
             var oldRole = user.UserRoles.FirstOrDefault()?.Role.Name ?? "None";
             _context.UserRoles.RemoveRange(user.UserRoles);
@@ -237,7 +245,7 @@ public class AdminController : ControllerBase
             // Update personal information
             if (request.FirstName != null) user.FirstName = request.FirstName;
             if (request.LastName != null) user.LastName = request.LastName;
-            if (request.Email != null) user.Email = request.Email;
+            if (request.Email != null) user.Email = EmailNormalizer.Normalize(request.Email);
             if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
             if (request.FullLegalName != null) user.FullLegalName = request.FullLegalName;
             if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
@@ -349,6 +357,40 @@ public class AdminController : ControllerBase
             var datevSyncsThisWeek = await _context.Set<Domain.Entities.DATEV.DATEVJob>()
                 .CountAsync(j => j.CompletedAt.HasValue && j.CompletedAt.Value >= weekStart && j.Status == "Completed");
 
+            // Login activity: daily, monthly, yearly counts and last 30 days series
+            var yearStart = new DateTime(now.Year, 1, 1);
+            var thirtyDaysAgo = today.AddDays(-29);
+
+            var loginCountsDaily = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= today);
+            var loginCountsMonthly = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= monthStart);
+            var loginCountsYearly = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .CountAsync(la => la.IsSuccessful && la.CreatedAt >= yearStart);
+
+            var loginsByDay = await _context.Set<Domain.Entities.Audit.LoginAttempt>()
+                .Where(la => la.IsSuccessful && la.CreatedAt >= thirtyDaysAgo)
+                .GroupBy(la => la.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            // Fill in missing days with 0
+            var loginsByDayDict = loginsByDay.ToDictionary(x => x.Date, x => x.Count);
+            var last30DaysSeries = Enumerable.Range(0, 30)
+                .Select(i => today.AddDays(-(29 - i)))
+                .Select(date => new LoginDayDto(
+                    date.ToString("yyyy-MM-dd"),
+                    loginsByDayDict.TryGetValue(date, out var count) ? count : 0
+                ))
+                .ToList();
+
+            var loginActivity = new LoginActivityDto(
+                loginCountsDaily,
+                loginCountsMonthly,
+                loginCountsYearly,
+                last30DaysSeries
+            );
+
             var statistics = new UserStatisticsDto(
                 TotalUsers: totalUsers,
                 TotalClients: totalClients,
@@ -364,7 +406,8 @@ public class AdminController : ControllerBase
                     documentUploadsThisWeek,
                     datevSyncsToday,
                     datevSyncsThisWeek
-                )
+                ),
+                LoginActivity: loginActivity
             );
 
             return Ok(statistics);

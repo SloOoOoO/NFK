@@ -59,6 +59,10 @@ public class AuthController : ControllerBase
             var result = await _authService.LoginAsync(request);
             return Ok(result);
         }
+        catch (NFK.Application.Exceptions.EmailNotVerifiedException ex)
+        {
+            return Unauthorized(new { error = "email_not_verified", message = ex.Message });
+        }
         catch (UnauthorizedAccessException ex)
         {
             return Unauthorized(new { error = "invalid_credentials", message = ex.Message });
@@ -352,6 +356,22 @@ public class AuthController : ControllerBase
         {
             _logger.LogError(ex, "Email verification failed");
             return StatusCode(500, new { error = "internal_error", message = "Failed to verify email" });
+        }
+    }
+
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request)
+    {
+        try
+        {
+            await _authService.ResendVerificationEmailAsync(request.Email);
+            // Always return generic success to prevent account enumeration
+            return Ok(new { message = "If an account exists and is not yet verified, a verification email has been sent." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Resend verification failed");
+            return StatusCode(500, new { error = "internal_error", message = "Failed to process request" });
         }
     }
 }

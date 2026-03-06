@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using NFK.Application.DTOs.Auth;
 using NFK.Application.Interfaces;
+using NFK.Application.Utils;
 using NFK.Domain.Entities.Users;
 using NFK.Infrastructure.Data;
 using NFK.Infrastructure.Security;
@@ -17,6 +19,7 @@ public class AuthService : IAuthService
     private readonly ILogger<AuthService> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailService _emailService;
+    private readonly IDistributedCache _cache;
 
     public AuthService(
         ApplicationDbContext context,
@@ -24,7 +27,8 @@ public class AuthService : IAuthService
         PasswordHasher passwordHasher,
         ILogger<AuthService> logger,
         IHttpContextAccessor httpContextAccessor,
-        IEmailService emailService)
+        IEmailService emailService,
+        IDistributedCache cache)
     {
         _context = context;
         _jwtService = jwtService;
@@ -32,17 +36,22 @@ public class AuthService : IAuthService
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
         _emailService = emailService;
+        _cache = cache;
     }
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
     {
         var ipAddress = GetClientIpAddress();
-        _logger.LogInformation("Registration attempt for email: {Email} from IP: {IP}", request.Email, ipAddress);
 
-        // Validate email format
-        if (!IsValidEmail(request.Email))
+        // Normalize email to canonical form (trim + lowercase) before any validation or storage
+        var normalizedEmail = EmailNormalizer.Normalize(request.Email);
+
+        _logger.LogInformation("Registration attempt for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+
+        // Validate email format against the already-normalized value
+        if (!IsValidEmail(normalizedEmail))
         {
-            _logger.LogWarning("Registration failed - invalid email format: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Registration failed - invalid email format: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new ArgumentException("Invalid email format.");
         }
 
@@ -50,17 +59,21 @@ public class AuthService : IAuthService
         var passwordValidation = PasswordPolicy.Validate(request.Password);
         if (!passwordValidation.IsValid)
         {
-            _logger.LogWarning("Registration failed - password policy violation for: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Registration failed - password policy violation for: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new ArgumentException(string.Join(" ", passwordValidation.Errors));
         }
 
-        // Check if user already exists
+        // Check if user already exists – use IgnoreQueryFilters() so soft-deleted rows
+        // are also found; without this the unique index on Email blocks a new INSERT
+        // while EF's global soft-delete filter makes the old row invisible, leaving
+        // the user unable to register OR log in.
         var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == request.Email);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
-        if (existingUser != null)
+        if (existingUser != null && !existingUser.IsDeleted)
         {
-            _logger.LogWarning("Registration failed - user exists: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Registration failed - user exists: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw new InvalidOperationException("User with this email already exists.");
         }
 
@@ -74,53 +87,105 @@ public class AuthService : IAuthService
         using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
         try
         {
-            // Create user
-            var user = new User
-            {
-                Email = request.Email,
-                PasswordHash = passwordHash,
-                FirstName = SanitizeInput(request.FirstName),
-                LastName = SanitizeInput(request.LastName),
-                PhoneNumber = request.PhoneNumber,
-                FullLegalName = request.FullLegalName,
-                DateOfBirth = request.DateOfBirth,
-                Address = request.Address ?? request.Street, // Use Street if Address not provided
-                City = request.City,
-                PostalCode = request.PostalCode,
-                Country = request.Country ?? "Germany",
-                TaxId = request.TaxId,
-                TaxNumber = request.TaxNumber,
-                VatId = request.VatId,
-                CommercialRegister = request.CommercialRegister,
-                PhoneVerified = false,
-                // Client type and company fields
-                ClientType = request.ClientType,
-                CompanyName = request.CompanyName,
-                Salutation = request.Salutation,
-                Gender = request.Gender,
-                // Firm details (optional)
-                FirmLegalName = request.FirmLegalName,
-                FirmTaxId = request.FirmTaxId,
-                FirmChamberRegistration = request.FirmChamberRegistration,
-                FirmAddress = request.FirmAddress,
-                FirmCity = request.FirmCity,
-                FirmPostalCode = request.FirmPostalCode,
-                FirmCountry = request.FirmCountry,
-                // OAuth IDs
-                GoogleId = request.GoogleId,
-                DATEVId = request.DATEVId,
-                IsActive = true,
-                IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
-                FailedLoginAttempts = 0,
-                // Security fields
-                PasswordChangedAt = DateTime.UtcNow,
-                PasswordExpiresAt = passwordExpiresAt
-            };
+            User user;
+            var isReactivation = existingUser != null && existingUser.IsDeleted;
 
-            _context.Users.Add(user);
-            
-            // Save user first to get the generated Id
-            await _context.SaveChangesAsync();
+            if (isReactivation)
+            {
+                // Reactivate the soft-deleted account: update all fields from the new
+                // registration request instead of creating a new row, which would conflict
+                // with the unique index on Email.
+                _logger.LogInformation("Reactivating soft-deleted account for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+                user = existingUser!;
+                user.PasswordHash = passwordHash;
+                user.FirstName = SanitizeInput(request.FirstName);
+                user.LastName = SanitizeInput(request.LastName);
+                user.PhoneNumber = request.PhoneNumber;
+                user.FullLegalName = request.FullLegalName;
+                user.DateOfBirth = request.DateOfBirth;
+                user.Address = request.Address ?? request.Street;
+                user.City = request.City;
+                user.PostalCode = request.PostalCode;
+                user.Country = request.Country ?? "Germany";
+                user.TaxId = request.TaxId;
+                user.TaxNumber = request.TaxNumber;
+                user.VatId = request.VatId;
+                user.CommercialRegister = request.CommercialRegister;
+                user.PhoneVerified = false;
+                user.ClientType = request.ClientType;
+                user.CompanyName = request.CompanyName;
+                user.Salutation = request.Salutation;
+                user.Gender = request.Gender;
+                user.FirmLegalName = request.FirmLegalName;
+                user.FirmTaxId = request.FirmTaxId;
+                user.FirmChamberRegistration = request.FirmChamberRegistration;
+                user.FirmAddress = request.FirmAddress;
+                user.FirmCity = request.FirmCity;
+                user.FirmPostalCode = request.FirmPostalCode;
+                user.FirmCountry = request.FirmCountry;
+                user.GoogleId = request.GoogleId;
+                user.DATEVId = request.DATEVId;
+                user.IsActive = true;
+                user.IsDeleted = false;
+                user.IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true;
+                user.FailedLoginAttempts = 0;
+                user.IsLocked = false;
+                user.LockedUntil = null;
+                user.PasswordChangedAt = DateTime.UtcNow;
+                user.PasswordExpiresAt = passwordExpiresAt;
+
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Create user – always store the normalized (canonical) email
+                user = new User
+                {
+                    Email = normalizedEmail,
+                    PasswordHash = passwordHash,
+                    FirstName = SanitizeInput(request.FirstName),
+                    LastName = SanitizeInput(request.LastName),
+                    PhoneNumber = request.PhoneNumber,
+                    FullLegalName = request.FullLegalName,
+                    DateOfBirth = request.DateOfBirth,
+                    Address = request.Address ?? request.Street, // Use Street if Address not provided
+                    City = request.City,
+                    PostalCode = request.PostalCode,
+                    Country = request.Country ?? "Germany",
+                    TaxId = request.TaxId,
+                    TaxNumber = request.TaxNumber,
+                    VatId = request.VatId,
+                    CommercialRegister = request.CommercialRegister,
+                    PhoneVerified = false,
+                    // Client type and company fields
+                    ClientType = request.ClientType,
+                    CompanyName = request.CompanyName,
+                    Salutation = request.Salutation,
+                    Gender = request.Gender,
+                    // Firm details (optional)
+                    FirmLegalName = request.FirmLegalName,
+                    FirmTaxId = request.FirmTaxId,
+                    FirmChamberRegistration = request.FirmChamberRegistration,
+                    FirmAddress = request.FirmAddress,
+                    FirmCity = request.FirmCity,
+                    FirmPostalCode = request.FirmPostalCode,
+                    FirmCountry = request.FirmCountry,
+                    // OAuth IDs
+                    GoogleId = request.GoogleId,
+                    DATEVId = request.DATEVId,
+                    IsActive = true,
+                    IsEmailConfirmed = string.IsNullOrEmpty(request.GoogleId) ? false : true, // Auto-confirm for OAuth
+                    FailedLoginAttempts = 0,
+                    // Security fields
+                    PasswordChangedAt = DateTime.UtcNow,
+                    PasswordExpiresAt = passwordExpiresAt
+                };
+
+                _context.Users.Add(user);
+
+                // Save user first to get the generated Id
+                await _context.SaveChangesAsync();
+            }
             
             // Now create password history and audit log with the persisted user.Id
             var passwordHistory = new PasswordHistory
@@ -155,11 +220,11 @@ public class AuthService : IAuthService
             var auditLog = new Domain.Entities.Audit.AuditLog
             {
                 UserId = user.Id,
-                Action = "UserRegistration",
+                Action = isReactivation ? "UserReactivation" : "UserRegistration",
                 EntityType = "User",
                 EntityId = user.Id,
                 IpAddress = ipAddress,
-                Details = $"New user registered: {user.Email}",
+                Details = isReactivation ? $"User account reactivated: {user.Email}" : $"New user registered: {user.Email}",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -171,7 +236,17 @@ public class AuthService : IAuthService
             // Generate email verification token for non-OAuth users
             if (string.IsNullOrEmpty(request.GoogleId) && string.IsNullOrEmpty(request.DATEVId))
             {
-                var verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+                // For reactivated accounts, invalidate any old unused verification tokens first
+                if (isReactivation)
+                {
+                    var oldTokens = await _context.EmailVerificationTokens
+                        .Where(t => t.UserId == user.Id && !t.IsUsed)
+                        .ToListAsync();
+                    _context.EmailVerificationTokens.RemoveRange(oldTokens);
+                }
+
+                var verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+                    .Replace('+', '-').Replace('/', '_').TrimEnd('=');
                 var emailVerificationToken = new EmailVerificationToken
                 {
                     UserId = user.Id,
@@ -202,10 +277,18 @@ public class AuthService : IAuthService
 
             return new RegisterResponse("Registration successful. Please check your email to verify your account.", user.Id);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+            when (IsDuplicateEmailException(dbEx))
+        {
+            // Race condition: another request inserted the same email between our
+            // pre-check and SaveChanges.  Surface as a domain conflict, not a 500.
+            _logger.LogWarning("Registration failed - duplicate email (race condition): {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            throw new InvalidOperationException("User with this email already exists.");
+        }
         catch (Exception ex)
         {
             // Transaction will auto-rollback on disposal if not committed
-            _logger.LogError(ex, "Registration failed for email: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogError(ex, "Registration failed for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             throw;
         }
     }
@@ -214,37 +297,60 @@ public class AuthService : IAuthService
     {
         var ipAddress = GetClientIpAddress();
         var userAgent = GetUserAgent();
-        _logger.LogInformation("Login attempt for email: {Email} from IP: {IP}", request.Email, ipAddress);
 
-        // Find user by email
+        // Normalize email so login works regardless of case or surrounding whitespace
+        var normalizedEmail = EmailNormalizer.Normalize(request.Email);
+
+        _logger.LogInformation("Login attempt for email: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+
+        // Find user by normalized email – use IgnoreQueryFilters() so soft-deleted users
+        // are also found; this allows us to return an informative error rather than
+        // "user not found" when the account was soft-deleted.
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Email == request.Email);
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
         if (user == null)
         {
-            _logger.LogWarning("Login failed - user not found: {Email} from IP: {IP}", request.Email, ipAddress);
+            _logger.LogWarning("Login failed - user not found: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             // Log failed attempt for security monitoring
-            await LogFailedLoginAttempt(request.Email, ipAddress, "User not found");
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "User not found");
             throw new UnauthorizedAccessException("Invalid email or password");
+        }
+
+        // Check if the account has been soft-deleted (deactivated)
+        if (user.IsDeleted)
+        {
+            _logger.LogWarning("Login failed - account deactivated: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Account deactivated");
+            throw new UnauthorizedAccessException("This account has been deactivated. Please register again.");
         }
 
         // Check if account is locked
         if (user.IsLocked && user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
         {
             _logger.LogWarning("Login failed - account locked: {Email} from IP: {IP}, Locked until: {LockedUntil}", 
-                request.Email, ipAddress, user.LockedUntil.Value);
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Account locked");
+                normalizedEmail, ipAddress, user.LockedUntil.Value);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Account locked");
             throw new UnauthorizedAccessException("Account is locked. Please try again later.");
         }
 
         // Check if account is active
         if (!user.IsActive)
         {
-            _logger.LogWarning("Login failed - account inactive: {Email} from IP: {IP}", request.Email, ipAddress);
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Account inactive");
+            _logger.LogWarning("Login failed - account inactive: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Account inactive");
             throw new UnauthorizedAccessException("Account is not active.");
+        }
+
+        // Check if email has been verified
+        if (!user.IsEmailConfirmed)
+        {
+            _logger.LogWarning("Login failed - email not verified: {Email} from IP: {IP}", normalizedEmail, ipAddress);
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Email not verified");
+            throw new Exceptions.EmailNotVerifiedException("Please verify your email address before logging in. Check your inbox for the verification email.");
         }
 
         // Verify password
@@ -256,13 +362,13 @@ public class AuthService : IAuthService
             {
                 user.IsLocked = true;
                 user.LockedUntil = DateTime.UtcNow.AddMinutes(30);
-                _logger.LogWarning("Account locked due to multiple failed attempts: {Email} from IP: {IP}", request.Email, ipAddress);
+                _logger.LogWarning("Account locked due to multiple failed attempts: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             }
             await _context.SaveChangesAsync();
-            await LogFailedLoginAttempt(request.Email, ipAddress, "Invalid password");
+            await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Invalid password");
 
             _logger.LogWarning("Login failed - invalid password: {Email} from IP: {IP}, Failed attempts: {Attempts}", 
-                request.Email, ipAddress, user.FailedLoginAttempts);
+                normalizedEmail, ipAddress, user.FailedLoginAttempts);
             throw new UnauthorizedAccessException("Invalid email or password");
         }
 
@@ -297,6 +403,17 @@ public class AuthService : IAuthService
         };
 
         _context.RefreshTokens.Add(refreshTokenEntity);
+
+        // Record successful login in LoginAttempts for statistics tracking
+        var successfulLogin = new Domain.Entities.Audit.LoginAttempt
+        {
+            Email = user.Email,
+            IsSuccessful = true,
+            IpAddress = ipAddress,
+            UserAgent = userAgent
+        };
+        _context.LoginAttempts.Add(successfulLogin);
+
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("User logged in successfully: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
@@ -449,6 +566,12 @@ public class AuthService : IAuthService
             user.Country,
             user.TaxId,
             user.TaxNumber,
+            user.VatId,
+            user.CommercialRegister,
+            user.ClientType,
+            user.CompanyName,
+            user.Salutation,
+            user.Gender,
             user.FirmLegalName,
             user.FirmTaxId,
             user.FirmChamberRegistration
@@ -458,15 +581,23 @@ public class AuthService : IAuthService
     public async Task<string> RequestPasswordResetAsync(string email)
     {
         var ipAddress = GetClientIpAddress();
+
+        // Normalize so forgot-password works for any case/whitespace variant
+        email = EmailNormalizer.Normalize(email);
+
         _logger.LogInformation("Password reset request for email: {Email} from IP: {IP}", email, ipAddress);
 
-        // Find user by email
+        // Find user by normalized email – use IgnoreQueryFilters() so soft-deleted
+        // accounts are also found; for a soft-deleted account we send the "not found"
+        // notification (same behaviour as a truly non-existent address) so there is
+        // no information leak about the deletion state.
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == email);
 
-        if (user == null)
+        if (user == null || user.IsDeleted)
         {
-            _logger.LogWarning("Password reset request failed - user not found: {Email} from IP: {IP}", email, ipAddress);
+            _logger.LogWarning("Password reset request failed - user not found or deactivated: {Email} from IP: {IP}", email, ipAddress);
             // Send notification that email is not in database
             try
             {
@@ -488,8 +619,13 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Account is not active.");
         }
 
-        // Generate secure random token
-        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        // Generate secure random token using Base64Url (RFC 4648 URL-safe alphabet):
+        // replaces '+' with '-' and '/' with '_', and strips '=' padding so the token
+        // contains only unreserved URL characters and never needs percent-encoding.
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+        _logger.LogDebug("Password reset token created: format=url-safe, length={Length}", token.Length);
 
         // Create password reset token
         var resetToken = new PasswordResetToken
@@ -532,10 +668,24 @@ public class AuthService : IAuthService
             throw new ArgumentException("Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number.");
         }
 
+        // Classify and normalise the incoming token to handle transport corruption.
+        // URL-safe Base64Url tokens (current format) use only A-Za-z0-9, '-', '_'.
+        // Legacy standard-Base64 tokens contain '+', '/' and/or '=' padding.
+        // Browser URLSearchParams.get() follows application/x-www-form-urlencoded
+        // semantics and silently decodes '+' as a space.  Other characters ('/', '=')
+        // are NOT decoded by URLSearchParams, so only space→'+' normalisation is needed.
+        string lookupToken = token.Contains(' ')
+            ? token.Replace(' ', '+')   // space→'+' backward-compat for legacy tokens
+            : token;
+        bool isUrlSafeFormat = !lookupToken.Contains('+') && !lookupToken.Contains('/') && !lookupToken.Contains('=');
+
+        _logger.LogDebug("Password reset token format: {Format}, length={Length}",
+            isUrlSafeFormat ? "url-safe" : "legacy", token.Length);
+
         // Find reset token
         var resetToken = await _context.PasswordResetTokens
             .Include(rt => rt.User)
-            .FirstOrDefaultAsync(rt => rt.Token == token);
+            .FirstOrDefaultAsync(rt => rt.Token == lookupToken);
 
         if (resetToken == null)
         {
@@ -591,6 +741,49 @@ public class AuthService : IAuthService
         }
 
         return hasUpper && hasLower && hasDigit;
+    }
+
+    /// <summary>
+    /// Returns true when <paramref name="ex"/> represents a unique-constraint violation
+    /// on the <c>IX_Users_Email</c> index.
+    /// <para>
+    /// The check uses a combination of strategies ordered from most-precise to broadest:
+    /// <list type="number">
+    ///   <item>Index name in the inner exception message (<c>IX_Users_Email</c>) – SQL Server 2627/2601.</item>
+    ///   <item>The SqlException error number (2627 = unique constraint, 2601 = duplicate key) accessed
+    ///         via the inner exception type name, to avoid a hard compile-time dependency on
+    ///         <c>Microsoft.Data.SqlClient</c> in the Application layer.</item>
+    ///   <item>Generic "duplicate key" / "Duplicate entry" text as a last-resort fallback for
+    ///         non-SQL-Server providers (e.g. MySQL, SQLite).</item>
+    /// </list>
+    /// </para>
+    /// </summary>
+    private static bool IsDuplicateEmailException(Microsoft.EntityFrameworkCore.DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        if (inner == null)
+            return false;
+
+        // Most precise: our specific unique index name appears in the SQL Server error message.
+        if (inner.Message.Contains("IX_Users_Email", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // SQL Server SqlException error numbers: 2627 = unique constraint violated, 2601 = cannot insert duplicate key.
+        // Access via reflection to avoid a hard reference to Microsoft.Data.SqlClient from this layer.
+        if (inner.GetType().Name == "SqlException")
+        {
+            var numberProp = inner.GetType().GetProperty("Number");
+            if (numberProp?.GetValue(inner) is int sqlErrorNumber
+                && (sqlErrorNumber == 2627 || sqlErrorNumber == 2601))
+                return true;
+        }
+
+        // Fallback: generic duplicate-key message text (covers MySQL "Duplicate entry" and others).
+        if (inner.Message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase)
+            || inner.Message.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 
     private bool IsValidEmail(string email)
@@ -725,5 +918,103 @@ public class AuthService : IAuthService
         }
 
         _logger.LogInformation("Email verified successfully for user: {UserId}, Email: {Email} from IP: {IP}", user.Id, user.Email, ipAddress);
+    }
+
+    /// <summary>
+    /// Resend verification email for a given email address.
+    /// Always returns without revealing whether the account exists or is already verified,
+    /// to prevent account enumeration. Per-email (60 s) and per-IP (5 / 10 min) cooldowns
+    /// are enforced via the distributed cache.
+    /// </summary>
+    public async Task ResendVerificationEmailAsync(string email)
+    {
+        var ipAddress = GetClientIpAddress();
+
+        // Normalize so resend works for any case/whitespace variant
+        email = EmailNormalizer.Normalize(email);
+
+        // Per-email cooldown: one resend every 60 seconds (key uses already-normalized value)
+        var emailCacheKey = $"resendverif:email:{email}";
+        var emailCooldown = await _cache.GetStringAsync(emailCacheKey);
+        if (emailCooldown != null)
+        {
+            _logger.LogInformation("Resend verification email cooldown active from IP: {IP}", ipAddress);
+            return; // Generic return – no enumeration leak
+        }
+
+        // Per-IP rate limit: 5 resend attempts per 10-minute window
+        var ipCacheKey = $"resendverif:ip:{ipAddress}";
+        var ipCountStr = await _cache.GetStringAsync(ipCacheKey);
+        var ipCount = int.TryParse(ipCountStr, out var c) ? c : 0;
+        if (ipCount >= 5)
+        {
+            _logger.LogWarning("Resend verification IP rate limit exceeded for IP: {IP}", ipAddress);
+            return; // Generic return – no enumeration leak
+        }
+
+        // Always set cooldowns before touching the DB so timing attacks reveal nothing
+        var emailCooldownOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60)
+        };
+        await _cache.SetStringAsync(emailCacheKey, "1", emailCooldownOptions);
+
+        // Increment IP counter; keep the same absolute window on the first set
+        var ipCountOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+        };
+        await _cache.SetStringAsync(ipCacheKey, (ipCount + 1).ToString(), ipCountOptions);
+
+        // Find user – use IgnoreQueryFilters() so soft-deleted accounts are also found.
+        // Soft-deleted users are treated the same as non-existent ones: silent return
+        // with no email sent, to prevent account enumeration.
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null || user.IsDeleted)
+        {
+            _logger.LogInformation("Resend verification: no account for email: {Email} from IP: {IP}", email, ipAddress);
+            return;
+        }
+
+        if (user.IsEmailConfirmed)
+        {
+            _logger.LogInformation("Resend verification: account already verified for email: {Email} user: {UserId} from IP: {IP}", email, user.Id, ipAddress);
+            return;
+        }
+
+        // Invalidate all unused verification tokens for this user before issuing a fresh one
+        var oldTokens = await _context.EmailVerificationTokens
+            .Where(t => t.UserId == user.Id && !t.IsUsed)
+            .ToListAsync();
+        _context.EmailVerificationTokens.RemoveRange(oldTokens);
+
+        // Generate a new URL-safe Base64Url token (same approach as registration & password reset)
+        var verificationToken = Convert.ToBase64String(
+                System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+        var tokenEntity = new EmailVerificationToken
+        {
+            UserId = user.Id,
+            Token = verificationToken,
+            ExpiresAt = DateTime.UtcNow.AddHours(24),
+            IsUsed = false
+        };
+        _context.EmailVerificationTokens.Add(tokenEntity);
+        await _context.SaveChangesAsync();
+
+        // Attempt to send the email; failures are logged but do not surface to the caller
+        try
+        {
+            await _emailService.SendEmailVerificationAsync(user.Email, user.FirstName, verificationToken);
+            _logger.LogInformation("Resend verification email sent for user: {UserId} from IP: {IP}", user.Id, ipAddress);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send resend verification email for user: {UserId} from IP: {IP}", user.Id, ipAddress);
+        }
     }
 }

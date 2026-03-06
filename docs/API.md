@@ -87,7 +87,122 @@ Logout and invalidate tokens.
 
 **Response:** `200 OK`
 
-### Client Endpoints
+#### POST /auth/forgot-password
+Request a password reset email.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** `200 OK` (always, to prevent account enumeration)
+```json
+{
+  "message": "If an account with that email exists, a password reset link has been sent."
+}
+```
+
+#### POST /auth/reset-password
+Reset password using a token from the reset email.
+
+**Request Body:**
+```json
+{
+  "token": "<url-safe-base64url-token>",
+  "newPassword": "NewSecurePassword1!"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Password has been reset successfully"
+}
+```
+
+#### POST /auth/verify-email
+Verify an email address using a token from the verification email.
+
+**Request Body:**
+```json
+{
+  "token": "<url-safe-base64url-token>"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Email verified successfully"
+}
+```
+
+#### POST /auth/resend-verification
+Resend the email verification link to a given address.
+
+> **Security note:** The response is always the same generic success message regardless of
+> whether the account exists or is already verified. This prevents account enumeration.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** `200 OK` (always)
+```json
+{
+  "message": "If an account exists and is not yet verified, a verification email has been sent."
+}
+```
+
+**Rate limiting:**
+- Per-email cooldown: one request per 60 seconds.
+- Per-IP limit: 5 requests per 10-minute window.
+
+**User flow:**
+1. User registers but never receives the verification email (e.g. due to an SMTP outage).
+2. User tries to log in and sees "Please verify your email address before logging in."
+3. User clicks **"Keine Bestätigungs-E-Mail erhalten?"** on the login page.
+4. User enters their email address and clicks **"Bestätigungs-E-Mail erneut senden"**.
+5. A fresh 24-hour verification link is sent (old unused tokens are invalidated).
+6. User clicks the link in their inbox and is redirected to login.
+
+---
+
+## Email Normalization Policy
+
+All email addresses are normalized to a **canonical form** before any storage or lookup:
+
+1. **Trim** leading and trailing whitespace.
+2. **Lowercase** using the invariant culture.
+
+This normalization is applied consistently in every auth flow:
+- `POST /auth/register` – stored email is always normalized.
+- `POST /auth/login` – lookup uses normalized email; mixed-case or padded input always matches the stored address.
+- `POST /auth/forgot-password` – lookup uses normalized email.
+- `POST /auth/resend-verification` – lookup uses normalized email.
+- Admin user-update paths – any email update is normalized before persistence.
+
+### Duplicate registration behavior
+
+If a client attempts to register with an email that already exists (including case/whitespace variants), the API returns:
+
+```
+HTTP 409 Conflict
+{"error": "user_exists", "message": "User with this email already exists."}
+```
+
+This prevents the raw SQL duplicate-key exception from surfacing as a `500 Internal Server Error`.
+
+### Data migration caveat
+
+A one-time data remediation migration (`NormalizeExistingEmails`) normalizes all existing rows in the `Users` table.  
+If two rows would resolve to the same normalized email (a collision), the migration aborts with a structured error message and operator instructions for manual remediation.  
+**Always take a database backup before running migrations.**
 
 #### GET /clients
 Get all clients (Admin/Consultant only).

@@ -70,6 +70,12 @@
   "auth": {
     "emailLabel": "E-Mail",
     "emailPlaceholder": "ihre.email@beispiel.de",
+    "forgotPasswordTitle": "Passwort vergessen",
+    "forgotPasswordSubtitle": "Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+    "forgotPasswordSuccessTitle": "E-Mail gesendet",
+    "forgotPasswordSuccessMessage": "Falls ein Konto mit dieser E-Mail-Adresse existiert, erhalten Sie in Kürze eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts.",
+    "forgotPasswordSuccessNote": "Bitte überprüfen Sie auch Ihren Spam-Ordner.",
+    "forgotPasswordSend": "Link anfordern",
     "passwordLabel": "Passwort",
     "passwordPlaceholder": "Ihr Passwort",
     "firstNameLabel": "Vorname",

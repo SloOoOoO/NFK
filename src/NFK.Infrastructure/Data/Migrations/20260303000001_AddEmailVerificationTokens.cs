@@ -1,24 +1,21 @@
-﻿using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using NFK.Infrastructure.Data;
 
 #nullable disable
 
 namespace NFK.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddPasswordResetToken : Migration
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260303000001_AddEmailVerificationTokens")]
+    public partial class AddEmailVerificationTokens : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // User profile fields (Address, City, Country, DateOfBirth, Firm*, FullLegalName,
-            // PhoneVerified, PostalCode, TaxId) are now owned by the earlier
-            // ExtendUserFields migration (20260111170000) which uses IF NOT EXISTS guards.
-            // Keeping them here would produce a duplicate-column error when both migrations
-            // run in order on a fresh database.
-
             migrationBuilder.CreateTable(
-                name: "PasswordResetTokens",
+                name: "EmailVerificationTokens",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -27,6 +24,7 @@ namespace NFK.Infrastructure.Data.Migrations
                     Token = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsUsed = table.Column<bool>(type: "bit", nullable: false),
+                    UsedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -35,9 +33,9 @@ namespace NFK.Infrastructure.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PasswordResetTokens", x => x.Id);
+                    table.PrimaryKey("PK_EmailVerificationTokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_PasswordResetTokens_Users_UserId",
+                        name: "FK_EmailVerificationTokens_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -45,8 +43,8 @@ namespace NFK.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PasswordResetTokens_UserId",
-                table: "PasswordResetTokens",
+                name: "IX_EmailVerificationTokens_UserId",
+                table: "EmailVerificationTokens",
                 column: "UserId");
         }
 
@@ -54,10 +52,7 @@ namespace NFK.Infrastructure.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "PasswordResetTokens");
-
-            // User profile columns are owned by ExtendUserFields (20260111170000);
-            // they must not be dropped here to avoid leaving the DB in an inconsistent state.
+                name: "EmailVerificationTokens");
         }
     }
 }

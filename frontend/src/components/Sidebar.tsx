@@ -30,13 +30,18 @@ export default function Sidebar() {
 
   const navItems = [
     { name: t('dashboard.nav.dashboard'), path: '/portal/dashboard', icon: '📊' },
-    { name: t('dashboard.nav.clients'), path: '/portal/clients', icon: '👥' },
     { name: t('dashboard.nav.cases'), path: '/portal/cases', icon: '📁' },
     { name: t('dashboard.nav.documents'), path: '/portal/documents', icon: '📄' },
     { name: t('dashboard.nav.messages'), path: '/portal/messages', icon: '✉️' },
     { name: t('dashboard.nav.calendar'), path: '/portal/calendar', icon: '📅' },
     { name: t('dashboard.nav.connections'), path: '/portal/connections', icon: '🔄' },
   ];
+
+  // Add Clients tab only for employee roles (not Client/RegisteredUser)
+  const clientRoles = ['Client', 'RegisteredUser'];
+  if (currentUser?.role && !clientRoles.includes(currentUser.role)) {
+    navItems.splice(1, 0, { name: t('dashboard.nav.clients'), path: '/portal/clients', icon: '👥' });
+  }
 
   // Add Admin tab if user is SuperAdmin
   if (currentUser?.role === 'SuperAdmin') {

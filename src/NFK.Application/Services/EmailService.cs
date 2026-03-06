@@ -1,13 +1,16 @@
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MimeKit;
 using NFK.Application.Interfaces;
-using System.Net;
-using System.Net.Mail;
 
 namespace NFK.Application.Services;
 
 public class EmailService : IEmailService
 {
+    private const int SmtpTimeoutSeconds = 30;
+
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
     private readonly string _fromEmail;
@@ -20,14 +23,14 @@ public class EmailService : IEmailService
     {
         _configuration = configuration;
         _logger = logger;
-        _fromEmail = configuration["Email:Smtp:FromEmail"] ?? "info@nfk-buchhaltung.de";
+        _fromEmail = Environment.GetEnvironmentVariable("SMTP_FROM") ?? string.Empty;
         _fromName = configuration["Email:Smtp:FromName"] ?? "NFK Buchhaltung";
         _frontendUrl = configuration["Frontend:Url"] ?? "http://localhost:5173";
     }
 
     public async Task SendEmailVerificationAsync(string email, string firstName, string verificationToken)
     {
-        var verificationLink = $"{_frontendUrl}/auth/verify-email?token={verificationToken}";
+        var verificationLink = $"{_frontendUrl}/auth/verify-email?token={Uri.EscapeDataString(verificationToken)}";
         var subject = "Bestätigen Sie Ihre E-Mail-Adresse - NFK Buchhaltung";
         var body = $@"
 <!DOCTYPE html>
@@ -61,7 +64,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -72,7 +75,7 @@ public class EmailService : IEmailService
 
     public async Task SendPasswordResetEmailAsync(string email, string firstName, string resetToken)
     {
-        var resetLink = $"{_frontendUrl}/auth/reset-password?token={resetToken}";
+        var resetLink = $"{_frontendUrl}/auth/reset-password?token={Uri.EscapeDataString(resetToken)}";
         var subject = "Passwort zurücksetzen - NFK Buchhaltung";
         var body = $@"
 <!DOCTYPE html>
@@ -108,7 +111,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -150,7 +153,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -190,7 +193,7 @@ public class EmailService : IEmailService
         </div>
         <div class=""footer"">
             <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
-            <p>info@nfk-buchhaltung.de</p>
+            <p>{_fromEmail}</p>
         </div>
     </div>
 </body>
@@ -225,35 +228,110 @@ public class EmailService : IEmailService
 
     private async Task SendViaSmtpAsync(string toEmail, string subject, string htmlBody)
     {
-        var smtpHost = _configuration["Email:Smtp:Host"];
-        var smtpPort = int.Parse(_configuration["Email:Smtp:Port"] ?? "587");
-        var smtpUsername = _configuration["Email:Smtp:Username"];
-        var smtpPassword = _configuration["Email:Smtp:Password"];
-        var enableSsl = bool.Parse(_configuration["Email:Smtp:EnableSsl"] ?? "true");
+        var smtpHost = Environment.GetEnvironmentVariable("SMTP_HOST");
+        var smtpPortValue = Environment.GetEnvironmentVariable("SMTP_PORT");
+        var smtpUsername = Environment.GetEnvironmentVariable("SMTP_USERNAME");
+        var smtpPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+        var enableSslValue = Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL");
 
-        if (string.IsNullOrEmpty(smtpHost) || string.IsNullOrEmpty(smtpUsername) || string.IsNullOrEmpty(smtpPassword))
+        if (string.IsNullOrEmpty(smtpHost)
+            || string.IsNullOrEmpty(smtpPortValue)
+            || string.IsNullOrEmpty(_fromEmail))
         {
-            _logger.LogWarning("SMTP configuration is incomplete. Email not sent to {Email}", toEmail);
+            _logger.LogWarning("SMTP configuration is incomplete (missing host, port, or from address). Email not sent to {Email}", toEmail);
             _logger.LogInformation("Email would have been sent: To={Email}, Subject={Subject}", toEmail, subject);
             return;
         }
 
-        using var client = new SmtpClient(smtpHost, smtpPort)
+        if (!int.TryParse(smtpPortValue, out var smtpPort))
         {
-            EnableSsl = enableSsl,
-            Credentials = new NetworkCredential(smtpUsername, smtpPassword)
-        };
+            _logger.LogWarning("SMTP_PORT is not a valid integer ({Value}). Email not sent to {Email}", smtpPortValue, toEmail);
+            return;
+        }
 
-        var message = new MailMessage
+        var enableSsl = false;
+        if (!string.IsNullOrWhiteSpace(enableSslValue))
         {
-            From = new MailAddress(_fromEmail, _fromName),
-            Subject = subject,
-            Body = htmlBody,
-            IsBodyHtml = true
-        };
-        message.To.Add(toEmail);
+            if (!bool.TryParse(enableSslValue, out enableSsl))
+            {
+                _logger.LogWarning("SMTP_ENABLE_SSL value '{Value}' is not a valid boolean. Defaulting SSL to disabled", enableSslValue);
+                enableSsl = false;
+            }
+        }
 
-        await client.SendMailAsync(message);
+        // Determine the correct TLS option to avoid protocol mismatches:
+        //   port 465 (or SMTP_ENABLE_SSL=true + 465)  → SSL on connect
+        //   port 587                                    → STARTTLS
+        //   anything else (e.g. 1025 for Mailpit)      → plaintext
+        SecureSocketOptions socketOptions;
+        if (enableSsl && smtpPort == 465)
+        {
+            socketOptions = SecureSocketOptions.SslOnConnect;
+        }
+        else if (smtpPort == 587)
+        {
+            socketOptions = SecureSocketOptions.StartTls;
+        }
+        else
+        {
+            socketOptions = SecureSocketOptions.None;
+        }
+
+        var hasCredentials = !string.IsNullOrEmpty(smtpUsername) && !string.IsNullOrEmpty(smtpPassword);
+
+        _logger.LogDebug("SMTP connecting to {Host}:{Port} mode={Mode} auth={Auth}",
+            smtpHost, smtpPort, socketOptions, hasCredentials ? "yes" : "no");
+
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(_fromName, _fromEmail));
+        message.To.Add(MailboxAddress.Parse(toEmail));
+        message.Subject = subject;
+        message.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = htmlBody };
+
+        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(SmtpTimeoutSeconds));
+        using var client = new SmtpClient();
+
+        try
+        {
+            await client.ConnectAsync(smtpHost, smtpPort, socketOptions, cts.Token);
+
+            // Only authenticate when credentials are provided (not needed for Mailpit / local catchers)
+            if (hasCredentials)
+            {
+                await client.AuthenticateAsync(smtpUsername, smtpPassword, cts.Token);
+            }
+
+            await client.SendAsync(message, cts.Token);
+            await client.DisconnectAsync(true, cts.Token);
+        }
+        catch (MailKit.Security.AuthenticationException ex)
+        {
+            _logger.LogError("SMTP authentication failed for {Host}:{Port} (user={User}): {Message}",
+                smtpHost, smtpPort, smtpUsername, ex.Message);
+            throw;
+        }
+        catch (MailKit.Net.Smtp.SmtpCommandException ex)
+        {
+            _logger.LogError("SMTP protocol error sending to {Recipient} via {Host}:{Port} – status={Status} message={Message}",
+                toEmail, smtpHost, smtpPort, ex.StatusCode, ex.Message);
+            throw;
+        }
+        catch (MailKit.Net.Smtp.SmtpProtocolException ex)
+        {
+            _logger.LogError("SMTP protocol exception sending to {Recipient} via {Host}:{Port}: {Message}",
+                toEmail, smtpHost, smtpPort, ex.Message);
+            throw;
+        }
+        catch (System.Net.Sockets.SocketException ex)
+        {
+            _logger.LogError("SMTP DNS/connect error for {Host}:{Port}: {Message}", smtpHost, smtpPort, ex.Message);
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("SMTP send timed out after {Timeout} s for {Host}:{Port} recipient={Recipient}", SmtpTimeoutSeconds, smtpHost, smtpPort, toEmail);
+            throw;
+        }
     }
 
     private async Task SendViaSendGridAsync(string toEmail, string subject, string htmlBody)

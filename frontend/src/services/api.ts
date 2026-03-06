@@ -87,6 +87,9 @@ export const authAPI = {
   
   getCurrentUser: () =>
     apiClient.get('/auth/me'),
+
+  resendVerification: (email: string) =>
+    apiClient.post('/auth/resend-verification', { email }),
 };
 
 // Clients API

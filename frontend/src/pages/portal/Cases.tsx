@@ -53,15 +53,21 @@ export default function Cases() {
   const [successMessage, setSuccessMessage] = useState('');
   const [user, setUser] = useState<any>(null);
 
+  const isClientRole = (role?: string) => role === 'Client' || role === 'RegisteredUser';
+
   useEffect(() => {
     // Get current user from localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      // Only fetch clients list for employee roles (needed for creating cases)
+      if (!isClientRole(parsedUser.role)) {
+        fetchClients();
+      }
     }
     
     fetchCases();
-    fetchClients();
   }, []);
 
   const fetchClients = async () => {
@@ -291,7 +297,7 @@ export default function Cases() {
             
             <div className="flex gap-2 w-full md:w-auto">
               {/* Only employees can create cases */}
-              {user && user.role !== 'Client' ? (
+              {user && !isClientRole(user.role) ? (
                 <>
                   <button 
                     onClick={() => setShowCreateModal(true)}
@@ -381,11 +387,11 @@ export default function Cases() {
                 <div className="text-6xl mb-4">📁</div>
                 <h3 className="text-xl font-semibold text-textPrimary dark:text-white mb-2">Keine Fälle gefunden</h3>
                 <p className="text-textSecondary dark:text-gray-400 mb-4">
-                  {user && user.role === 'Client' 
+                  {user && isClientRole(user.role)
                     ? 'Sie haben keine zugewiesenen Fälle.' 
                     : 'Es gibt keine Fälle mit diesem Status.'}
                 </p>
-                {user && user.role !== 'Client' && (
+                {user && !isClientRole(user.role) && (
                   <button 
                     onClick={() => setShowCreateModal(true)}
                     className="btn-primary"
