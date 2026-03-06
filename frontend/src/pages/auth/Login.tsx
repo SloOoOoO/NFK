@@ -13,7 +13,7 @@ interface ApiError {
 
 // Rate limiting constants
 const DEFAULT_RATE_LIMIT_SECONDS = 900; // 15 minutes
-const RESEND_COOLDOWN_SECONDS = 60; // 1 minute local cooldown
+const VERIFICATION_RESEND_COOLDOWN_SECONDS = 60; // 1 minute
 
 export default function Login() {
   const { t } = useTranslation();
@@ -27,13 +27,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Resend verification state
-  const [showResend, setShowResend] = useState(false);
-  const [resendEmail, setResendEmail] = useState('');
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendMessage, setResendMessage] = useState('');
-  const [resendError, setResendError] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
+  // Verification warning state
+  const [showVerificationWarning, setShowVerificationWarning] = useState(false);
+  const [verificationResendLoading, setVerificationResendLoading] = useState(false);
+  const [verificationResendSent, setVerificationResendSent] = useState(false);
+  const [verificationResendCooldown, setVerificationResendCooldown] = useState(0);
 
   useEffect(() => {
     // Check for SSO errors
@@ -93,42 +91,33 @@ export default function Login() {
     }
   }, [retryAfter]);
 
-  // Countdown timer for resend verification cooldown
+  // Countdown timer for verification resend cooldown
   useEffect(() => {
-    if (resendCooldown > 0) {
+    if (verificationResendCooldown > 0) {
       const timer = setInterval(() => {
-        setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+        setVerificationResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [resendCooldown]);
+  }, [verificationResendCooldown]);
 
-  const handleResendSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (resendLoading || resendCooldown > 0) return;
+  const handleVerificationResend = async () => {
+    if (verificationResendLoading || verificationResendCooldown > 0) return;
 
-    setResendError('');
-    setResendMessage('');
-    setResendLoading(true);
-
+    setVerificationResendLoading(true);
     try {
-      await authAPI.resendVerification(resendEmail);
-      setResendMessage(
-        'Falls ein Konto existiert und noch nicht bestätigt ist, wurde eine Bestätigungs-E-Mail gesendet.'
-      );
-      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      await authAPI.resendVerification(email);
+      setVerificationResendSent(true);
+      setVerificationResendCooldown(VERIFICATION_RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      // Show the same generic message regardless of outcome to prevent enumeration.
-      // In development, log the raw error for diagnostics.
       if (import.meta.env.DEV) {
         console.error('[ResendVerification]', err);
       }
-      setResendMessage(
-        'Falls ein Konto existiert und noch nicht bestätigt ist, wurde eine Bestätigungs-E-Mail gesendet.'
-      );
-      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      // Show success anyway to avoid account enumeration
+      setVerificationResendSent(true);
+      setVerificationResendCooldown(VERIFICATION_RESEND_COOLDOWN_SECONDS);
     } finally {
-      setResendLoading(false);
+      setVerificationResendLoading(false);
     }
   };
 
@@ -140,6 +129,8 @@ export default function Login() {
     }
     
     setError('');
+    setShowVerificationWarning(false);
+    setVerificationResendSent(false);
     setLoading(true);
 
     try {
@@ -161,11 +152,9 @@ export default function Login() {
           setRateLimited(true);
           setRetryAfter(retrySeconds);
           setError(`Zu viele Anmeldeversuche. Bitte versuchen Sie es in ${Math.ceil(retrySeconds / 60)} Minuten erneut.`);
-        } else if (err.response?.status === 401 && (err.response.data as ApiError)?.error === 'email_not_verified') {
-          // Email not verified – show German message and auto-open the resend section
-          setError('Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden. Überprüfen Sie Ihren Posteingang auf die Bestätigungs-E-Mail.');
-          setShowResend(true);
-          setResendEmail(email);
+        } else if (err.response?.status === 403 && (err.response.data as ApiError)?.error === 'email_not_verified') {
+          // Email not verified – show inline verification warning
+          setShowVerificationWarning(true);
         } else if (err.response?.data) {
           const apiError = err.response.data as ApiError;
           setError(apiError.message || apiError.error || t('auth.errors.loginFailed'));
@@ -217,6 +206,32 @@ export default function Login() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {showVerificationWarning && (
+          <div className="mb-6 p-4 rounded-md bg-amber-50 border border-amber-200">
+            <p className="text-sm font-medium text-amber-800">
+              Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse, um sich anmelden zu können.
+            </p>
+            <div className="mt-2">
+              {verificationResendSent ? (
+                <p className="text-sm text-amber-700">Bestätigungs-E-Mail wurde gesendet.</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleVerificationResend}
+                  disabled={verificationResendLoading || verificationResendCooldown > 0}
+                  className="text-sm text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {verificationResendLoading
+                    ? 'Sende...'
+                    : verificationResendCooldown > 0
+                    ? `Bestätigungs-E-Mail erneut senden (${verificationResendCooldown}s)`
+                    : 'Bestätigungs-E-Mail erneut senden'}
+                </button>
+              )}
+            </div>
           </div>
         )}
         
@@ -327,66 +342,6 @@ export default function Login() {
           <Link to="/auth/register" className="text-primary hover:underline">
             {t('auth.noAccount')} {t('auth.registerHere')}
           </Link>
-        </div>
-
-        {/* Resend verification email section */}
-        <div className="mt-4 border-t border-gray-100 pt-4">
-          <button
-            type="button"
-            onClick={() => {
-              setShowResend(!showResend);
-              setResendMessage('');
-              setResendError('');
-            }}
-            className="w-full text-sm text-gray-500 hover:text-primary text-center underline-offset-2 hover:underline"
-          >
-            Keine Bestätigungs-E-Mail erhalten?
-          </button>
-
-          {showResend && (
-            <div className="mt-3">
-              <p className="text-sm text-gray-600 mb-3 text-center">
-                Geben Sie Ihre E-Mail-Adresse ein, um die Bestätigungs-E-Mail erneut zu senden.
-              </p>
-
-              {resendMessage && (
-                <div className="mb-3 p-3 rounded-md bg-green-50 border border-green-200">
-                  <p className="text-sm text-green-800">{resendMessage}</p>
-                </div>
-              )}
-
-              {resendError && (
-                <div className="mb-3 p-3 rounded-md bg-red-50 border border-red-200">
-                  <p className="text-sm text-red-800">{resendError}</p>
-                </div>
-              )}
-
-              <form onSubmit={handleResendSubmit} className="space-y-3">
-                <input
-                  type="email"
-                  value={resendEmail}
-                  onChange={(e) => setResendEmail(e.target.value)}
-                  placeholder="ihre@email.de"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                  required
-                  disabled={resendLoading}
-                />
-                <button
-                  type="submit"
-                  disabled={resendLoading || resendCooldown > 0}
-                  className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {resendLoading ? (
-                    'Sende...'
-                  ) : resendCooldown > 0 ? (
-                    `Erneut senden in ${resendCooldown}s`
-                  ) : (
-                    'Bestätigungs-E-Mail erneut senden'
-                  )}
-                </button>
-              </form>
-            </div>
-          )}
         </div>
       </div>
     </div>
