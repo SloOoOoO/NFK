@@ -120,7 +120,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const roles = ['SuperAdmin', 'Admin', 'Consultant', 'Receptionist', 'Client', 'DATEVManager'];
+  const roles = ['SuperAdmin', 'Admin', 'Consultant', 'Receptionist', 'DATEVManager'];
 
   return (
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">

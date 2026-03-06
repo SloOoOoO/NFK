@@ -48,9 +48,10 @@ public class AppointmentsController : ControllerBase
                 .AsQueryable();
 
             // Filter by role
-            if (userRole == "Client")
+            var clientRoles = new[] { "Client", "RegisteredUser" };
+            if (clientRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase))
             {
-                // For clients, filter appointments where the appointment's client's userId matches the current user
+                // For clients/registered users, only show appointments where their linked client record matches
                 query = query.Where(a => a.Client.UserId == userId);
             }
 

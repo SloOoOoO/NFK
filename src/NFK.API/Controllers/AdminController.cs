@@ -182,6 +182,13 @@ public class AdminController : ControllerBase
                 return BadRequest(new { error = "invalid_request", message = $"Role {request.Role} not found" });
             }
 
+            // Block manual assignment of system-managed roles
+            var restrictedRoles = new[] { "Client", "RegisteredUser" };
+            if (restrictedRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { error = "invalid_request", message = $"Die Rolle '{role.Name}' kann nicht manuell zugewiesen werden. Client-Rollen werden ausschließlich über die Mandantenverwaltung vergeben." });
+            }
+
             // Remove existing roles
             var oldRole = user.UserRoles.FirstOrDefault()?.Role.Name ?? "None";
             _context.UserRoles.RemoveRange(user.UserRoles);
