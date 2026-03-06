@@ -274,7 +274,7 @@ public class AuthService : IAuthService
         {
             _logger.LogWarning("Login failed - email not verified: {Email} from IP: {IP}", normalizedEmail, ipAddress);
             await LogFailedLoginAttempt(normalizedEmail, ipAddress, "Email not verified");
-            throw new UnauthorizedAccessException("Please verify your email address before logging in. Check your inbox for the verification email.");
+            throw new Exceptions.EmailNotVerifiedException("Please verify your email address before logging in. Check your inbox for the verification email.");
         }
 
         // Verify password

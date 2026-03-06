@@ -265,6 +265,9 @@ app.Use(async (context, next) =>
 
 app.UseSerilogRequestLogging();
 app.UseResponseCompression();
+// HTTPS redirection is only needed in non-development environments.
+// In Docker dev the API listens on HTTP only, so the middleware produces
+// "Failed to determine the https port for redirect" warnings on every request.
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
