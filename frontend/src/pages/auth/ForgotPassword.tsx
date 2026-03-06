@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+import apiClient from '../../services/api';
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -18,7 +16,7 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await axios.post(`${API_BASE_URL}/api/v1/auth/forgot-password`, { email });
+      await apiClient.post('/auth/forgot-password', { email });
       setSuccess(true);
     } catch (err: any) {
       console.error('Forgot password failed:', err);

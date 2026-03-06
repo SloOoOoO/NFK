@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import * as Dialog from '@radix-ui/react-dialog';
+import apiClient from '../../services/api';
 
 interface Event {
   id: number;
@@ -41,16 +42,8 @@ export default function Calendar() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/appointments', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setEvents(data);
+      const response = await apiClient.get('/appointments');
+      setEvents(response.data);
     } catch (error) {
       console.error('Error fetching events:', error);
       setEvents([]);
@@ -59,16 +52,8 @@ export default function Calendar() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/clients', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setClients(data);
+      const response = await apiClient.get('/clients');
+      setClients(response.data);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -76,35 +61,16 @@ export default function Calendar() {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.clientId) {
       alert(t('calendar.selectClient'));
       return;
     }
-    
+
     try {
-      const response = await fetch('http://localhost:8080/api/v1/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
+      await apiClient.post('/appointments', formData);
       setShowModal(false);
-      setFormData({
-        clientId: null,
-        title: '',
-        startTime: '',
-        endTime: '',
-        description: '',
-        location: ''
-      });
+      setFormData({ clientId: null, title: '', startTime: '', endTime: '', description: '', location: '' });
       fetchEvents();
     } catch (error) {
       console.error('Error creating appointment:', error);
