@@ -77,9 +77,9 @@ public static class DatabaseSeeder
         {
             Email = adminEmail,
             PasswordHash = passwordHasher.HashPassword(adminPassword),
-            FirstName = "Max",
-            LastName = "Berater",
-            FullLegalName = "Max Berater",
+            FirstName = "IT",
+            LastName = "Admin",
+            FullLegalName = "IT Admin",
             PhoneNumber = "+49 30 12345678",
             IsActive = true,
             IsEmailConfirmed = true
@@ -313,7 +313,7 @@ public static class DatabaseSeeder
                 SenderUserId = testUser.Id,
                 RecipientUserId = testUser2.Id,
                 Subject = "Rückfrage zu Belegen Q4",
-                Content = "Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nMax Berater",
+                Content = "Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nIT Admin",
                 IsRead = true,
                 ReadAt = DateTime.UtcNow.AddHours(-2)
             },
@@ -322,7 +322,7 @@ public static class DatabaseSeeder
                 SenderUserId = testUser.Id,
                 RecipientUserId = testUser.Id,
                 Subject = "Fall-Update: Umsatzsteuervoranmeldung Q4",
-                Content = "Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: M. Berater\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"),
+                Content = "Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: IT Admin\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"),
                 IsRead = false
             }
         };

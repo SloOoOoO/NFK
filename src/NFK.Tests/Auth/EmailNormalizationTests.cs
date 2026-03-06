@@ -57,8 +57,8 @@ public class EmailNormalizationTests : IDisposable
     [InlineData("User@Example.Com", "user@example.com")]
     [InlineData("  user@example.com  ", "user@example.com")]
     [InlineData("  USER@EXAMPLE.COM  ", "user@example.com")]
-    [InlineData("SUEHANSARI@GMAIL.COM", "suehansari@gmail.com")]
-    [InlineData(" Suehansari@Gmail.com ", "suehansari@gmail.com")]
+    [InlineData("TESTUSER@EXAMPLE.COM", "testuser@example.com")]
+    [InlineData(" Testuser@Example.com ", "testuser@example.com")]
     public void NormalizeEmail_ReturnsLowercaseTrimmed(string input, string expected)
     {
         Assert.Equal(expected, EmailNormalizer.Normalize(input));
@@ -78,22 +78,22 @@ public class EmailNormalizationTests : IDisposable
     /// <summary>
     /// Login must succeed even when the supplied email has a different case than
     /// the stored canonical form – the root cause of the reported "user not found"
-    /// bug for suehansari@gmail.com.
+    /// bug.
     /// </summary>
     [Theory]
-    [InlineData("suehansari@gmail.com")]
-    [InlineData("SUEHANSARI@GMAIL.COM")]
-    [InlineData("Suehansari@Gmail.com")]
-    [InlineData("  suehansari@gmail.com  ")]
+    [InlineData("testuser@example.com")]
+    [InlineData("TESTUSER@EXAMPLE.COM")]
+    [InlineData("Testuser@Example.com")]
+    [InlineData("  testuser@example.com  ")]
     public async Task Login_EmailVariants_FindStoredNormalizedUser(string loginEmail)
     {
         // Seed a user stored with the canonical (already-normalised) email
         var passwordHasher = new PasswordHasher();
         _db.Users.Add(new User
         {
-            Email = "suehansari@gmail.com",
-            FirstName = "Sue",
-            LastName = "Hansari",
+            Email = "testuser@example.com",
+            FirstName = "Test",
+            LastName = "User",
             IsActive = true,
             IsEmailConfirmed = true,
             PasswordHash = passwordHasher.HashPassword("Password1!Abcd")
@@ -104,7 +104,7 @@ public class EmailNormalizationTests : IDisposable
         var result = await _authService.LoginAsync(request);
 
         Assert.NotNull(result);
-        Assert.Equal("suehansari@gmail.com", result.User.Email);
+        Assert.Equal("testuser@example.com", result.User.Email);
     }
 
     // ── Registration normalization ────────────────────────────────────────────
@@ -144,10 +144,10 @@ public class EmailNormalizationTests : IDisposable
     /// Covers the reported "Cannot insert duplicate key row" scenario.
     /// </summary>
     [Theory]
-    [InlineData("suehansari@gmail.com")]
-    [InlineData("SUEHANSARI@GMAIL.COM")]
-    [InlineData("Suehansari@Gmail.com")]
-    [InlineData("  Suehansari@Gmail.com  ")]
+    [InlineData("testuser@example.com")]
+    [InlineData("TESTUSER@EXAMPLE.COM")]
+    [InlineData("Testuser@Example.com")]
+    [InlineData("  Testuser@Example.com  ")]
     public async Task Register_DuplicateEmailVariant_ThrowsInvalidOperationException(string duplicateEmail)
     {
         _emailMock
@@ -155,7 +155,7 @@ public class EmailNormalizationTests : IDisposable
             .Returns(Task.CompletedTask);
 
         // First registration succeeds
-        await _authService.RegisterAsync(BuildRegisterRequest("suehansari@gmail.com"));
+        await _authService.RegisterAsync(BuildRegisterRequest("testuser@example.com"));
 
         // Second registration with any case/whitespace variant must return a controlled error
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -237,22 +237,22 @@ public class EmailNormalizationTests : IDisposable
     ///
     /// The test guards against regression of the normalization mismatch that
     /// caused the original "user not found / duplicate key" contradiction for
-    /// suehansari@gmail.com.
+    /// testuser@example.com.
     /// </summary>
     [Theory]
-    [InlineData("suehansari@gmail.com")]
-    [InlineData("SUEHANSARI@GMAIL.COM")]
-    [InlineData("Suehansari@Gmail.com")]
-    [InlineData("  suehansari@gmail.com  ")]
+    [InlineData("testuser@example.com")]
+    [InlineData("TESTUSER@EXAMPLE.COM")]
+    [InlineData("Testuser@Example.com")]
+    [InlineData("  testuser@example.com  ")]
     public async Task ThreeWay_ExistingUnverifiedUser_AllFlowsConsistent(string inputEmail)
     {
         // Arrange – seed an unverified user stored under the canonical email.
         var passwordHasher = new PasswordHasher();
         _db.Users.Add(new User
         {
-            Email = "suehansari@gmail.com",
-            FirstName = "Sue",
-            LastName = "Hansari",
+            Email = "testuser@example.com",
+            FirstName = "Test",
+            LastName = "User",
             IsActive = true,
             IsEmailConfirmed = false,
             PasswordHash = passwordHasher.HashPassword("Password1!Abcd")
@@ -282,7 +282,7 @@ public class EmailNormalizationTests : IDisposable
         await _authService.ResendVerificationEmailAsync(inputEmail);
 
         _emailMock.Verify(
-            e => e.SendEmailVerificationAsync("suehansari@gmail.com", It.IsAny<string>(), It.IsAny<string>()),
+            e => e.SendEmailVerificationAsync("testuser@example.com", It.IsAny<string>(), It.IsAny<string>()),
             Times.Once);
     }
 
