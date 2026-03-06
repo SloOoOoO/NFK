@@ -224,6 +224,68 @@ public class EmailNormalizationTests : IDisposable
             Times.Once);
     }
 
+    // ── Three-way consistency ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Reproduces the exact three-way contradiction reported in the issue:
+    /// for the SAME email (and case/whitespace variants) of an existing but
+    /// unverified account:
+    ///  1. register   → 409 / InvalidOperationException "already exists"
+    ///  2. login      → UnauthorizedAccessException containing "verify your email"
+    ///                  (user WAS found; not "Invalid email or password" / "user not found")
+    ///  3. resend     → email is sent exactly once (not "no account" silent return)
+    ///
+    /// The test guards against regression of the normalization mismatch that
+    /// caused the original "user not found / duplicate key" contradiction for
+    /// suehansari@gmail.com.
+    /// </summary>
+    [Theory]
+    [InlineData("suehansari@gmail.com")]
+    [InlineData("SUEHANSARI@GMAIL.COM")]
+    [InlineData("Suehansari@Gmail.com")]
+    [InlineData("  suehansari@gmail.com  ")]
+    public async Task ThreeWay_ExistingUnverifiedUser_AllFlowsConsistent(string inputEmail)
+    {
+        // Arrange – seed an unverified user stored under the canonical email.
+        var passwordHasher = new PasswordHasher();
+        _db.Users.Add(new User
+        {
+            Email = "suehansari@gmail.com",
+            FirstName = "Sue",
+            LastName = "Hansari",
+            IsActive = true,
+            IsEmailConfirmed = false,
+            PasswordHash = passwordHasher.HashPassword("Password1!Abcd")
+        });
+        await _db.SaveChangesAsync();
+
+        _emailMock
+            .Setup(e => e.SendEmailVerificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // 1. Register with same email (any variant) must return a controlled duplicate conflict,
+        //    NOT a raw database exception.
+        var regEx = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _authService.RegisterAsync(BuildRegisterRequest(inputEmail)));
+        Assert.Contains("already exists", regEx.Message, StringComparison.OrdinalIgnoreCase);
+
+        // 2. Login must locate the account and fail specifically because the email is
+        //    not yet verified – NOT because "user not found".
+        //    The expected message confirms the account was found and the verification
+        //    branch was reached.
+        var loginEx = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _authService.LoginAsync(new NFK.Application.DTOs.Auth.LoginRequest(inputEmail, "Password1!Abcd")));
+        Assert.Contains("verify your email", loginEx.Message, StringComparison.OrdinalIgnoreCase);
+
+        // 3. Resend-verification must reach the account and send exactly one email.
+        //    A silent return here would indicate "no account found" which is the bug.
+        await _authService.ResendVerificationEmailAsync(inputEmail);
+
+        _emailMock.Verify(
+            e => e.SendEmailVerificationAsync("suehansari@gmail.com", It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static NFK.Application.DTOs.Auth.RegisterRequest BuildRegisterRequest(string email) =>
