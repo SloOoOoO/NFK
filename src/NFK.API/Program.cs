@@ -273,8 +273,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 app.UseCors("AllowFrontend");
-app.UseMiddleware<NFK.Infrastructure.Middleware.RateLimitingMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<NFK.Infrastructure.Middleware.RateLimitingMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
