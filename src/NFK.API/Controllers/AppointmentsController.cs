@@ -104,8 +104,8 @@ public class AppointmentsController : ControllerBase
 
             var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "RegisteredUser";
 
-            // Only employees (Consultant, SuperAdmin, Receptionist, DATEVManager) can create appointments
-            var employeeRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "DATEVManager" };
+            // Only employees (Consultant, SuperAdmin, Receptionist, Assistant) can create appointments
+            var employeeRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             if (!employeeRoles.Contains(userRole))
             {
                 _logger.LogWarning("User {UserId} with role {Role} attempted to create appointment - permission denied", userId, userRole);

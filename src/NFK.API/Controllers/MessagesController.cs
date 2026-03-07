@@ -50,7 +50,7 @@ public class MessagesController : ControllerBase
             }
             else
             {
-                // Employees (SuperAdmin, Consultant, Receptionist, DATEVManager) can see:
+                // Employees (SuperAdmin, Consultant, Receptionist, Assistant) can see:
                 // 1. Messages sent to them
                 // 2. Pool emails
                 // 3. Messages they sent
@@ -400,8 +400,8 @@ public class MessagesController : ControllerBase
                 return Ok(new { message = "Email received but not for routing" });
             }
 
-            // Get all users with employee roles (SuperAdmin, Consultant, Receptionist, DATEVManager)
-            var employeeRoleNames = new[] { "SuperAdmin", "Consultant", "Receptionist", "DATEVManager" };
+            // Get all users with employee roles (SuperAdmin, Consultant, Receptionist, Assistant)
+            var employeeRoleNames = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             var employeeUsers = await _context.UserRoles
                 .Include(ur => ur.Role)
                 .Include(ur => ur.User)

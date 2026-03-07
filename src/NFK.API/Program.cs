@@ -302,8 +302,8 @@ public class HangfireAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthoriz
     {
         var httpContext = context.GetHttpContext();
         
-        // Require authentication and SuperAdmin or DATEVManager role
+        // Require authentication and SuperAdmin or Assistant role
         return httpContext.User?.Identity?.IsAuthenticated == true &&
-               (httpContext.User.IsInRole("SuperAdmin") || httpContext.User.IsInRole("DATEVManager"));
+               (httpContext.User.IsInRole("SuperAdmin") || httpContext.User.IsInRole("Assistant"));
     }
 }

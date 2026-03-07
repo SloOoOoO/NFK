@@ -363,18 +363,22 @@ export default function Cases() {
                       >
                         Details
                       </button>
-                      <button 
-                        onClick={() => openEditModal(caseItem)}
-                        className="btn-primary"
-                      >
-                        Bearbeiten
-                      </button>
-                      <button 
-                        onClick={() => openDeleteModal(caseItem)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                      >
-                        Löschen
-                      </button>
+                      {user && !isClientRole(user.role) && (
+                        <>
+                          <button 
+                            onClick={() => openEditModal(caseItem)}
+                            className="btn-primary"
+                          >
+                            Bearbeiten
+                          </button>
+                          <button 
+                            onClick={() => openDeleteModal(caseItem)}
+                            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                          >
+                            Löschen
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

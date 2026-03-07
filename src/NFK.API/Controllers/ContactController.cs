@@ -93,7 +93,7 @@ public class ContactController : ControllerBase
             }
 
             // 2. Create internal messages for all employee users
-            var employeeRoleNames = new[] { "SuperAdmin", "Consultant", "Receptionist", "DATEVManager" };
+            var employeeRoleNames = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             var employeeUsers = await _context.UserRoles
                 .Include(ur => ur.Role)
                 .Include(ur => ur.User)
@@ -117,6 +117,18 @@ public class ContactController : ControllerBase
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Contact form message routed to {Count} employee users", employeeUsers.Count);
+            }
+
+            // 3. Send confirmation email to the sender (best-effort - don't fail if email is unavailable)
+            try
+            {
+                await _emailService.SendContactConfirmationAsync(request.Email, request.Name);
+                _logger.LogInformation("Contact confirmation email sent to sender {Email}", request.Email);
+            }
+            catch (Exception confirmEx)
+            {
+                _logger.LogError(confirmEx, "Failed to send confirmation email to sender {Email}", request.Email);
+                // Continue - the contact was already processed successfully
             }
 
             return Ok(new { message = "Ihre Nachricht wurde erfolgreich gesendet!" });

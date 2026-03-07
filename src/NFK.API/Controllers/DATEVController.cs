@@ -8,7 +8,7 @@ namespace NFK.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "SuperAdmin,DATEVManager")]
+[Authorize(Roles = "SuperAdmin,Assistant")]
 public class DATEVController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

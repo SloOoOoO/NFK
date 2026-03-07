@@ -48,7 +48,7 @@ public class ClientsController : ControllerBase
             // ROLE-BASED FILTERING:
             // Clients: Only see their own client record
             // Admin/SuperAdmin/Consultant/Receptionist: See all clients
-            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var allowedViewRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             var canViewAllClients = allowedViewRoles.Contains(userRole);
 
             if (userRole == "Client")
@@ -123,7 +123,7 @@ public class ClientsController : ControllerBase
             // PERMISSION CHECK:
             // Clients: Only view their own client record
             // Admin/SuperAdmin/Consultant/Receptionist: View any client
-            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var allowedViewRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             var canViewAllClients = allowedViewRoles.Contains(userRole);
 
             if (userRole == "Client" && client.UserId != currentUserId.Value)
@@ -180,7 +180,7 @@ public class ClientsController : ControllerBase
             var userRole = currentUser?.UserRoles.FirstOrDefault()?.Role?.Name ?? "RegisteredUser";
 
             // Only Admin, SuperAdmin, and Consultant can create new clients (mandants)
-            var allowedRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
+            var allowedRoles = new[] { "SuperAdmin", "Consultant" };
             if (!allowedRoles.Contains(userRole))
             {
                 _logger.LogWarning("User {UserId} with role {Role} attempted to create client - permission denied", currentUserId, userRole);

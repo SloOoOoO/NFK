@@ -56,8 +56,8 @@ public class DocumentsController : ControllerBase
             // ROLE-BASED FILTERING:
             // Clients: Only see their own documents (uploaded by them)
             // Admin/SuperAdmin/Consultant: See all documents or filtered by clientId/userId
-            // Other roles (Receptionist, DATEVManager): No access to documents
-            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
+            // Other roles (Receptionist, Assistant): No access to documents
+            var allowedViewRoles = new[] { "SuperAdmin", "Consultant" };
             var canViewAllDocuments = allowedViewRoles.Contains(userRole);
 
             if (ClientRoles.Contains(userRole))
@@ -432,7 +432,7 @@ public class DocumentsController : ControllerBase
             // PERMISSION CHECK:
             // Users can delete their own documents
             // Admin/SuperAdmin/Consultant can delete any document
-            var allowedDeleteRoles = new[] { "SuperAdmin", "Admin", "Consultant" };
+            var allowedDeleteRoles = new[] { "SuperAdmin", "Consultant" };
             var canDeleteAnyDocument = allowedDeleteRoles.Contains(userRole);
 
             if (!canDeleteAnyDocument && document.UploadedByUserId != currentUserId.Value)

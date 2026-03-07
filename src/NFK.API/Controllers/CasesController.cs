@@ -49,7 +49,7 @@ public class CasesController : ControllerBase
             // ROLE-BASED FILTERING:
             // Clients: Only see their own cases
             // Admin/SuperAdmin/Consultant/Receptionist: See all cases
-            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var allowedViewRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             var canViewAllCases = allowedViewRoles.Contains(userRole);
             var clientRoles = new[] { "Client", "RegisteredUser" };
 
@@ -122,7 +122,7 @@ public class CasesController : ControllerBase
             // PERMISSION CHECK:
             // Clients: Only view their own cases
             // Admin/SuperAdmin/Consultant/Receptionist: View any case
-            var allowedViewRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var allowedViewRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             var canViewAllCases = allowedViewRoles.Contains(userRole);
 
             if (userRole == "Client" && caseEntity.Client.UserId != currentUserId.Value)
@@ -176,7 +176,7 @@ public class CasesController : ControllerBase
             var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
 
             // PERMISSION CHECK: Only employees can create cases, not clients
-            var allowedCreateRoles = new[] { "SuperAdmin", "Admin", "Consultant", "Receptionist", "DATEVManager" };
+            var allowedCreateRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
             if (!allowedCreateRoles.Contains(userRole))
             {
                 return StatusCode(403, new { error = "forbidden", message = "Nur Mitarbeiter können Fälle erstellen" });
