@@ -210,7 +210,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex gap-2">
-                              {!(currentUser?.role === 'SuperAdmin' && user.id === currentUser?.id) && (
+                              {currentUser?.role === 'SuperAdmin' && user.role !== 'SuperAdmin' && (
                                 <button
                                   onClick={() => openRoleModal(user)}
                                   className="px-3 py-1 bg-primary dark:bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 text-xs"
@@ -218,12 +218,14 @@ export default function AdminDashboard() {
                                   Rolle ändern
                                 </button>
                               )}
-                              <button
-                                onClick={() => openEditModal(user)}
-                                className="px-3 py-1 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 text-xs"
-                              >
-                                Bearbeiten
-                              </button>
+                              {currentUser?.role === 'SuperAdmin' && (
+                                <button
+                                  onClick={() => openEditModal(user)}
+                                  className="px-3 py-1 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 text-xs"
+                                >
+                                  Bearbeiten
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -496,8 +498,8 @@ export default function AdminDashboard() {
                 <input
                   type="email"
                   value={editForm.email || ''}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                 />
               </div>
 

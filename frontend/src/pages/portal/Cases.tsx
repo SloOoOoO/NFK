@@ -305,9 +305,6 @@ export default function Cases() {
                   >
                     + Neuer Fall
                   </button>
-                  <button className="btn-secondary whitespace-nowrap">
-                    📥 Export
-                  </button>
                 </>
               ) : (
                 <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">

@@ -15,6 +15,7 @@ interface Message {
   timestamp: string;
   unread: boolean;
   isPoolEmail?: boolean;
+  isSent?: boolean;
 }
 
 interface User {
@@ -81,13 +82,14 @@ export default function Messages() {
       const messagesData = Array.isArray(response.data) ? response.data : [];
       const transformedMessages = messagesData.map((m: any) => ({
         id: m.id,
-        sender: m.sender,
+        sender: m.isSent ? (m.recipient || m.sender) : m.sender,
         subject: m.subject,
-        preview: m.preview,
+        preview: m.isSent ? `An: ${m.recipient || ''} ${m.preview}` : m.preview,
         body: m.body,
         timestamp: new Date(m.timestamp).toLocaleString('de-DE'),
         unread: m.unread,
         isPoolEmail: m.isPoolEmail || false,
+        isSent: m.isSent || false,
       }));
       setMessages(transformedMessages);
       if (transformedMessages.length > 0 && !selectedMessage) {

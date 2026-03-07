@@ -8,7 +8,9 @@ public record MessageDto(
     string Body,
     DateTime Timestamp,
     bool Unread,
-    bool IsPoolEmail = false
+    bool IsPoolEmail = false,
+    string? Recipient = null,
+    bool IsSent = false
 );
 
 public record MarkMessageReadRequest(

@@ -206,6 +206,17 @@ public static class DatabaseSeeder
                 City = "Köln",
                 PostalCode = "50667",
                 IsActive = true
+            },
+            new Client
+            {
+                UserId = clientUser.Id,
+                CompanyName = "Julia Braun",
+                PhoneNumber = "+49 221 55555555",
+                TaxNumber = "M-1006",
+                Address = "Bachemer Str. 10",
+                City = "Köln",
+                PostalCode = "50931",
+                IsActive = true
             }
         };
 

@@ -45,25 +45,32 @@ public class ContactController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Rate limiting: max 5 requests per IP per hour
+        // Rate limiting: max 5 requests per IP per hour (skip gracefully if cache is unavailable)
         var ipAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
             ?? HttpContext.Connection.RemoteIpAddress?.ToString()
             ?? "unknown";
 
         var cacheKey = $"contact_ratelimit:{ipAddress}";
-        var countStr = await _cache.GetStringAsync(cacheKey);
-        var count = string.IsNullOrEmpty(countStr) ? 0 : int.Parse(countStr);
-
-        if (count >= MaxContactsPerHour)
+        try
         {
-            return StatusCode(429, new { error = "rate_limit_exceeded", message = "Zu viele Anfragen. Bitte versuchen Sie es später erneut." });
+            var countStr = await _cache.GetStringAsync(cacheKey);
+            var count = string.IsNullOrEmpty(countStr) ? 0 : int.Parse(countStr);
+
+            if (count >= MaxContactsPerHour)
+            {
+                return StatusCode(429, new { error = "rate_limit_exceeded", message = "Zu viele Anfragen. Bitte versuchen Sie es später erneut." });
+            }
+
+            // Increment rate limit counter (1 hour window)
+            await _cache.SetStringAsync(cacheKey, (count + 1).ToString(), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+            });
         }
-
-        // Increment rate limit counter (1 hour window)
-        await _cache.SetStringAsync(cacheKey, (count + 1).ToString(), new DistributedCacheEntryOptions
+        catch (Exception cacheEx)
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
-        });
+            _logger.LogWarning(cacheEx, "Rate limit cache unavailable, skipping rate limiting for IP {IpAddress}", ipAddress);
+        }
 
         try
         {

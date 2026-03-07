@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NFK.Application.Interfaces;
 using NFK.Domain.Entities.Other;
 using NFK.Infrastructure.Data;
 using System.Security.Claims;
@@ -14,11 +15,13 @@ public class AppointmentsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<AppointmentsController> _logger;
+    private readonly IEmailService _emailService;
 
-    public AppointmentsController(ApplicationDbContext context, ILogger<AppointmentsController> logger)
+    public AppointmentsController(ApplicationDbContext context, ILogger<AppointmentsController> logger, IEmailService emailService)
     {
         _context = context;
         _logger = logger;
+        _emailService = emailService;
     }
 
     [HttpGet]
@@ -155,6 +158,53 @@ public class AppointmentsController : ControllerBase
             };
             _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
             await _context.SaveChangesAsync();
+
+            // Notify client: create internal message and send email
+            try
+            {
+                var clientRecord = await _context.Clients
+                    .Include(c => c.User)
+                    .FirstOrDefaultAsync(c => c.Id == dto.ClientId);
+
+                if (clientRecord?.User != null)
+                {
+                    var clientUser = clientRecord.User;
+
+                    // Internal message notification
+                    var notificationMessage = new Domain.Entities.Messaging.Message
+                    {
+                        SenderUserId = userId,
+                        RecipientUserId = clientUser.Id,
+                        Subject = $"Neuer Termin: {appointment.Title}",
+                        Content = $"Ein neuer Termin wurde für Sie vereinbart.\n\nTitel: {appointment.Title}\nBeginn: {appointment.StartTime:dd.MM.yyyy HH:mm} Uhr\nEnde: {appointment.EndTime:dd.MM.yyyy HH:mm} Uhr"
+                            + (string.IsNullOrWhiteSpace(appointment.Location) ? "" : $"\nOrt: {appointment.Location}")
+                            + (string.IsNullOrWhiteSpace(appointment.Description) ? "" : $"\nBeschreibung: {appointment.Description}"),
+                        IsRead = false
+                    };
+                    _context.Messages.Add(notificationMessage);
+                    await _context.SaveChangesAsync();
+
+                    // Email notification (non-blocking; exceptions are caught and logged)
+                    var emailTask = _emailService.SendAppointmentNotificationAsync(
+                        clientUser.Email,
+                        clientUser.FirstName,
+                        appointment.Title,
+                        appointment.StartTime,
+                        appointment.EndTime,
+                        appointment.Description,
+                        appointment.Location
+                    );
+                    _ = emailTask.ContinueWith(t =>
+                    {
+                        if (t.IsFaulted)
+                            _logger.LogWarning(t.Exception?.GetBaseException(), "Failed to send appointment email notification to {Email}", clientUser.Email);
+                    }, TaskContinuationOptions.OnlyOnFaulted);
+                }
+            }
+            catch (Exception notifyEx)
+            {
+                _logger.LogWarning(notifyEx, "Failed to send appointment notification for appointment {AppointmentId}", appointment.Id);
+            }
 
             _logger.LogInformation("Appointment created successfully by user {UserId}", userId);
 

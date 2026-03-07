@@ -185,6 +185,13 @@ public class AdminController : ControllerBase
                 return NotFound(new { error = "not_found", message = $"User {id} not found" });
             }
 
+            // Prevent changing the role of any user who is currently a SuperAdmin
+            var targetUserCurrentRole = user.UserRoles.FirstOrDefault()?.Role.Name;
+            if (targetUserCurrentRole == "SuperAdmin")
+            {
+                return BadRequest(new { error = "invalid_request", message = "SuperAdmin-Rollen können nicht geändert werden." });
+            }
+
             // Find the role
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == request.Role);
             if (role == null)
@@ -252,10 +259,7 @@ public class AdminController : ControllerBase
                 return NotFound(new { error = "not_found", message = $"User {id} not found" });
             }
 
-            // Update personal information
-            if (request.FirstName != null) user.FirstName = request.FirstName;
-            if (request.LastName != null) user.LastName = request.LastName;
-            if (request.Email != null) user.Email = EmailNormalizer.Normalize(request.Email);
+            // Update personal information (email, firstName, lastName are not editable via admin)
             if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
             if (request.FullLegalName != null) user.FullLegalName = request.FullLegalName;
             if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
