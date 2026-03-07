@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import { adminAPI } from '../../services/api';
 import apiClient from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import {
@@ -27,6 +28,7 @@ export default function AdminDashboard() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -120,7 +122,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const roles = ['SuperAdmin', 'Admin', 'Consultant', 'Receptionist', 'DATEVManager'];
+  const roles = ['SuperAdmin', 'Consultant', 'Receptionist', 'DATEVManager'];
 
   return (
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
@@ -208,12 +210,14 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => openRoleModal(user)}
-                                className="px-3 py-1 bg-primary dark:bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 text-xs"
-                              >
-                                Rolle ändern
-                              </button>
+                              {!(currentUser?.role === 'SuperAdmin' && user.id === currentUser?.id) && (
+                                <button
+                                  onClick={() => openRoleModal(user)}
+                                  className="px-3 py-1 bg-primary dark:bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 text-xs"
+                                >
+                                  Rolle ändern
+                                </button>
+                              )}
                               <button
                                 onClick={() => openEditModal(user)}
                                 className="px-3 py-1 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 text-xs"
