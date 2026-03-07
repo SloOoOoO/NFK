@@ -7,7 +7,7 @@ namespace NFK.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "SuperAdmin,Admin,Consultant,DATEVManager")]
+[Authorize(Roles = "SuperAdmin,Consultant,Assistant")]
 public class AnalyticsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

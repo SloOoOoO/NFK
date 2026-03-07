@@ -93,17 +93,35 @@ export default function AdminDashboard() {
     }
   };
 
-  const openEditModal = (user: any) => {
+  const openEditModal = async (user: any) => {
     setSelectedUser(user);
+    // Fetch full user details to get all fields
+    let details = user;
+    try {
+      const res = await adminAPI.getUserDetails(user.id);
+      details = res.data;
+    } catch {
+      // Fall back to user list data
+    }
     setEditForm({
-      fullLegalName: user.fullLegalName || user.fullName || '',
-      email: user.email || '',
-      phoneNumber: user.phoneNumber || '',
-      taxId: user.taxId || '',
-      address: user.address || '',
-      city: user.city || '',
-      postalCode: user.postalCode || '',
-      dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split('T')[0] : '',
+      firstName: details.firstName || '',
+      lastName: details.lastName || '',
+      fullLegalName: details.fullLegalName || details.fullName || '',
+      email: details.email || '',
+      phoneNumber: details.phoneNumber || '',
+      taxId: details.taxId || '',
+      taxNumber: details.taxNumber || '',
+      vatId: details.vatId || '',
+      clientType: details.clientType || '',
+      companyName: details.companyName || '',
+      salutation: details.salutation || '',
+      commercialRegister: details.commercialRegister || '',
+      gender: details.gender || '',
+      address: details.address || '',
+      city: details.city || '',
+      postalCode: details.postalCode || '',
+      country: details.country || '',
+      dateOfBirth: details.dateOfBirth ? details.dateOfBirth.split('T')[0] : '',
     });
     setShowEditModal(true);
   };
@@ -122,7 +140,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const roles = ['SuperAdmin', 'Consultant', 'Receptionist', 'DATEVManager'];
+  const roles = ['SuperAdmin', 'Consultant', 'Receptionist', 'Assistant'];
 
   return (
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
@@ -210,7 +228,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex gap-2">
-                              {currentUser?.role === 'SuperAdmin' && user.role !== 'SuperAdmin' && (
+                              {currentUser?.role === 'SuperAdmin' && user.role !== 'SuperAdmin' && user.id !== currentUser?.id && (
                                 <button
                                   onClick={() => openRoleModal(user)}
                                   className="px-3 py-1 bg-primary dark:bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 text-xs"
@@ -479,27 +497,107 @@ export default function AdminDashboard() {
             </Dialog.Description>
 
             <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                    Vorname <span className="text-gray-400 text-xs">(schreibgeschützt)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.firstName || ''}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                    Nachname <span className="text-gray-400 text-xs">(schreibgeschützt)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.lastName || ''}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2 dark:text-gray-300">
-                  Vollständiger Name
+                  Vollständiger rechtlicher Name <span className="text-gray-400 text-xs">(schreibgeschützt)</span>
                 </label>
                 <input
                   type="text"
                   value={editForm.fullLegalName || ''}
-                  onChange={(e) => setEditForm({ ...editForm, fullLegalName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2 dark:text-gray-300">
-                  E-Mail
+                  E-Mail <span className="text-gray-400 text-xs">(schreibgeschützt)</span>
                 </label>
                 <input
                   type="email"
                   value={editForm.email || ''}
                   disabled
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Anrede</label>
+                  <select
+                    value={editForm.salutation || ''}
+                    onChange={(e) => setEditForm({ ...editForm, salutation: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">--</option>
+                    <option value="Herr">Herr</option>
+                    <option value="Frau">Frau</option>
+                    <option value="Divers">Divers</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">Geschlecht</label>
+                  <select
+                    value={editForm.gender || ''}
+                    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">--</option>
+                    <option value="male">Männlich</option>
+                    <option value="female">Weiblich</option>
+                    <option value="diverse">Divers</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">Mandantenart</label>
+                <select
+                  value={editForm.clientType || ''}
+                  onChange={(e) => setEditForm({ ...editForm, clientType: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">--</option>
+                  <option value="Privatperson">Privatperson</option>
+                  <option value="Einzelunternehmen">Einzelunternehmen</option>
+                  <option value="GmbH">GmbH</option>
+                  <option value="UG">UG</option>
+                  <option value="GbR">GbR</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">Firmenname</label>
+                <input
+                  type="text"
+                  value={editForm.companyName || ''}
+                  onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -517,18 +615,6 @@ export default function AdminDashboard() {
 
               <div>
                 <label className="block text-sm font-medium mb-2 dark:text-gray-300">
-                  Steuernummer
-                </label>
-                <input
-                  type="text"
-                  value={editForm.taxId || ''}
-                  onChange={(e) => setEditForm({ ...editForm, taxId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
                   Adresse
                 </label>
                 <input
@@ -539,7 +625,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2 dark:text-gray-300">
                     Stadt
@@ -554,12 +640,24 @@ export default function AdminDashboard() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2 dark:text-gray-300">
-                    Postleitzahl
+                    PLZ
                   </label>
                   <input
                     type="text"
                     value={editForm.postalCode || ''}
                     onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                    Land
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.country || ''}
+                    onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
                   />
                 </div>
@@ -573,6 +671,57 @@ export default function AdminDashboard() {
                   type="date"
                   value={editForm.dateOfBirth || ''}
                   onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <hr className="border-gray-200 dark:border-gray-700 my-2" />
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Steuerdaten</p>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Steuer-ID
+                </label>
+                <input
+                  type="text"
+                  value={editForm.taxId || ''}
+                  onChange={(e) => setEditForm({ ...editForm, taxId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Steuernummer
+                </label>
+                <input
+                  type="text"
+                  value={editForm.taxNumber || ''}
+                  onChange={(e) => setEditForm({ ...editForm, taxNumber: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  USt-IdNr.
+                </label>
+                <input
+                  type="text"
+                  value={editForm.vatId || ''}
+                  onChange={(e) => setEditForm({ ...editForm, vatId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                  Handelsregister
+                </label>
+                <input
+                  type="text"
+                  value={editForm.commercialRegister || ''}
+                  onChange={(e) => setEditForm({ ...editForm, commercialRegister: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
                 />
               </div>

@@ -158,6 +158,7 @@ export const eventsAPI = {
 // Admin API
 export const adminAPI = {
   getAllUsers: () => apiClient.get('/admin/users'),
+  getUserDetails: (userId: number) => apiClient.get(`/admin/users/${userId}`),
   getStatistics: () => apiClient.get('/admin/statistics'),
   updateUserRole: (userId: number, role: string) => 
     apiClient.put(`/admin/users/${userId}/role`, { role }),

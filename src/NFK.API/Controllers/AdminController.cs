@@ -165,13 +165,13 @@ public class AdminController : ControllerBase
     {
         try
         {
-            // Prevent SuperAdmin from changing their own role
+            // Prevent any user from changing their own role
             var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
             if (currentUserIdClaim != null && int.TryParse(currentUserIdClaim.Value, out var currentUserId))
             {
-                if (currentUserId == id && User.IsInRole("SuperAdmin"))
+                if (currentUserId == id)
                 {
-                    return BadRequest(new { error = "invalid_request", message = "SuperAdmin kann die eigene Rolle nicht ändern." });
+                    return StatusCode(403, new { error = "forbidden", message = "Sie können Ihre eigene Rolle nicht ändern." });
                 }
             }
 
@@ -259,12 +259,17 @@ public class AdminController : ControllerBase
                 return NotFound(new { error = "not_found", message = $"User {id} not found" });
             }
 
-            // Update personal information (email, firstName, lastName are not editable via admin)
+            // Update personal information (email, firstName, lastName, fullLegalName are NOT editable via admin)
             if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
-            if (request.FullLegalName != null) user.FullLegalName = request.FullLegalName;
             if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
             if (request.TaxId != null) user.TaxId = request.TaxId;
             if (request.TaxNumber != null) user.TaxNumber = request.TaxNumber;
+            if (request.VatId != null) user.VatId = request.VatId;
+            if (request.ClientType != null) user.ClientType = request.ClientType;
+            if (request.CompanyName != null) user.CompanyName = request.CompanyName;
+            if (request.Salutation != null) user.Salutation = request.Salutation;
+            if (request.CommercialRegister != null) user.CommercialRegister = request.CommercialRegister;
+            if (request.Gender != null) user.Gender = request.Gender;
             
             // Update address
             if (request.Address != null) user.Address = request.Address;

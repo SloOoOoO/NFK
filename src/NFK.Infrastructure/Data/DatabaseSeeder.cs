@@ -40,7 +40,7 @@ public static class DatabaseSeeder
             new Role { Name = "Consultant", Description = "Client and case management (Tax Consultant/Steuerberater)", IsSystemRole = true },
             new Role { Name = "Receptionist", Description = "Scheduling and basic client info", IsSystemRole = true },
             new Role { Name = "Client", Description = "Own dossier and documents", IsSystemRole = true },
-            new Role { Name = "DATEVManager", Description = "DATEV export management", IsSystemRole = true }
+            new Role { Name = "Assistant", Description = "Assistant to Consultant (formerly DATEVManager)", IsSystemRole = true }
         };
 
         context.Roles.AddRange(roles);
@@ -69,7 +69,7 @@ public static class DatabaseSeeder
         var superAdminUser = new User
         {
             Email = "superadmin@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Super123!"),
+            PasswordHash = passwordHasher.HashPassword("Test123!"),
             FirstName = "Max",
             LastName = "Müller",
             FullLegalName = "Max Müller",
@@ -81,7 +81,7 @@ public static class DatabaseSeeder
         var consultantUser = new User
         {
             Email = "consultant@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Consult123!"),
+            PasswordHash = passwordHasher.HashPassword("Test123!"),
             FirstName = "Anna",
             LastName = "Schmidt",
             FullLegalName = "Anna Schmidt",
@@ -93,22 +93,22 @@ public static class DatabaseSeeder
         var receptionistUser = new User
         {
             Email = "receptionist@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Recept123!"),
-            FirstName = "Lisa",
+            PasswordHash = passwordHasher.HashPassword("Test123!"),
+            FirstName = "Thomas",
             LastName = "Weber",
-            FullLegalName = "Lisa Weber",
+            FullLegalName = "Thomas Weber",
             PhoneNumber = "+49 89 33333333",
             IsActive = true,
             IsEmailConfirmed = true
         };
 
-        var datevUser = new User
+        var assistantUser = new User
         {
-            Email = "datev@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Datev123!"),
-            FirstName = "Thomas",
+            Email = "assistant@nfk.de",
+            PasswordHash = passwordHasher.HashPassword("Test123!"),
+            FirstName = "Lena",
             LastName = "Fischer",
-            FullLegalName = "Thomas Fischer",
+            FullLegalName = "Lena Fischer",
             PhoneNumber = "+49 69 44444444",
             IsActive = true,
             IsEmailConfirmed = true
@@ -117,7 +117,7 @@ public static class DatabaseSeeder
         var clientUser = new User
         {
             Email = "client@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Client123!"),
+            PasswordHash = passwordHasher.HashPassword("Test123!"),
             FirstName = "Julia",
             LastName = "Braun",
             FullLegalName = "Julia Braun",
@@ -126,14 +126,14 @@ public static class DatabaseSeeder
             IsEmailConfirmed = true
         };
 
-        context.Users.AddRange(suheylUser, superAdminUser, consultantUser, receptionistUser, datevUser, clientUser);
+        context.Users.AddRange(suheylUser, superAdminUser, consultantUser, receptionistUser, assistantUser, clientUser);
         await context.SaveChangesAsync();
 
         // Assign roles
         var superAdminRole = roles.First(r => r.Name == "SuperAdmin");
         var consultantRole = roles.First(r => r.Name == "Consultant");
         var receptionistRole = roles.First(r => r.Name == "Receptionist");
-        var datevManagerRole = roles.First(r => r.Name == "DATEVManager");
+        var assistantRole = roles.First(r => r.Name == "Assistant");
         var clientRole = roles.First(r => r.Name == "Client");
 
         var userRoles = new List<UserRoleEntity>
@@ -142,7 +142,7 @@ public static class DatabaseSeeder
             new UserRoleEntity { UserId = superAdminUser.Id, RoleId = superAdminRole.Id },
             new UserRoleEntity { UserId = consultantUser.Id, RoleId = consultantRole.Id },
             new UserRoleEntity { UserId = receptionistUser.Id, RoleId = receptionistRole.Id },
-            new UserRoleEntity { UserId = datevUser.Id, RoleId = datevManagerRole.Id },
+            new UserRoleEntity { UserId = assistantUser.Id, RoleId = assistantRole.Id },
             new UserRoleEntity { UserId = clientUser.Id, RoleId = clientRole.Id }
         };
 

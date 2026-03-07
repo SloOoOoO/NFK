@@ -40,7 +40,7 @@ const DEFAULT_MAX_DOCUMENTS = 10;
 const DEFAULT_MAX_STORAGE_MB = 100;
 
 // Roles allowed to delete any document
-const DOCUMENT_DELETE_ROLES = ['SuperAdmin', 'Admin', 'Consultant'];
+const DOCUMENT_DELETE_ROLES = ['SuperAdmin', 'Consultant'];
 
 export default function Documents() {
   const { t } = useTranslation();

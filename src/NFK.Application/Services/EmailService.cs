@@ -441,4 +441,36 @@ public class EmailService : IEmailService
 
         await SendEmailAsync(toEmail, subject, body);
     }
+
+    public async Task SendContactConfirmationAsync(string toEmail, string senderName)
+    {
+        var subject = "Ihre Nachricht ist bei uns eingegangen – NFK Buchhaltung";
+        var body = $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"" />
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+        .header {{ background-color: #208A8F; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 20px; }}
+        .footer {{ margin-top: 30px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 16px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h2 style=""margin:0;"">Ihre Nachricht wurde empfangen</h2>
+        </div>
+        <p>Hallo {System.Net.WebUtility.HtmlEncode(senderName)},</p>
+        <p>Vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns so schnell wie möglich bei Ihnen melden.</p>
+        <p>Mit freundlichen Grüßen,<br/>Ihr NFK Buchhaltung Team</p>
+        <div class=""footer"">
+            <p>Diese E-Mail wurde automatisch vom NFK Steuerberatungsportal generiert.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(toEmail, subject, body);
+    }
 }
