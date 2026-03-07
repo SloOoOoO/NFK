@@ -16,8 +16,16 @@ public class RateLimitingMiddleware
     // Rate limit configurations
     private const int LoginAttempts = 5;
     private const int LoginWindowMinutes = 15;
-    private const int ApiRequestsPerMinute = 100;
+    private const int ApiRequestsPerMinute = 200;
     private const int DocumentDownloadsPerHour = 50;
+
+    // Auth endpoints that must never be rate-limited (required for session recovery)
+    private static readonly string[] ExemptEndpoints =
+    [
+        "/api/v1/auth/me",
+        "/api/v1/auth/refresh",
+        "/api/v1/auth/login",
+    ];
     
     public RateLimitingMiddleware(RequestDelegate next, IDistributedCache cache)
     {
@@ -30,10 +38,14 @@ public class RateLimitingMiddleware
         var endpoint = context.Request.Path.Value?.ToLower() ?? "";
         var clientId = GetClientIdentifier(context);
         
+        // Auth endpoints (login, me, refresh) are exempt from rate limiting so that
+        // session recovery and token refresh always work even under heavy load.
+        var isExempt = ExemptEndpoints.Any(e => endpoint.StartsWith(e, StringComparison.OrdinalIgnoreCase));
+
         // Apply different limits based on endpoint
         // NOTE: Login rate limiting is handled in AuthService to distinguish failed vs successful attempts
         // We only apply general API rate limits here
-        if (endpoint.Contains("/api/v1/documents") && endpoint.Contains("/download"))
+        if (!isExempt && endpoint.Contains("/api/v1/documents") && endpoint.Contains("/download"))
         {
             if (!await CheckRateLimitAsync($"download:{clientId}", DocumentDownloadsPerHour, 3600))
             {
@@ -47,10 +59,9 @@ public class RateLimitingMiddleware
                 return;
             }
         }
-        else if (endpoint.StartsWith("/api/v1/") && !endpoint.Contains("/api/v1/auth/login"))
+        else if (!isExempt && endpoint.StartsWith("/api/v1/"))
         {
-            // Apply general rate limit to all API endpoints EXCEPT login
-            // (login has its own rate limiting in AuthService based on failed attempts)
+            // Apply general rate limit to all non-exempt API endpoints
             if (!await CheckRateLimitAsync($"api:{clientId}", ApiRequestsPerMinute, 60))
             {
                 context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;

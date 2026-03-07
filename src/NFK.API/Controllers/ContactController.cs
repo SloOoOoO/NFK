@@ -74,15 +74,23 @@ public class ContactController : ControllerBase
 
         try
         {
-            // 1. Send email to info@nfk-buchhaltung.de
-            await _emailService.SendContactFormEmailAsync(
-                ContactEmailAddress,
-                request.Name,
-                request.Email,
-                request.Subject,
-                request.Message);
+            // 1. Send email to info@nfk-buchhaltung.de (best-effort - don't fail if email is unavailable)
+            try
+            {
+                await _emailService.SendContactFormEmailAsync(
+                    ContactEmailAddress,
+                    request.Name,
+                    request.Email,
+                    request.Subject,
+                    request.Message);
 
-            _logger.LogInformation("Contact form email sent from {Email} ({Name}), subject: {Subject}", request.Email, request.Name, request.Subject);
+                _logger.LogInformation("Contact form email sent from {Email} ({Name}), subject: {Subject}", request.Email, request.Name, request.Subject);
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogError(emailEx, "Failed to send email to {ContactEmail}: [{Subject}]", ContactEmailAddress, request.Subject);
+                // Continue - internal messages are more important than the external email
+            }
 
             // 2. Create internal messages for all employee users
             var employeeRoleNames = new[] { "SuperAdmin", "Consultant", "Receptionist", "DATEVManager" };

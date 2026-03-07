@@ -339,7 +339,7 @@ export default function Dashboard() {
             
             {activities.length > 0 ? (
               <div className="space-y-4">
-                {activities.map((activity, index) => (
+                {activities.slice(0, 3).map((activity, index) => (
                   <div key={activity.id || index} className="flex items-center justify-between border-b dark:border-gray-700 pb-4 last:border-b-0">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
