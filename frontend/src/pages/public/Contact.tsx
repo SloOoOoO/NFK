@@ -1,15 +1,22 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { contactAPI } from '../../services/api';
 
 export default function Contact() {
   const { t } = useTranslation();
   const { setDarkMode } = useDarkMode();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     // Force light mode on public pages
@@ -28,6 +35,53 @@ export default function Contact() {
     if (gender === 'male') return '👨';
     if (gender === 'female') return '👩';
     return '🧑'; // diverse
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      errors.name = 'Name muss mindestens 2 Zeichen lang sein.';
+    }
+    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein.';
+    }
+    if (!formData.subject.trim() || formData.subject.trim().length < 2) {
+      errors.subject = 'Betreff muss mindestens 2 Zeichen lang sein.';
+    }
+    if (!formData.message.trim() || formData.message.trim().length < 10) {
+      errors.message = 'Nachricht muss mindestens 10 Zeichen lang sein.';
+    }
+    return errors;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError('');
+    setSubmitSuccess(false);
+
+    const errors = validateForm();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await contactAPI.submit(formData);
+      setSubmitSuccess(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.';
+      setSubmitError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   return (
@@ -199,16 +253,32 @@ export default function Contact() {
                 <h4 className="text-xl font-semibold mb-4 text-primary">
                   {t('contact.form.title')}
                 </h4>
-                <form className="space-y-4">
+
+                {submitSuccess && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md text-green-700">
+                    ✅ Ihre Nachricht wurde erfolgreich gesendet!
+                  </div>
+                )}
+                {submitError && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+                    ❌ {submitError}
+                  </div>
+                )}
+
+                <form className="space-y-4" onSubmit={handleSubmit} noValidate>
                   <div>
                     <label className="block text-sm font-medium mb-1 text-textPrimary">
                       {t('contact.form.name')}
                     </label>
                     <input
                       type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
                       placeholder={t('contact.form.namePlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {formErrors.name && <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 text-textPrimary">
@@ -216,9 +286,13 @@ export default function Contact() {
                     </label>
                     <input
                       type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
                       placeholder={t('contact.form.emailPlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 text-textPrimary">
@@ -226,25 +300,34 @@ export default function Contact() {
                     </label>
                     <input
                       type="text"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleChange}
                       placeholder={t('contact.form.subjectPlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent ${formErrors.subject ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {formErrors.subject && <p className="mt-1 text-xs text-red-500">{formErrors.subject}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 text-textPrimary">
                       {t('contact.form.message')}
                     </label>
                     <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
                       rows={4}
                       placeholder={t('contact.form.messagePlaceholder')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent ${formErrors.message ? 'border-red-500' : 'border-gray-300'}`}
                     ></textarea>
+                    {formErrors.message && <p className="mt-1 text-xs text-red-500">{formErrors.message}</p>}
                   </div>
                   <button
                     type="submit"
-                    className="btn-primary w-full py-3 rounded-md"
+                    disabled={submitting}
+                    className="btn-primary w-full py-3 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {t('contact.form.send')}
+                    {submitting ? 'Sende...' : t('contact.form.send')}
                   </button>
                 </form>
               </div>

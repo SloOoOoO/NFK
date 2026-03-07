@@ -9,7 +9,7 @@ namespace NFK.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize(Roles = "SuperAdmin,Admin,Consultant")]
+[Authorize(Roles = "SuperAdmin,Consultant")]
 public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -72,9 +72,9 @@ public class AdminController : ControllerBase
             var currentUserRoles = currentUser?.UserRoles.Select(ur => ur.Role.Name).ToList() ?? new List<string>();
             
             // Check if user is authorized to view this user's details
-            // SuperAdmin, Admin, and Consultant can view any user
+            // SuperAdmin and Consultant can view any user
             // Other roles can only view their own info
-            var isAdminRole = currentUserRoles.Any(r => r == "SuperAdmin" || r == "Admin" || r == "Consultant");
+            var isAdminRole = currentUserRoles.Any(r => r == "SuperAdmin" || r == "Consultant");
             
             if (!isAdminRole && currentUserId != id)
             {
@@ -165,6 +165,16 @@ public class AdminController : ControllerBase
     {
         try
         {
+            // Prevent SuperAdmin from changing their own role
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (currentUserIdClaim != null && int.TryParse(currentUserIdClaim.Value, out var currentUserId))
+            {
+                if (currentUserId == id && User.IsInRole("SuperAdmin"))
+                {
+                    return BadRequest(new { error = "invalid_request", message = "SuperAdmin kann die eigene Rolle nicht ändern." });
+                }
+            }
+
             var user = await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)

@@ -7,7 +7,6 @@ public enum UserRole
     Receptionist = 3,
     Client = 4,
     DATEVManager = 5,
-    Admin = 6,           // General admin role
+    // 6 intentionally removed (was Admin, no longer used)
     RegisteredUser = 7,  // New users who registered but not yet assigned Client role
-    Steuerberater = 2    // Alias for Consultant - maps to same value for compatibility
 }

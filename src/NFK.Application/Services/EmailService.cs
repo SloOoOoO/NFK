@@ -202,6 +202,47 @@ public class EmailService : IEmailService
         await SendEmailAsync(email, subject, body);
     }
 
+    public async Task SendContactFormEmailAsync(string toEmail, string senderName, string senderEmail, string subject, string message)
+    {
+        var emailSubject = $"[Kontaktformular] {subject}";
+        var body = $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"" />
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+        .header {{ background-color: #208A8F; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 20px; }}
+        .field-label {{ font-weight: bold; color: #555; margin-top: 16px; }}
+        .field-value {{ color: #333; margin-top: 4px; }}
+        .message-box {{ background: #f8f9fa; border-left: 4px solid #208A8F; padding: 16px; margin-top: 8px; white-space: pre-wrap; }}
+        .footer {{ margin-top: 30px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 16px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h2 style=""margin:0;"">Neue Kontaktanfrage</h2>
+        </div>
+        <p>Eine neue Nachricht wurde über das Kontaktformular auf der NFK-Website gesendet.</p>
+        <div class=""field-label"">Name:</div>
+        <div class=""field-value"">{System.Net.WebUtility.HtmlEncode(senderName)}</div>
+        <div class=""field-label"">E-Mail:</div>
+        <div class=""field-value""><a href=""mailto:{System.Net.WebUtility.HtmlEncode(senderEmail)}"">{System.Net.WebUtility.HtmlEncode(senderEmail)}</a></div>
+        <div class=""field-label"">Betreff:</div>
+        <div class=""field-value"">{System.Net.WebUtility.HtmlEncode(subject)}</div>
+        <div class=""field-label"">Nachricht:</div>
+        <div class=""message-box"">{System.Net.WebUtility.HtmlEncode(message)}</div>
+        <div class=""footer"">
+            <p>Diese E-Mail wurde automatisch vom NFK Kontaktformular generiert.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(toEmail, emailSubject, body);
+    }
+
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
         try

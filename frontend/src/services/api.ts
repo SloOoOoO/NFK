@@ -181,4 +181,10 @@ export const healthAPI = {
   check: () => axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`),
 };
 
+// Contact form API
+export const contactAPI = {
+  submit: (data: { name: string; email: string; subject: string; message: string }) =>
+    apiClient.post('/contact', data),
+};
+
 export default apiClient;

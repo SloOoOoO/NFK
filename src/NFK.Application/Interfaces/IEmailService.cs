@@ -6,4 +6,5 @@ public interface IEmailService
     Task SendPasswordResetEmailAsync(string email, string firstName, string resetToken);
     Task SendEmailNotFoundNotificationAsync(string email);
     Task SendWelcomeEmailAsync(string email, string firstName);
+    Task SendContactFormEmailAsync(string toEmail, string senderName, string senderEmail, string subject, string message);
 }
