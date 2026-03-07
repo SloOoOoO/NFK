@@ -167,6 +167,10 @@ export const adminAPI = {
   getHeaderText: () => apiClient.get('/admin/header-text'),
   updateHeaderText: (data: { welcomeTitle: string; welcomeSubtitle: string }) =>
     apiClient.put('/admin/header-text', data),
+  getAssistantAssignments: () => apiClient.get('/admin/assistant-assignments'),
+  getAssistantAssignment: (userId: number) => apiClient.get(`/admin/users/${userId}/assistant-assignment`),
+  setAssistantAssignment: (userId: number, consultantUserId: number) =>
+    apiClient.put(`/admin/users/${userId}/assistant-assignment`, { consultantUserId }),
 };
 
 // Users API
@@ -175,6 +179,8 @@ export const usersAPI = {
   search: (query: string) => apiClient.get('/users/search', { params: { query } }),
   updateProfile: (data: Record<string, unknown>) => apiClient.put('/users/profile', data),
   deleteProfile: (confirmationText: string) => apiClient.delete('/users/profile', { data: { confirmationText } }),
+  updateReceptionistVisibility: (receptionistCanSeeMessages: boolean) =>
+    apiClient.put('/users/receptionist-visibility', { receptionistCanSeeMessages }),
 };
 
 // Health check

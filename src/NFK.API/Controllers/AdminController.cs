@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Admin;
 using NFK.Application.Utils;
+using NFK.Domain.Entities.Users;
 using NFK.Infrastructure.Data;
 
 namespace NFK.API.Controllers;
@@ -435,6 +436,135 @@ public class AdminController : ControllerBase
         {
             _logger.LogError(ex, "Error fetching statistics");
             return StatusCode(500, new { error = "internal_error", message = "Error fetching statistics" });
+        }
+    }
+
+    [HttpGet("assistant-assignments")]
+    public async Task<IActionResult> GetAllAssistantAssignments()
+    {
+        try
+        {
+            var assignments = await _context.AssistantAssignments
+                .Include(a => a.AssistantUser)
+                .Include(a => a.ConsultantUser)
+                .ToListAsync();
+
+            var dtos = assignments.Select(a => new AssistantAssignmentDto(
+                a.Id,
+                a.AssistantUserId,
+                $"{a.AssistantUser.FirstName} {a.AssistantUser.LastName}",
+                a.ConsultantUserId,
+                $"{a.ConsultantUser.FirstName} {a.ConsultantUser.LastName}"
+            )).ToList();
+
+            return Ok(dtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching assistant assignments");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching assistant assignments" });
+        }
+    }
+
+    [HttpGet("users/{id}/assistant-assignment")]
+    public async Task<IActionResult> GetAssistantAssignment(int id)
+    {
+        try
+        {
+            var assignment = await _context.AssistantAssignments
+                .Include(a => a.AssistantUser)
+                .Include(a => a.ConsultantUser)
+                .FirstOrDefaultAsync(a => a.AssistantUserId == id);
+
+            if (assignment == null)
+            {
+                return NotFound(new { error = "not_found", message = "Keine Zuweisung gefunden" });
+            }
+
+            var dto = new AssistantAssignmentDto(
+                assignment.Id,
+                assignment.AssistantUserId,
+                $"{assignment.AssistantUser.FirstName} {assignment.AssistantUser.LastName}",
+                assignment.ConsultantUserId,
+                $"{assignment.ConsultantUser.FirstName} {assignment.ConsultantUser.LastName}"
+            );
+
+            return Ok(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching assistant assignment for user {UserId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching assistant assignment" });
+        }
+    }
+
+    [HttpPut("users/{id}/assistant-assignment")]
+    public async Task<IActionResult> AssignAssistant(int id, [FromBody] AssignAssistantRequest request)
+    {
+        try
+        {
+            // Verify the user exists and has Assistant role
+            var assistantUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (assistantUser == null)
+            {
+                return NotFound(new { error = "not_found", message = "Benutzer nicht gefunden" });
+            }
+
+            var userRole = assistantUser.UserRoles.FirstOrDefault()?.Role?.Name;
+            if (userRole != "Assistant")
+            {
+                return BadRequest(new { error = "invalid_request", message = "Benutzer ist kein Assistent" });
+            }
+
+            // Verify the consultant exists
+            var consultantUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == request.ConsultantUserId);
+
+            if (consultantUser == null)
+            {
+                return NotFound(new { error = "not_found", message = "Berater nicht gefunden" });
+            }
+
+            var consultantRole = consultantUser.UserRoles.FirstOrDefault()?.Role?.Name;
+            if (consultantRole != "Consultant" && consultantRole != "SuperAdmin")
+            {
+                return BadRequest(new { error = "invalid_request", message = "Ziel-Benutzer muss Berater oder SuperAdmin sein" });
+            }
+
+            // Create or update the assignment
+            var existing = await _context.AssistantAssignments
+                .FirstOrDefaultAsync(a => a.AssistantUserId == id);
+
+            if (existing != null)
+            {
+                existing.ConsultantUserId = request.ConsultantUserId;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                var assignment = new AssistantAssignment
+                {
+                    AssistantUserId = id,
+                    ConsultantUserId = request.ConsultantUserId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.AssistantAssignments.Add(assignment);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Assistent erfolgreich zugewiesen" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning assistant {AssistantId} to consultant", id);
+            return StatusCode(500, new { error = "internal_error", message = "Error assigning assistant" });
         }
     }
 }

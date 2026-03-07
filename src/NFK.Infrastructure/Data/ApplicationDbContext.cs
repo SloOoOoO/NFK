@@ -29,6 +29,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<PasswordHistory> PasswordHistories { get; set; }
     public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; }
+    public DbSet<AssistantAssignment> AssistantAssignments { get; set; }
 
     // Clients
     public DbSet<Client> Clients { get; set; }
@@ -123,6 +124,22 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RecipientUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // AssistantAssignment entity configuration
+        modelBuilder.Entity<AssistantAssignment>(entity =>
+        {
+            entity.HasOne(e => e.AssistantUser)
+                .WithMany()
+                .HasForeignKey(e => e.AssistantUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ConsultantUser)
+                .WithMany()
+                .HasForeignKey(e => e.ConsultantUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.AssistantUserId).IsUnique();
         });
 
         // Apply global query filter for soft deletes

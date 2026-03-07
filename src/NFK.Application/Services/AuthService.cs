@@ -574,7 +574,8 @@ public class AuthService : IAuthService
             user.Gender,
             user.FirmLegalName,
             user.FirmTaxId,
-            user.FirmChamberRegistration
+            user.FirmChamberRegistration,
+            user.ReceptionistCanSeeMessages
         );
     }
 
