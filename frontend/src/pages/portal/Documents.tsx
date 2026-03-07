@@ -274,7 +274,7 @@ export default function Documents() {
     return true;
   });
 
-  const documentTypes = ['all', ...Array.from(new Set(documents.map(d => d.type)))];
+  const documentTypes = ['all', ...Array.from(new Set(documents.map(d => d.type).filter((t): t is string => !!t)))];
 
   return (
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">

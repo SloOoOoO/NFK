@@ -391,4 +391,54 @@ public class EmailService : IEmailService
         _logger.LogInformation("SendGrid integration not yet implemented, falling back to SMTP");
         await SendViaSmtpAsync(toEmail, subject, htmlBody);
     }
+
+    public async Task SendAppointmentNotificationAsync(string toEmail, string firstName, string title, DateTime startTime, DateTime endTime, string? description, string? location)
+    {
+        var subject = $"Neuer Termin: {title}";
+        var startFormatted = startTime.ToString("dd.MM.yyyy HH:mm");
+        var endFormatted = endTime.ToString("dd.MM.yyyy HH:mm");
+        var descriptionHtml = !string.IsNullOrWhiteSpace(description)
+            ? $"<div class=\"field-label\">Beschreibung:</div><div class=\"field-value\">{System.Net.WebUtility.HtmlEncode(description)}</div>"
+            : string.Empty;
+        var locationHtml = !string.IsNullOrWhiteSpace(location)
+            ? $"<div class=\"field-label\">Ort:</div><div class=\"field-value\">{System.Net.WebUtility.HtmlEncode(location)}</div>"
+            : string.Empty;
+
+        var body = $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"" />
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+        .header {{ background-color: #208A8F; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 20px; }}
+        .field-label {{ font-weight: bold; color: #555; margin-top: 16px; }}
+        .field-value {{ color: #333; margin-top: 4px; }}
+        .footer {{ margin-top: 30px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 16px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h2 style=""margin:0;"">Neuer Termin</h2>
+        </div>
+        <p>Hallo {System.Net.WebUtility.HtmlEncode(firstName)},</p>
+        <p>Für Sie wurde ein neuer Termin vereinbart.</p>
+        <div class=""field-label"">Titel:</div>
+        <div class=""field-value"">{System.Net.WebUtility.HtmlEncode(title)}</div>
+        <div class=""field-label"">Beginn:</div>
+        <div class=""field-value"">{startFormatted} Uhr</div>
+        <div class=""field-label"">Ende:</div>
+        <div class=""field-value"">{endFormatted} Uhr</div>
+        {locationHtml}
+        {descriptionHtml}
+        <div class=""footer"">
+            <p>Diese E-Mail wurde automatisch vom NFK Steuerberatungsportal generiert.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(toEmail, subject, body);
+    }
 }

@@ -228,6 +228,16 @@ export default function Calendar() {
                                 <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
                                   <span>🕒</span> {new Date(event.startTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
                                 </p>
+                                {event.location && (
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <span>📍</span> {event.location}
+                                  </p>
+                                )}
+                                {event.description && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {event.description}
+                                  </p>
+                                )}
                               </div>
                             ))}
                             {dayEvents.length > 3 && (

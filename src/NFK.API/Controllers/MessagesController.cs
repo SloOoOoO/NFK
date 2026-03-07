@@ -37,6 +37,7 @@ public class MessagesController : ControllerBase
 
             var query = _context.Messages
                 .Include(m => m.SenderUser)
+                .Include(m => m.RecipientUser)
                 .AsQueryable();
 
             // Role-based filtering
@@ -71,7 +72,9 @@ public class MessagesController : ControllerBase
                 m.Content,
                 m.CreatedAt,
                 !m.IsRead,
-                m.IsPoolEmail
+                m.IsPoolEmail,
+                Recipient: (m.RecipientUser?.FirstName ?? "") + " " + (m.RecipientUser?.LastName ?? ""),
+                IsSent: m.SenderUserId == currentUserId.Value
             )).ToList();
 
             return Ok(messageDtos);
