@@ -52,6 +52,7 @@ export default function Clients() {
     email: '',
     contact: '',
     phone: '',
+    consultantUserId: 0,
   });
   const [editClient, setEditClient] = useState({
     name: '',
@@ -64,6 +65,7 @@ export default function Clients() {
   });
   const [successMessage, setSuccessMessage] = useState('');
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+  const [consultantUsers, setConsultantUsers] = useState<ClientUser[]>([]);
 
   // Check if user can create clients (only Admin, SuperAdmin, Consultant)
   const canCreateClients = user?.role && ['Admin', 'SuperAdmin', 'Consultant'].includes(user.role);
@@ -71,11 +73,13 @@ export default function Clients() {
   useEffect(() => {
     fetchClients();
     fetchClientUsers();
+    fetchConsultantUsers();
   }, []);
 
   useEffect(() => {
     if (showCreateModal) {
       fetchClientUsers();
+      fetchConsultantUsers();
     }
   }, [showCreateModal]);
 
@@ -98,16 +102,35 @@ export default function Clients() {
 
   const fetchClientUsers = async () => {
     try {
-      const response = await apiClient.get('/users?role=Client');
+      const response = await apiClient.get('/users?role=RegisteredUser');
       const usersData = Array.isArray(response.data) ? response.data : [];
       
-      // Filter to ensure only Client role users
-      const clientsOnly = usersData.filter((u: any) => u.role === 'Client');
+      // Filter to ensure only RegisteredUser role users
+      const registeredOnly = usersData.filter((u: any) => u.role === 'RegisteredUser');
       
-      setClientUsers(clientsOnly);
+      setClientUsers(registeredOnly);
     } catch (err: any) {
-      console.error('Error fetching client users:', err);
+      console.error('Error fetching registered users:', err);
       setClientUsers([]);
+    }
+  };
+
+  const fetchConsultantUsers = async () => {
+    try {
+      const [consultantsRes, superAdminsRes] = await Promise.allSettled([
+        apiClient.get('/users?role=Consultant'),
+        apiClient.get('/users?role=SuperAdmin'),
+      ]);
+      const consultants = consultantsRes.status === 'fulfilled' && Array.isArray(consultantsRes.value.data)
+        ? consultantsRes.value.data
+        : [];
+      const superAdmins = superAdminsRes.status === 'fulfilled' && Array.isArray(superAdminsRes.value.data)
+        ? superAdminsRes.value.data
+        : [];
+      setConsultantUsers([...consultants, ...superAdmins]);
+    } catch (err: any) {
+      console.error('Error fetching consultant users:', err);
+      setConsultantUsers([]);
     }
   };
 
@@ -115,9 +138,12 @@ export default function Clients() {
     e.preventDefault();
     setCreateLoading(true);
     try {
-      await clientsAPI.create(newClient);
+      await clientsAPI.create({
+        ...newClient,
+        consultantUserId: newClient.consultantUserId || undefined,
+      });
       setShowCreateModal(false);
-      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '' });
+      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: 0 });
       setSuccessMessage('Mandant erfolgreich erstellt');
       setTimeout(() => setSuccessMessage(''), 3000);
       await fetchClients();
@@ -432,7 +458,7 @@ export default function Clients() {
                     required
                     disabled={createLoading}
                   >
-                    <option value="">Client auswählen...</option>
+                    <option value="">Registrierten Benutzer auswählen...</option>
                     {clientUsers.map(user => (
                       <option key={user.id} value={user.id}>
                         {user.firstName} {user.lastName} ({user.email})
@@ -440,7 +466,7 @@ export default function Clients() {
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    {clientUsers.length} Client(s) gefunden
+                    {clientUsers.length} registrierte(r) Benutzer gefunden
                   </p>
                 </div>
                 
@@ -470,14 +496,27 @@ export default function Clients() {
                 
                 <div>
                   <label className="block text-sm font-medium mb-2">Ansprechpartner *</label>
-                  <input
-                    type="text"
-                    value={newClient.contact}
-                    onChange={(e) => setNewClient({ ...newClient, contact: e.target.value })}
+                  <select
+                    value={newClient.consultantUserId}
+                    onChange={(e) => {
+                      const selected = consultantUsers.find(u => u.id === Number(e.target.value));
+                      setNewClient({
+                        ...newClient,
+                        consultantUserId: Number(e.target.value),
+                        contact: selected ? `${selected.firstName} ${selected.lastName}` : newClient.contact,
+                      });
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     required
                     disabled={createLoading}
-                  />
+                  >
+                    <option value={0}>Ansprechpartner auswählen...</option>
+                    {consultantUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName} ({u.role})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
@@ -496,7 +535,7 @@ export default function Clients() {
                     type="button"
                     onClick={() => {
                       setShowCreateModal(false);
-                      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '' });
+                      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: 0 });
                     }}
                     className="flex-1 btn-secondary"
                     disabled={createLoading}

@@ -13,7 +13,9 @@ public record ClientDto(
     string? City,
     string? PostalCode,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    int? ConsultantUserId = null,
+    string? ConsultantName = null
 );
 
 public record CreateClientRequest(
@@ -25,7 +27,8 @@ public record CreateClientRequest(
     string? Address,
     string? City,
     string? PostalCode,
-    string? TaxNumber
+    string? TaxNumber,
+    int? ConsultantUserId = null
 );
 
 public record UpdateClientRequest(

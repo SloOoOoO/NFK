@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authAPI, casesAPI, documentsAPI, messagesAPI } from '../../services/api';
+import { authAPI, casesAPI, documentsAPI, messagesAPI, clientsAPI } from '../../services/api';
 
 interface User {
   id: number;
@@ -44,6 +44,7 @@ export default function ClientPortal() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [consultantName, setConsultantName] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -73,6 +74,17 @@ export default function ClientPortal() {
 
       if (messagesRes.status === 'fulfilled' && Array.isArray(messagesRes.value.data)) {
         setMessages(messagesRes.value.data);
+      }
+
+      // Fetch client record to get assigned consultant
+      try {
+        const clientsRes = await clientsAPI.getAll();
+        const clientsData = Array.isArray(clientsRes.data) ? clientsRes.data : [];
+        if (clientsData.length > 0 && clientsData[0].consultantName) {
+          setConsultantName(clientsData[0].consultantName);
+        }
+      } catch {
+        // Ignore - consultant info is optional
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -122,6 +134,17 @@ export default function ClientPortal() {
             Verwalten Sie Ihre Dokumente, Fälle und kommunizieren Sie mit Ihrem Steuerberater.
           </p>
         </div>
+
+        {/* Consultant Info */}
+        {consultantName && (
+          <div className="bg-white p-4 rounded-lg shadow-md mb-8 flex items-center gap-3">
+            <span className="text-2xl">👤</span>
+            <div>
+              <p className="text-sm text-textSecondary">Ihr Ansprechpartner</p>
+              <p className="font-semibold text-textPrimary">{consultantName}</p>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">

@@ -372,6 +372,9 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ConsultantUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("VatNumber")
                         .HasColumnType("nvarchar(max)");
 

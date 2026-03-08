@@ -59,15 +59,23 @@ export default function Sidebar() {
     { name: t('dashboard.nav.connections'), path: '/portal/connections', icon: '🔄' },
   ];
 
+  // RegisteredUser can only access Dashboard and Connections
+  const isRegisteredUser = currentUser?.role === 'RegisteredUser';
+  const filteredNavItems = isRegisteredUser
+    ? navItems.filter(item => item.path === '/portal/dashboard' || item.path === '/portal/connections')
+    : currentUser?.role === 'Receptionist'
+      ? navItems.filter(item => item.path !== '/portal/documents')
+      : navItems;
+
   // Add Clients tab only for employee roles (not Client/RegisteredUser)
   const clientRoles = ['Client', 'RegisteredUser'];
-  if (currentUser?.role && !clientRoles.includes(currentUser.role)) {
-    navItems.splice(1, 0, { name: t('dashboard.nav.clients'), path: '/portal/clients', icon: '👥' });
+  if (currentUser?.role && !clientRoles.includes(currentUser.role) && !isRegisteredUser) {
+    filteredNavItems.splice(1, 0, { name: t('dashboard.nav.clients'), path: '/portal/clients', icon: '👥' });
   }
 
   // Add Admin tab if user is SuperAdmin
   if (currentUser?.role === 'SuperAdmin') {
-    navItems.push({ name: t('dashboard.nav.admin'), path: '/portal/admin', icon: '⚙️' });
+    filteredNavItems.push({ name: t('dashboard.nav.admin'), path: '/portal/admin', icon: '⚙️' });
   }
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -88,7 +96,7 @@ export default function Sidebar() {
       </div>
       
       <nav className="px-3">
-        {navItems.map((item) => (
+        {filteredNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
