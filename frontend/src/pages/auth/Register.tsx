@@ -59,6 +59,9 @@ const registrationSchema = z.object({
   city: z
     .string()
     .min(2, 'Stadt muss mindestens 2 Zeichen lang sein'),
+  country: z
+    .string()
+    .min(1, 'Land ist erforderlich'),
   
   // Section 3: Tax Data
   taxId: z
@@ -158,6 +161,7 @@ export default function Register() {
       salutation: 'Herr' as const,
       privacyConsent: false,
       termsConsent: false,
+      country: 'Deutschland',
     },
   });
 
@@ -244,6 +248,7 @@ export default function Register() {
         street: data.street,
         postalCode: data.postalCode,
         city: data.city,
+        country: data.country,
         taxId: data.taxId,
         taxNumber: data.taxNumber || undefined,
         vatId: data.vatId || undefined,
@@ -607,6 +612,38 @@ export default function Register() {
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.city.message}</p>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Land <span className="text-red-500">*</span>
+                </label>
+                <select
+                  {...register('country')}
+                  id="country"
+                  aria-label="Land"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  disabled={loading}
+                >
+                  <option value="Deutschland">Deutschland</option>
+                  <option value="Österreich">Österreich</option>
+                  <option value="Schweiz">Schweiz</option>
+                  <option value="Frankreich">Frankreich</option>
+                  <option value="Niederlande">Niederlande</option>
+                  <option value="Belgien">Belgien</option>
+                  <option value="Polen">Polen</option>
+                  <option value="Tschechien">Tschechien</option>
+                  <option value="Dänemark">Dänemark</option>
+                  <option value="Italien">Italien</option>
+                  <option value="Spanien">Spanien</option>
+                  <option value="Vereinigtes Königreich">Vereinigtes Königreich</option>
+                  <option value="USA">USA</option>
+                  <option value="Türkei">Türkei</option>
+                  <option value="Andere">Andere</option>
+                </select>
+                {errors.country && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.country.message}</p>
+                )}
               </div>
             </div>
             

@@ -43,6 +43,7 @@ public class ClientsController : ControllerBase
             var query = _context.Clients
                 .AsNoTracking() // Performance: Read-only query
                 .Include(c => c.User)
+                .Include(c => c.ConsultantUser)
                 .AsQueryable();
 
             // ROLE-BASED FILTERING:
@@ -79,7 +80,9 @@ public class ClientsController : ControllerBase
                 c.City,
                 c.PostalCode,
                 c.CreatedAt,
-                c.UpdatedAt
+                c.UpdatedAt,
+                c.ConsultantUserId,
+                c.ConsultantUser != null ? $"{c.ConsultantUser.FirstName} {c.ConsultantUser.LastName}" : null
             )).ToList();
 
             return Ok(clientDtos);
@@ -105,6 +108,7 @@ public class ClientsController : ControllerBase
             var client = await _context.Clients
                 .AsNoTracking() // Performance: Read-only query
                 .Include(c => c.User)
+                .Include(c => c.ConsultantUser)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (client == null)
@@ -148,7 +152,9 @@ public class ClientsController : ControllerBase
                 client.City,
                 client.PostalCode,
                 client.CreatedAt,
-                client.UpdatedAt
+                client.UpdatedAt,
+                client.ConsultantUserId,
+                client.ConsultantUser != null ? $"{client.ConsultantUser.FirstName} {client.ConsultantUser.LastName}" : null
             );
 
             return Ok(clientDto);
@@ -249,6 +255,7 @@ public class ClientsController : ControllerBase
                 City = request.City,
                 PostalCode = request.PostalCode,
                 TaxNumber = request.TaxNumber,
+                ConsultantUserId = request.ConsultantUserId,
                 IsActive = true
             };
 
@@ -256,6 +263,14 @@ public class ClientsController : ControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Client created successfully by user {UserId} for user {TargetUserId}", currentUserId, request.UserId);
+
+            // Fetch consultant name if provided
+            string? consultantName = null;
+            if (request.ConsultantUserId.HasValue)
+            {
+                var consultantUser = await _context.Users.FindAsync(request.ConsultantUserId.Value);
+                consultantName = consultantUser != null ? $"{consultantUser.FirstName} {consultantUser.LastName}" : null;
+            }
 
             var clientDto = new ClientDto(
                 client.Id,
@@ -270,7 +285,9 @@ public class ClientsController : ControllerBase
                 client.City,
                 client.PostalCode,
                 client.CreatedAt,
-                client.UpdatedAt
+                client.UpdatedAt,
+                client.ConsultantUserId,
+                consultantName
             );
 
             return CreatedAtAction(nameof(GetById), new { id = client.Id }, clientDto);
@@ -289,6 +306,7 @@ public class ClientsController : ControllerBase
         {
             var client = await _context.Clients
                 .Include(c => c.User)
+                .Include(c => c.ConsultantUser)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (client == null)
@@ -321,7 +339,9 @@ public class ClientsController : ControllerBase
                 client.City,
                 client.PostalCode,
                 client.CreatedAt,
-                client.UpdatedAt
+                client.UpdatedAt,
+                client.ConsultantUserId,
+                client.ConsultantUser != null ? $"{client.ConsultantUser.FirstName} {client.ConsultantUser.LastName}" : null
             );
 
             return Ok(clientDto);

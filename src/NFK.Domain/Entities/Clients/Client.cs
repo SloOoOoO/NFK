@@ -17,7 +17,10 @@ public class Client : BaseEntity
     public string? Notes { get; set; }
     public bool IsActive { get; set; } = true;
 
+    public int? ConsultantUserId { get; set; }
+
     // Navigation properties
     public virtual Users.User User { get; set; } = null!;
+    public virtual Users.User? ConsultantUser { get; set; }
     public virtual ICollection<Case> Cases { get; set; } = new List<Case>();
 }

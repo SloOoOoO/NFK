@@ -76,9 +76,33 @@ public class DocumentsController : ControllerBase
                     }
                 }
             }
+            else if (userRole == "Assistant")
+            {
+                // Assistants can view documents of clients assigned to their consultant
+                var assignedConsultantId = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == currentUserId.Value)
+                    .Select(a => (int?)a.ConsultantUserId)
+                    .FirstOrDefaultAsync();
+
+                if (assignedConsultantId.HasValue)
+                {
+                    // Get user IDs of clients whose consultant is the assigned consultant
+                    var clientUserIds = await _context.Clients
+                        .Where(c => c.ConsultantUserId == assignedConsultantId.Value)
+                        .Select(c => c.UserId)
+                        .ToListAsync();
+
+                    query = query.Where(d => d.UploadedByUserId != null && clientUserIds.Contains(d.UploadedByUserId.Value));
+                }
+                else
+                {
+                    // No assignment — show nothing
+                    query = query.Where(d => false);
+                }
+            }
             else
             {
-                // Other roles have no access to documents
+                // Other roles (Receptionist) have no access to documents
                 return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Dokumenten" });
             }
 

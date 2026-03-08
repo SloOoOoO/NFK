@@ -142,6 +142,15 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.AssistantUserId).IsUnique();
         });
 
+        // Client entity - ConsultantUser relationship
+        modelBuilder.Entity<Client>(entity =>
+        {
+            entity.HasOne(e => e.ConsultantUser)
+                .WithMany()
+                .HasForeignKey(e => e.ConsultantUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // Apply global query filter for soft deletes
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {

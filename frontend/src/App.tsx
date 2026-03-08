@@ -4,6 +4,7 @@ import './i18n/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import { useAuth } from './contexts/AuthContext';
 
 // Lazy load all route components
 const Landing = lazy(() => import('./pages/public/Landing'));
@@ -33,6 +34,15 @@ const LoadingSpinner = () => (
   </div>
 );
 
+// Route guard that redirects RegisteredUser to dashboard
+function RegisteredUserBlockedRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role === 'RegisteredUser') {
+    return <Navigate to="/portal/dashboard" replace />;
+  }
+  return <ProtectedRoute>{children}</ProtectedRoute>;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -53,10 +63,10 @@ function App() {
             <Route path="/portal/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/portal/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/portal/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
-            <Route path="/portal/cases" element={<ProtectedRoute><Cases /></ProtectedRoute>} />
-            <Route path="/portal/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
-            <Route path="/portal/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            <Route path="/portal/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+            <Route path="/portal/cases" element={<RegisteredUserBlockedRoute><Cases /></RegisteredUserBlockedRoute>} />
+            <Route path="/portal/documents" element={<RegisteredUserBlockedRoute><Documents /></RegisteredUserBlockedRoute>} />
+            <Route path="/portal/messages" element={<RegisteredUserBlockedRoute><Messages /></RegisteredUserBlockedRoute>} />
+            <Route path="/portal/calendar" element={<RegisteredUserBlockedRoute><Calendar /></RegisteredUserBlockedRoute>} />
             <Route path="/portal/connections" element={<ProtectedRoute><Connections /></ProtectedRoute>} />
             <Route path="/portal/datev" element={<ProtectedRoute><DATEV /></ProtectedRoute>} />
             <Route path="/portal/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

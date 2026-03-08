@@ -37,7 +37,7 @@ export default function Cases() {
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 5;
   const [newCase, setNewCase] = useState({
     title: '',
     description: '',
