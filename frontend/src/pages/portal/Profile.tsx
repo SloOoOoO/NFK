@@ -53,35 +53,17 @@ export default function Profile() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch('http://localhost:8080/api/v1/users/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phone: editForm.phoneNumber,
-          phoneNumber: editForm.phoneNumber,
-          address: editForm.address,
-          city: editForm.city,
-          postalCode: editForm.postalCode,
-          country: editForm.country,
-          dateOfBirth: editForm.dateOfBirth,
-          taxId: editForm.taxId,
-          taxNumber: editForm.taxNumber
-        })
+      const response = await usersAPI.updateProfile({
+        phoneNumber: editForm.phoneNumber,
+        address: editForm.address,
+        city: editForm.city,
+        postalCode: editForm.postalCode,
+        country: editForm.country,
+        dateOfBirth: editForm.dateOfBirth ?? null,
+        taxNumber: editForm.taxNumber,
       });
 
-      // Check if response has content before parsing JSON
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Fehler beim Aktualisieren');
-      }
+      const data = response.data;
 
       // Update local user state
       if (data.user) {
@@ -96,7 +78,7 @@ export default function Profile() {
       alert(t('profile.successUpdate'));
     } catch (error: any) {
       console.error('Failed to update profile:', error);
-      alert(error.message || t('profile.errorUpdate'));
+      alert(error.response?.data?.message || error.message || t('profile.errorUpdate'));
     } finally {
       setSaving(false);
     }
@@ -151,14 +133,9 @@ export default function Profile() {
     }
   };
 
-  const isAdmin = user?.role === 'SuperAdmin';
   const canEditField = (field: string) => {
-    // SuperAdmins cannot change their own name or email
-    if (isAdmin && ['fullLegalName', 'email'].includes(field)) {
-      return false;
-    }
-    // For non-admin users, FullLegalName, Email, TaxId, and TaxNumber are read-only
-    if (!isAdmin && ['fullLegalName', 'email', 'taxId', 'taxNumber'].includes(field)) {
+    // fullLegalName, email, and taxId are always read-only for ALL roles
+    if (['fullLegalName', 'email', 'taxId'].includes(field)) {
       return false;
     }
     return isEditing;
@@ -324,8 +301,8 @@ export default function Profile() {
 
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
-                      {t('profile.taxId')}
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
+                      Steuer-ID
+                      <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>
                     </label>
                     {canEditField('taxId') ? (
                       <input
@@ -344,7 +321,6 @@ export default function Profile() {
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
                       Steuernummer
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
                     </label>
                     {canEditField('taxNumber') ? (
                       <input
