@@ -95,6 +95,13 @@ export default function ForgotPassword() {
             />
           </div>
 
+          <div className="flex justify-center">
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={RECAPTCHA_SITE_KEY}
+            />
+          </div>
+
           <button 
             type="submit" 
             className="w-full btn-primary flex items-center justify-center gap-2"
@@ -109,13 +116,6 @@ export default function ForgotPassword() {
               t('auth.forgotPasswordSend')
             )}
           </button>
-
-          <div className="flex justify-center">
-            <ReCAPTCHA
-              ref={recaptchaRef}
-              sitekey={RECAPTCHA_SITE_KEY}
-            />
-          </div>
         </form>
 
         <div className="mt-6 text-center">
