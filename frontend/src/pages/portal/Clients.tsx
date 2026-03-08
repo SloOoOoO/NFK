@@ -52,7 +52,7 @@ export default function Clients() {
     email: '',
     contact: '',
     phone: '',
-    consultantUserId: 0,
+    consultantUserId: undefined as number | undefined,
   });
   const [editClient, setEditClient] = useState({
     name: '',
@@ -143,7 +143,7 @@ export default function Clients() {
         consultantUserId: newClient.consultantUserId || undefined,
       });
       setShowCreateModal(false);
-      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: 0 });
+      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: undefined });
       setSuccessMessage('Mandant erfolgreich erstellt');
       setTimeout(() => setSuccessMessage(''), 3000);
       await fetchClients();
@@ -497,12 +497,13 @@ export default function Clients() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Ansprechpartner *</label>
                   <select
-                    value={newClient.consultantUserId}
+                    value={newClient.consultantUserId ?? ''}
                     onChange={(e) => {
-                      const selected = consultantUsers.find(u => u.id === Number(e.target.value));
+                      const val = e.target.value ? Number(e.target.value) : undefined;
+                      const selected = val ? consultantUsers.find(u => u.id === val) : undefined;
                       setNewClient({
                         ...newClient,
-                        consultantUserId: Number(e.target.value),
+                        consultantUserId: val,
                         contact: selected ? `${selected.firstName} ${selected.lastName}` : newClient.contact,
                       });
                     }}
@@ -510,7 +511,7 @@ export default function Clients() {
                     required
                     disabled={createLoading}
                   >
-                    <option value={0}>Ansprechpartner auswählen...</option>
+                    <option value="">Ansprechpartner auswählen...</option>
                     {consultantUsers.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName} ({u.role})
@@ -535,7 +536,7 @@ export default function Clients() {
                     type="button"
                     onClick={() => {
                       setShowCreateModal(false);
-                      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: 0 });
+                      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: undefined });
                     }}
                     className="flex-1 btn-secondary"
                     disabled={createLoading}

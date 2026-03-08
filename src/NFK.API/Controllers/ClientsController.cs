@@ -306,6 +306,7 @@ public class ClientsController : ControllerBase
         {
             var client = await _context.Clients
                 .Include(c => c.User)
+                .Include(c => c.ConsultantUser)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (client == null)
@@ -339,7 +340,8 @@ public class ClientsController : ControllerBase
                 client.PostalCode,
                 client.CreatedAt,
                 client.UpdatedAt,
-                client.ConsultantUserId
+                client.ConsultantUserId,
+                client.ConsultantUser != null ? $"{client.ConsultantUser.FirstName} {client.ConsultantUser.LastName}" : null
             );
 
             return Ok(clientDto);

@@ -69,7 +69,7 @@ export default function Sidebar() {
 
   // Add Clients tab only for employee roles (not Client/RegisteredUser)
   const clientRoles = ['Client', 'RegisteredUser'];
-  if (currentUser?.role && !clientRoles.includes(currentUser.role) && !isRegisteredUser) {
+  if (currentUser?.role && !clientRoles.includes(currentUser.role)) {
     filteredNavItems.splice(1, 0, { name: t('dashboard.nav.clients'), path: '/portal/clients', icon: '👥' });
   }
 
