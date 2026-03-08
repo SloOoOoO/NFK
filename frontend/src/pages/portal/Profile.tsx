@@ -54,13 +54,13 @@ export default function Profile() {
     setSaving(true);
     try {
       const response = await usersAPI.updateProfile({
-        phoneNumber: editForm.phoneNumber,
-        address: editForm.address,
-        city: editForm.city,
-        postalCode: editForm.postalCode,
-        country: editForm.country,
-        dateOfBirth: editForm.dateOfBirth ?? null,
-        taxNumber: editForm.taxNumber,
+        phoneNumber: editForm.phoneNumber || null,
+        address: editForm.address || null,
+        city: editForm.city || null,
+        postalCode: editForm.postalCode || null,
+        country: editForm.country || null,
+        dateOfBirth: editForm.dateOfBirth || null,
+        taxNumber: editForm.taxNumber || null,
       });
 
       const data = response.data;
@@ -387,12 +387,28 @@ export default function Profile() {
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">{t('profile.country')}</label>
                     {isEditing ? (
-                      <input
-                        type="text"
+                      <select
                         value={editForm.country}
                         onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 dark:bg-gray-700 dark:text-white"
-                      />
+                      >
+                        <option value="">— {t('profile.notSpecified')} —</option>
+                        <option value="Deutschland">Deutschland</option>
+                        <option value="Österreich">Österreich</option>
+                        <option value="Schweiz">Schweiz</option>
+                        <option value="Frankreich">Frankreich</option>
+                        <option value="Niederlande">Niederlande</option>
+                        <option value="Belgien">Belgien</option>
+                        <option value="Polen">Polen</option>
+                        <option value="Tschechien">Tschechien</option>
+                        <option value="Dänemark">Dänemark</option>
+                        <option value="Italien">Italien</option>
+                        <option value="Spanien">Spanien</option>
+                        <option value="Vereinigtes Königreich">Vereinigtes Königreich</option>
+                        <option value="USA">USA</option>
+                        <option value="Türkei">Türkei</option>
+                        <option value="Andere">Andere</option>
+                      </select>
                     ) : (
                       <p className="text-textPrimary dark:text-gray-200 mt-1">{user.country || t('profile.notSpecified')}</p>
                     )}
