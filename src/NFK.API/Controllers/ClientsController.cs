@@ -48,14 +48,20 @@ public class ClientsController : ControllerBase
 
             // ROLE-BASED FILTERING:
             // Clients: Only see their own client record
-            // Admin/SuperAdmin/Consultant/Receptionist: See all clients
-            var allowedViewRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
+            // Consultant: Only see clients assigned to them
+            // SuperAdmin/Receptionist/Assistant: See all clients
+            var allowedViewRoles = new[] { "SuperAdmin", "Receptionist", "Assistant" };
             var canViewAllClients = allowedViewRoles.Contains(userRole);
 
             if (userRole == "Client")
             {
                 // Client can only see their own record
                 query = query.Where(c => c.UserId == currentUserId.Value);
+            }
+            else if (userRole == "Consultant")
+            {
+                // Consultant can only see clients assigned to them
+                query = query.Where(c => c.ConsultantUserId == currentUserId.Value);
             }
             else if (!canViewAllClients)
             {

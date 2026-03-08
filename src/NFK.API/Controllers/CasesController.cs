@@ -48,8 +48,9 @@ public class CasesController : ControllerBase
 
             // ROLE-BASED FILTERING:
             // Clients: Only see their own cases
-            // Admin/SuperAdmin/Consultant/Receptionist: See all cases
-            var allowedViewRoles = new[] { "SuperAdmin", "Consultant", "Receptionist", "Assistant" };
+            // Consultant: Only see cases for clients assigned to them
+            // SuperAdmin/Receptionist/Assistant: See all cases
+            var allowedViewRoles = new[] { "SuperAdmin", "Receptionist", "Assistant" };
             var canViewAllCases = allowedViewRoles.Contains(userRole);
             var clientRoles = new[] { "Client", "RegisteredUser" };
 
@@ -57,6 +58,11 @@ public class CasesController : ControllerBase
             {
                 // Client/RegisteredUser can only see cases where they are the client
                 query = query.Where(c => c.Client.UserId == currentUserId.Value);
+            }
+            else if (userRole == "Consultant")
+            {
+                // Consultant can only see cases for clients assigned to them
+                query = query.Where(c => c.Client.ConsultantUserId == currentUserId.Value);
             }
             else if (!canViewAllCases)
             {
@@ -186,6 +192,12 @@ public class CasesController : ControllerBase
             if (client == null)
             {
                 return BadRequest(new { error = "invalid_request", message = "Client not found" });
+            }
+
+            // Consultant can only create cases for their own clients
+            if (userRole == "Consultant" && client.ConsultantUserId != currentUserId.Value)
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Steuerberater können nur Fälle für ihre eigenen Mandanten erstellen" });
             }
 
             var caseEntity = new Case
