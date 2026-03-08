@@ -129,10 +129,17 @@ public class UsersController : ControllerBase
                 return NotFound(new { message = "Benutzer nicht gefunden" });
 
             // Update fields - handle both field name variations
-            if (!string.IsNullOrEmpty(dto.FirstName))
-                user.FirstName = dto.FirstName;
-            if (!string.IsNullOrEmpty(dto.LastName))
-                user.LastName = dto.LastName;
+            // SuperAdmins cannot change their own name or email
+            var userRoleStr = User.FindFirst("role")?.Value ?? "";
+            bool isSuperAdmin = userRoleStr == "SuperAdmin";
+
+            if (!isSuperAdmin)
+            {
+                if (!string.IsNullOrEmpty(dto.FirstName))
+                    user.FirstName = dto.FirstName;
+                if (!string.IsNullOrEmpty(dto.LastName))
+                    user.LastName = dto.LastName;
+            }
             
             // Handle both Phone and PhoneNumber
             if (!string.IsNullOrEmpty(dto.Phone))

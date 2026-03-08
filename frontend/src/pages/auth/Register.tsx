@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { authAPI } from '../../services/api';
 import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 import { validateSteuerID } from '../../utils/taxValidation';
 import { isNotDisposableEmail, getDisposableEmailError } from '../../utils/emailValidation';
+
+// Use Google's test key by default; override with VITE_RECAPTCHA_SITE_KEY in production
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
 
 // Zod validation schema
 const registrationSchema = z.object({
@@ -138,6 +142,7 @@ export default function Register() {
   const [disabledFields, setDisabledFields] = useState<{[key: string]: boolean}>({});
   const [oauthSource, setOauthSource] = useState<string | null>(null);
   const [oauthProviderId, setOauthProviderId] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
   
   const {
     register,
@@ -203,6 +208,18 @@ export default function Register() {
 
   const onSubmit = async (data: RegistrationFormData) => {
     setApiError('');
+
+    // reCAPTCHA check (skip for OAuth flows which are inherently verified)
+    const isOAuth = oauthSource === 'google' || oauthSource === 'datev';
+    let recaptchaToken: string | null = null;
+    if (!isOAuth) {
+      recaptchaToken = recaptchaRef.current?.getValue() ?? null;
+      if (!recaptchaToken) {
+        setApiError('Bitte bestätigen Sie, dass Sie kein Roboter sind.');
+        return;
+      }
+    }
+
     setLoading(true);
     
     try {
@@ -236,6 +253,7 @@ export default function Register() {
         // Add OAuth provider info if available
         googleId: oauthSource === 'google' && oauthProviderId ? oauthProviderId : undefined,
         datevId: oauthSource === 'datev' && oauthProviderId ? oauthProviderId : undefined,
+        recaptchaToken: recaptchaToken ?? undefined,
       };
       
       await authAPI.register(payload);
@@ -248,6 +266,7 @@ export default function Register() {
     } catch (err: unknown) {
       console.error('Registration failed:', err);
       const axiosError = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
+      recaptchaRef.current?.reset();
 
       if (axiosError.response?.status === 409 || axiosError.response?.data?.error === 'user_exists') {
         setIsEmailConflict(true);
@@ -724,7 +743,16 @@ export default function Register() {
             </div>
             
             {/* Submit Button */}
-            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700 space-y-4">
+              {/* reCAPTCHA - skip for OAuth registrations */}
+              {oauthSource !== 'google' && oauthSource !== 'datev' && (
+                <div className="flex justify-center">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={RECAPTCHA_SITE_KEY}
+                  />
+                </div>
+              )}
               <button
                 type="submit"
                 className="w-full btn-primary flex items-center justify-center gap-2"

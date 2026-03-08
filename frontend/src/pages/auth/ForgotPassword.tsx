@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import ReCAPTCHA from 'react-google-recaptcha';
 import apiClient from '../../services/api';
+
+// Use Google's test key by default; override with VITE_RECAPTCHA_SITE_KEY in production
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -9,14 +13,22 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const recaptchaToken = recaptchaRef.current?.getValue();
+    if (!recaptchaToken) {
+      setError('Bitte bestätigen Sie, dass Sie kein Roboter sind.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await apiClient.post('/auth/forgot-password', { email });
+      await apiClient.post('/auth/forgot-password', { email, recaptchaToken });
       setSuccess(true);
     } catch (err: any) {
       console.error('Forgot password failed:', err);
@@ -24,6 +36,7 @@ export default function ForgotPassword() {
         err.response?.data?.message || 
         t('contact.form.error')
       );
+      recaptchaRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -96,6 +109,13 @@ export default function ForgotPassword() {
               t('auth.forgotPasswordSend')
             )}
           </button>
+
+          <div className="flex justify-center">
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey={RECAPTCHA_SITE_KEY}
+            />
+          </div>
         </form>
 
         <div className="mt-6 text-center">

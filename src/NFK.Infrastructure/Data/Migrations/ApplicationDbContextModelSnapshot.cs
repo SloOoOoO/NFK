@@ -785,6 +785,9 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Property<string>("RecipientRoles")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("AssistantVisible")
+                        .HasColumnType("bit");
+
                     b.Property<int>("RecipientUserId")
                         .HasColumnType("int");
 

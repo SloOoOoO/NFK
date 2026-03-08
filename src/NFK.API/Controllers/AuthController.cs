@@ -33,6 +33,15 @@ public class AuthController : ControllerBase
     {
         try
         {
+            // reCAPTCHA validation (if secret key is configured and no OAuth provider)
+            bool isOAuth = !string.IsNullOrEmpty(request.GoogleId) || !string.IsNullOrEmpty(request.DATEVId);
+            if (!isOAuth)
+            {
+                var captchaError = await ValidateRecaptchaAsync(request.RecaptchaToken);
+                if (captchaError != null)
+                    return BadRequest(new { error = "invalid_recaptcha", message = captchaError });
+            }
+
             var result = await _authService.RegisterAsync(request);
             return Ok(result);
         }
@@ -298,6 +307,11 @@ public class AuthController : ControllerBase
     {
         try
         {
+            // reCAPTCHA validation (if secret key is configured)
+            var captchaError = await ValidateRecaptchaAsync(request.RecaptchaToken);
+            if (captchaError != null)
+                return BadRequest(new { error = "invalid_recaptcha", message = captchaError });
+
             await _authService.RequestPasswordResetAsync(request.Email);
             // Always return success to prevent email enumeration
             return Ok(new { message = "If an account with that email exists, a password reset link has been sent." });
@@ -374,6 +388,51 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = "internal_error", message = "Failed to process request" });
         }
     }
+    /// <summary>
+    /// Validates a reCAPTCHA token against Google's API.
+    /// Returns null if valid or if reCAPTCHA is not configured.
+    /// Returns an error message string if the token is invalid.
+    /// </summary>
+    private async Task<string?> ValidateRecaptchaAsync(string? token)
+    {
+        var secretKey = _configuration["ReCaptcha:SecretKey"];
+        
+        // If no secret key configured, skip validation (development/test mode)
+        if (string.IsNullOrEmpty(secretKey))
+            return null;
+
+        if (string.IsNullOrEmpty(token))
+            return "Bitte bestätigen Sie, dass Sie kein Roboter sind.";
+
+        try
+        {
+            using var httpClient = new System.Net.Http.HttpClient();
+            var response = await httpClient.PostAsync(
+                $"https://www.google.com/recaptcha/api/siteverify?secret={secretKey}&response={token}",
+                null);
+            
+            var content = await response.Content.ReadAsStringAsync();
+            var result = System.Text.Json.JsonSerializer.Deserialize<RecaptchaResponse>(content, 
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            
+            if (result == null || !result.Success)
+                return "reCAPTCHA-Überprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.";
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "reCAPTCHA validation request failed");
+            // Don't block the user if the reCAPTCHA service is unreachable
+            return null;
+        }
+    }
 }
 
 public record RefreshTokenRequest(string RefreshToken);
+
+internal class RecaptchaResponse
+{
+    public bool Success { get; set; }
+    public string[]? ErrorCodes { get; set; }
+}
