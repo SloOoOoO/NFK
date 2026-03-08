@@ -5,63 +5,37 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace NFK.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
     public partial class AddAssistantAssignmentAndReceptionistToggle : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "ReceptionistCanSeeMessages",
-                table: "Users",
-                type: "bit",
-                nullable: false,
-                defaultValue: true);
+            migrationBuilder.Sql(@"
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Users]') AND name = N'ReceptionistCanSeeMessages')
+    ALTER TABLE [dbo].[Users] ADD [ReceptionistCanSeeMessages] bit NOT NULL DEFAULT 1;
+");
 
-            migrationBuilder.CreateTable(
-                name: "AssistantAssignments",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    AssistantUserId = table.Column<int>(type: "int", nullable: false),
-                    ConsultantUserId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AssistantAssignments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_AssistantAssignments_Users_AssistantUserId",
-                        column: x => x.AssistantUserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_AssistantAssignments_Users_ConsultantUserId",
-                        column: x => x.ConsultantUserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AssistantAssignments_AssistantUserId",
-                table: "AssistantAssignments",
-                column: "AssistantUserId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AssistantAssignments_ConsultantUserId",
-                table: "AssistantAssignments",
-                column: "ConsultantUserId");
+            migrationBuilder.Sql(@"
+IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[AssistantAssignments]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[AssistantAssignments] (
+        [Id] int NOT NULL IDENTITY(1,1),
+        [AssistantUserId] int NOT NULL,
+        [ConsultantUserId] int NOT NULL,
+        [CreatedAt] datetime2 NOT NULL,
+        [UpdatedAt] datetime2 NULL,
+        [CreatedBy] nvarchar(max) NULL,
+        [UpdatedBy] nvarchar(max) NULL,
+        [IsDeleted] bit NOT NULL,
+        CONSTRAINT [PK_AssistantAssignments] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_AssistantAssignments_Users_AssistantUserId] FOREIGN KEY ([AssistantUserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_AssistantAssignments_Users_ConsultantUserId] FOREIGN KEY ([ConsultantUserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE NO ACTION
+    );
+    CREATE UNIQUE INDEX [IX_AssistantAssignments_AssistantUserId] ON [dbo].[AssistantAssignments] ([AssistantUserId]);
+    CREATE INDEX [IX_AssistantAssignments_ConsultantUserId] ON [dbo].[AssistantAssignments] ([ConsultantUserId]);
+END
+");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
