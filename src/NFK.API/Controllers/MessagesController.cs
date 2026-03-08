@@ -54,25 +54,11 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Receptionist")
             {
-                // Receptionists can see pool emails + messages to/from them,
-                // but only from Consultant/SuperAdmin users who have ReceptionistCanSeeMessages = true
+                // Receptionists can see pool emails and messages to/from them only
                 query = query.Where(m =>
                     m.IsPoolEmail ||
                     m.RecipientUserId == currentUserId.Value ||
-                    m.SenderUserId == currentUserId.Value ||
-                    (
-                        // Messages where sender is Consultant/SuperAdmin and they allow receptionist visibility
-                        m.SenderUser != null &&
-                        m.SenderUser.ReceptionistCanSeeMessages &&
-                        m.SenderUser.UserRoles.Any(ur => ur.Role.Name == "Consultant" || ur.Role.Name == "SuperAdmin")
-                    ) ||
-                    (
-                        // Messages where recipient is Consultant/SuperAdmin and they allow receptionist visibility
-                        m.RecipientUser != null &&
-                        m.RecipientUser.ReceptionistCanSeeMessages &&
-                        m.RecipientUser.UserRoles.Any(ur => ur.Role.Name == "Consultant" || ur.Role.Name == "SuperAdmin")
-                    )
-                );
+                    m.SenderUserId == currentUserId.Value);
             }
             else if (userRole == "Assistant")
             {
@@ -88,8 +74,10 @@ public class MessagesController : ControllerBase
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        m.RecipientUserId == assignedConsultantId.Value ||
-                        m.SenderUserId == assignedConsultantId.Value);
+                        // Only show messages from the assigned consultant where AssistantVisible = true
+                        (m.AssistantVisible && (
+                            m.RecipientUserId == assignedConsultantId.Value ||
+                            m.SenderUserId == assignedConsultantId.Value)));
                 }
                 else
                 {
@@ -125,7 +113,8 @@ public class MessagesController : ControllerBase
                 !m.IsRead,
                 m.IsPoolEmail,
                 Recipient: (m.RecipientUser?.FirstName ?? "") + " " + (m.RecipientUser?.LastName ?? ""),
-                IsSent: m.SenderUserId == currentUserId.Value
+                IsSent: m.SenderUserId == currentUserId.Value,
+                AssistantVisible: m.AssistantVisible
             )).ToList();
 
             return Ok(messageDtos);
@@ -134,6 +123,84 @@ public class MessagesController : ControllerBase
         {
             _logger.LogError(ex, "Error fetching messages");
             return StatusCode(500, new { error = "internal_error", message = "Error fetching messages" });
+        }
+    }
+
+    [HttpGet("unread-count")]
+    public async Task<IActionResult> GetUnreadCount()
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+            }
+
+            var userRole = User.FindFirst("role")?.Value ?? "";
+
+            IQueryable<Domain.Entities.Messaging.Message> query = _context.Messages
+                .Include(m => m.SenderUser!)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+                .AsQueryable();
+
+            if (ClientRoles.Contains(userRole))
+            {
+                query = query.Where(m =>
+                    (m.RecipientUserId == currentUserId.Value || m.SenderUserId == currentUserId.Value)
+                    && !m.IsPoolEmail);
+            }
+            else if (userRole == "Receptionist")
+            {
+                query = query.Where(m =>
+                    m.IsPoolEmail ||
+                    m.RecipientUserId == currentUserId.Value ||
+                    m.SenderUserId == currentUserId.Value);
+            }
+            else if (userRole == "Assistant")
+            {
+                var assignedConsultantId = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == currentUserId.Value)
+                    .Select(a => (int?)a.ConsultantUserId)
+                    .FirstOrDefaultAsync();
+
+                if (assignedConsultantId.HasValue)
+                {
+                    query = query.Where(m =>
+                        m.RecipientUserId == currentUserId.Value ||
+                        m.SenderUserId == currentUserId.Value ||
+                        m.IsPoolEmail ||
+                        (m.AssistantVisible && (
+                            m.RecipientUserId == assignedConsultantId.Value ||
+                            m.SenderUserId == assignedConsultantId.Value)));
+                }
+                else
+                {
+                    query = query.Where(m =>
+                        m.RecipientUserId == currentUserId.Value ||
+                        m.SenderUserId == currentUserId.Value ||
+                        m.IsPoolEmail);
+                }
+            }
+            else
+            {
+                query = query.Where(m =>
+                    m.RecipientUserId == currentUserId.Value ||
+                    m.SenderUserId == currentUserId.Value ||
+                    m.IsPoolEmail);
+            }
+
+            var unreadCount = await query
+                .Where(m => !m.IsRead && m.RecipientUserId == currentUserId.Value)
+                .CountAsync();
+
+            return Ok(new { unreadCount });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching unread message count");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching unread count" });
         }
     }
 
@@ -273,7 +340,9 @@ public class MessagesController : ControllerBase
                 Content = request.Content,
                 CaseId = request.CaseId,
                 IsRead = false,
-                IsPoolEmail = false
+                IsPoolEmail = false,
+                // Only Consultant and SuperAdmin can flag a message as visible to the assigned assistant
+                AssistantVisible = (userRole == "Consultant" || userRole == "SuperAdmin") && request.AssistantVisible
             };
 
             _context.Messages.Add(message);

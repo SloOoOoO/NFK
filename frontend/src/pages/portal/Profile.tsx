@@ -16,6 +16,8 @@ export default function Profile() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -133,8 +135,28 @@ export default function Profile() {
     }
   };
 
+  const handleChangePassword = async () => {
+    setChangingPassword(true);
+    try {
+      await import('../../services/api').then(({ default: apiClient }) =>
+        apiClient.post('/auth/forgot-password', { email: user.email })
+      );
+      setShowChangePasswordModal(false);
+      alert('Eine E-Mail mit einem Link zum Ändern Ihres Passworts wurde an Ihre E-Mail-Adresse gesendet.');
+    } catch (error: any) {
+      console.error('Failed to send password reset email:', error);
+      alert(error.response?.data?.message || 'Fehler beim Senden der Passwort-E-Mail');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const isAdmin = user?.role === 'SuperAdmin';
   const canEditField = (field: string) => {
+    // SuperAdmins cannot change their own name or email
+    if (isAdmin && ['fullLegalName', 'email'].includes(field)) {
+      return false;
+    }
     // For non-admin users, FullLegalName, Email, TaxId, and TaxNumber are read-only
     if (!isAdmin && ['fullLegalName', 'email', 'taxId', 'taxNumber'].includes(field)) {
       return false;
@@ -237,7 +259,7 @@ export default function Profile() {
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
                       {t('profile.fullLegalName')}
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
+                      <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>
                     </label>
                     {canEditField('fullLegalName') ? (
                       <input
@@ -256,7 +278,7 @@ export default function Profile() {
                   <div>
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">
                       {t('profile.email')}
-                      {!isAdmin && <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>}
+                      <span className="text-xs ml-2 text-gray-500 dark:text-gray-500">{t('common.readOnly')}</span>
                     </label>
                     {canEditField('email') ? (
                       <input
@@ -437,59 +459,71 @@ export default function Profile() {
               </div>
             )}
 
-            {/* Receptionist Message Visibility Toggle - only for Consultant/SuperAdmin */}
-            {(user.role === 'Consultant' || user.role === 'SuperAdmin') && (
-              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="font-semibold text-lg mb-2 text-primary dark:text-blue-400">
-                  Sichtbarkeit für Rezeptionisten
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Steuern Sie, ob Rezeptionisten Ihre Nachrichten sehen können.
-                </p>
-                <div className="flex items-center gap-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={user.receptionistCanSeeMessages !== false}
-                      onChange={async (e) => {
-                        const newValue = e.target.checked;
-                        try {
-                          await usersAPI.updateReceptionistVisibility(newValue);
-                          setUser({ ...user, receptionistCanSeeMessages: newValue });
-                        } catch (err) {
-                          console.error('Failed to update visibility setting:', err);
-                          alert('Fehler beim Speichern der Einstellung');
-                        }
-                      }}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                  </label>
-                  <span className="text-sm text-textPrimary dark:text-gray-200">
-                    {user.receptionistCanSeeMessages !== false
-                      ? 'Rezeptionisten können Ihre Nachrichten sehen'
-                      : 'Rezeptionisten können Ihre Nachrichten nicht sehen'}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Delete Profile Section */}
             <div className="mt-8 pt-6 border-t border-red-200 dark:border-red-900/50">
               <h3 className="font-semibold text-lg mb-2 text-red-600 dark:text-red-400">{t('profile.dangerZone')}</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 {t('profile.deleteWarning')}
               </p>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
-              >
-                🗑️ {t('profile.deleteProfile')}
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => setShowChangePasswordModal(true)}
+                  className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+                >
+                  🔑 Passwort ändern
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+                >
+                  🗑️ {t('profile.deleteProfile')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Change Password Modal */}
+      <Dialog.Root open={showChangePasswordModal} onOpenChange={setShowChangePasswordModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full z-50">
+            <Dialog.Title className="text-xl font-bold mb-4 text-yellow-600 dark:text-yellow-400">
+              🔑 Passwort ändern
+            </Dialog.Title>
+            <Dialog.Description className="text-gray-700 dark:text-gray-300 mb-6">
+              Möchten Sie wirklich Ihr Passwort ändern? Eine E-Mail mit einem Link zum Zurücksetzen des Passworts wird an Ihre E-Mail-Adresse gesendet.
+            </Dialog.Description>
+            <div className="flex gap-3 justify-end">
+              <Dialog.Close asChild>
+                <button
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-medium"
+                  disabled={changingPassword}
+                >
+                  Nein
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 text-white rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {changingPassword ? 'Wird gesendet...' : 'Ja, E-Mail senden'}
+              </button>
+            </div>
+            <Dialog.Close asChild>
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label="Schließen"
+                disabled={changingPassword}
+              >
+                <X size={24} />
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {/* Delete Profile Modal */}
       <Dialog.Root open={showDeleteModal} onOpenChange={setShowDeleteModal}>

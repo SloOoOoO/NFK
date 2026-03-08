@@ -35,7 +35,8 @@ public record RegisterRequest(
     string? FirmCountry = null,
     // OAuth fields
     string? GoogleId = null,
-    string? DATEVId = null
+    string? DATEVId = null,
+    string? RecaptchaToken = null
 );
 
 public record RegisterResponse(
@@ -102,7 +103,8 @@ public record UserResponse(
 public record ForgotPasswordRequest(
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email format")]
-    string Email
+    string Email,
+    string? RecaptchaToken = null
 );
 
 public record ResetPasswordRequest(

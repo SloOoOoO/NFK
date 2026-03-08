@@ -140,8 +140,8 @@ public class DocumentsController : ControllerBase
 
             var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
 
-            // PERMISSION CHECK: Only Clients and RegisteredUsers can upload documents
-            if (!ClientRoles.Contains(userRole))
+            // PERMISSION CHECK: Only Clients can upload documents (not RegisteredUser or employees)
+            if (userRole != "Client")
             {
                 return StatusCode(403, new { error = "forbidden", message = "Nur Klienten können Dokumente hochladen" });
             }

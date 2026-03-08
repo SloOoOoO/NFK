@@ -1,19 +1,41 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import DarkModeToggle from './DarkModeToggle';
+import apiClient from '../services/api';
 
 export default function Sidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user: currentUser, isLoading: loading, refreshUser } = useAuth();
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   useEffect(() => {
     // Refresh user data when sidebar mounts to ensure we have latest data
     refreshUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Fetch unread message count when user is loaded
+    if (currentUser) {
+      fetchUnreadCount();
+      // Poll every 60 seconds
+      const interval = setInterval(fetchUnreadCount, 60000);
+      return () => clearInterval(interval);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await apiClient.get('/messages/unread-count');
+      setUnreadMessageCount(response.data?.unreadCount ?? 0);
+    } catch {
+      // Silently fail - badge just won't show
+    }
+  };
 
   const handleLogout = () => {
     // Clear tokens from localStorage
@@ -28,11 +50,11 @@ export default function Sidebar() {
     navigate('/portal/profile');
   };
 
-  const navItems = [
+  const navItems: { name: string; path: string; icon: string; badge?: number }[] = [
     { name: t('dashboard.nav.dashboard'), path: '/portal/dashboard', icon: '📊' },
     { name: t('dashboard.nav.cases'), path: '/portal/cases', icon: '📁' },
     { name: t('dashboard.nav.documents'), path: '/portal/documents', icon: '📄' },
-    { name: t('dashboard.nav.messages'), path: '/portal/messages', icon: '✉️' },
+    { name: t('dashboard.nav.messages'), path: '/portal/messages', icon: '✉️', badge: unreadMessageCount },
     { name: t('dashboard.nav.calendar'), path: '/portal/calendar', icon: '📅' },
     { name: t('dashboard.nav.connections'), path: '/portal/connections', icon: '🔄' },
   ];
@@ -79,7 +101,12 @@ export default function Sidebar() {
             }
           >
             <span className="text-xl">{item.icon}</span>
-            <span className="font-medium">{item.name}</span>
+            <span className="font-medium flex-1">{item.name}</span>
+            {item.badge != null && item.badge > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                {item.badge > 99 ? '99+' : item.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

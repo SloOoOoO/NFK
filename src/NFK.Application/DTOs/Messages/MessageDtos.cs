@@ -10,7 +10,8 @@ public record MessageDto(
     bool Unread,
     bool IsPoolEmail = false,
     string? Recipient = null,
-    bool IsSent = false
+    bool IsSent = false,
+    bool AssistantVisible = false
 );
 
 public record MarkMessageReadRequest(
@@ -21,7 +22,8 @@ public record SendMessageRequest(
     int RecipientUserId,
     string Subject,
     string Content,
-    int? CaseId = null
+    int? CaseId = null,
+    bool AssistantVisible = false
 );
 
 public record ReplyMessageRequest(

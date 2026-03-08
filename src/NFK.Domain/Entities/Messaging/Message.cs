@@ -32,6 +32,12 @@ public class Message : BaseEntity
     /// </summary>
     public string? RecipientRoles { get; set; }
 
+    /// <summary>
+    /// When true, the assigned Assistant of the sender/consultant can see this message.
+    /// Defaults to false. Only SuperAdmin and Consultant can set this per message.
+    /// </summary>
+    public bool AssistantVisible { get; set; }
+
     // Navigation properties
     public virtual Users.User? SenderUser { get; set; }
     public virtual Users.User RecipientUser { get; set; } = null!;

@@ -35,7 +35,7 @@ export default function Messages() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [showReplyModal, setShowReplyModal] = useState(false);
-  const [composeForm, setComposeForm] = useState({ recipientUserId: 0, subject: '', content: '' });
+  const [composeForm, setComposeForm] = useState({ recipientUserId: 0, subject: '', content: '', assistantVisible: false });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userQuery, setUserQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -134,9 +134,10 @@ export default function Messages() {
         recipientUserId: selectedUser.id,
         subject: composeForm.subject,
         content: composeForm.content,
+        assistantVisible: composeForm.assistantVisible,
       });
       setShowComposeModal(false);
-      setComposeForm({ recipientUserId: 0, subject: '', content: '' });
+      setComposeForm({ recipientUserId: 0, subject: '', content: '', assistantVisible: false });
       setSelectedUser(null);
       setUserQuery('');
       await fetchMessages();
@@ -462,6 +463,23 @@ export default function Messages() {
                     placeholder="Ihre Nachricht..."
                   />
                 </div>
+                
+                {/* Assistant visibility toggle - only for Consultant/SuperAdmin */}
+                {(currentUser?.role === 'Consultant' || currentUser?.role === 'SuperAdmin') && (
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                    <input
+                      type="checkbox"
+                      id="assistantVisible"
+                      checked={composeForm.assistantVisible}
+                      onChange={(e) => setComposeForm({ ...composeForm, assistantVisible: e.target.checked })}
+                      disabled={sending}
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
+                    />
+                    <label htmlFor="assistantVisible" className="text-sm font-medium text-blue-800 dark:text-blue-300 cursor-pointer select-none">
+                      Assistent kann diese Nachricht sehen
+                    </label>
+                  </div>
+                )}
                 
                 <div className="flex gap-3 pt-4">
                   <Dialog.Close asChild>
