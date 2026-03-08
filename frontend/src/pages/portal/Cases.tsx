@@ -36,6 +36,8 @@ export default function Cases() {
   const [createLoading, setCreateLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
   const [newCase, setNewCase] = useState({
     title: '',
     description: '',
@@ -217,6 +219,9 @@ export default function Cases() {
     ? cases 
     : cases.filter(c => c.status === filterStatus);
 
+  const totalPages = Math.ceil(filteredCases.length / PAGE_SIZE);
+  const paginatedCases = filteredCases.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   const statusCounts = {
     all: cases.length,
     neu: cases.filter(c => c.status === 'Neu').length,
@@ -254,7 +259,7 @@ export default function Cases() {
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-2 overflow-x-auto w-full">
               <button
-                onClick={() => setFilterStatus('all')}
+                onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'all'
                     ? 'bg-primary text-white'
@@ -264,7 +269,7 @@ export default function Cases() {
                 Alle ({statusCounts.all})
               </button>
               <button
-                onClick={() => setFilterStatus('Neu')}
+                onClick={() => { setFilterStatus('Neu'); setCurrentPage(1); }}
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'Neu'
                     ? 'bg-primary text-white'
@@ -274,7 +279,7 @@ export default function Cases() {
                 Neu ({statusCounts.neu})
               </button>
               <button
-                onClick={() => setFilterStatus('In Bearbeitung')}
+                onClick={() => { setFilterStatus('In Bearbeitung'); setCurrentPage(1); }}
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'In Bearbeitung'
                     ? 'bg-primary text-white'
@@ -284,7 +289,7 @@ export default function Cases() {
                 In Bearbeitung ({statusCounts.inBearbeitung})
               </button>
               <button
-                onClick={() => setFilterStatus('Abgeschlossen')}
+                onClick={() => { setFilterStatus('Abgeschlossen'); setCurrentPage(1); }}
                 className={`px-4 py-2 rounded-md whitespace-nowrap ${
                   filterStatus === 'Abgeschlossen'
                     ? 'bg-primary text-white'
@@ -326,63 +331,88 @@ export default function Cases() {
         ) : (
           <div className="space-y-4">
             {filteredCases.length > 0 ? (
-              filteredCases.map((caseItem) => (
-                <div key={caseItem.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-primary">#{caseItem.id}</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(caseItem.status)}`}>
-                          {caseItem.status}
-                        </span>
-                        <span className={`text-sm font-medium ${getPriorityColor(caseItem.priority)}`}>
-                          ● {caseItem.priority}
-                        </span>
+              <>
+                {paginatedCases.map((caseItem) => (
+                  <div key={caseItem.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-primary">#{caseItem.id}</h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(caseItem.status)}`}>
+                            {caseItem.status}
+                          </span>
+                          <span className={`text-sm font-medium ${getPriorityColor(caseItem.priority)}`}>
+                            ● {caseItem.priority}
+                          </span>
+                        </div>
+                        
+                        <h4 className="text-lg font-medium text-textPrimary dark:text-white mb-2">{caseItem.title}</h4>
+                        
+                        <div className="flex flex-wrap gap-4 text-sm text-textSecondary dark:text-gray-400">
+                          <div className="flex items-center gap-1">
+                            <span>👥</span>
+                            <span>{caseItem.clientName}</span>
+                          </div>
+                          {caseItem.dueDate && (
+                            <div className="flex items-center gap-1">
+                              <span>📅</span>
+                              <span>Frist: {new Date(caseItem.dueDate).toLocaleDateString('de-DE')}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      <h4 className="text-lg font-medium text-textPrimary dark:text-white mb-2">{caseItem.title}</h4>
-                      
-                      <div className="flex flex-wrap gap-4 text-sm text-textSecondary dark:text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <span>👥</span>
-                          <span>{caseItem.clientName}</span>
-                        </div>
-                        {caseItem.dueDate && (
-                          <div className="flex items-center gap-1">
-                            <span>📅</span>
-                            <span>Frist: {new Date(caseItem.dueDate).toLocaleDateString('de-DE')}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => openDetailsModal(caseItem)}
+                          className="btn-secondary"
+                        >
+                          Details
+                        </button>
+                        {user && !isClientRole(user.role) && (
+                          <>
+                            <button 
+                              onClick={() => openEditModal(caseItem)}
+                              className="btn-primary"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button 
+                              onClick={() => openDeleteModal(caseItem)}
+                              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                            >
+                              Löschen
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
-                    
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => openDetailsModal(caseItem)}
-                        className="btn-secondary"
-                      >
-                        Details
-                      </button>
-                      {user && !isClientRole(user.role) && (
-                        <>
-                          <button 
-                            onClick={() => openEditModal(caseItem)}
-                            className="btn-primary"
-                          >
-                            Bearbeiten
-                          </button>
-                          <button 
-                            onClick={() => openDeleteModal(caseItem)}
-                            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                          >
-                            Löschen
-                          </button>
-                        </>
-                      )}
-                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-4 pt-4">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 rounded-md bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      ← Vorherige
+                    </button>
+                    <span className="text-sm text-textSecondary dark:text-gray-400">
+                      Seite {currentPage} von {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 rounded-md bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Nächste →
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm text-center">
                 <div className="text-6xl mb-4">📁</div>

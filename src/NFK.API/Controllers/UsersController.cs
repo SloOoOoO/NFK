@@ -128,18 +128,8 @@ public class UsersController : ControllerBase
             if (user == null)
                 return NotFound(new { message = "Benutzer nicht gefunden" });
 
-            // Update fields - handle both field name variations
-            // SuperAdmins cannot change their own name or email
-            var userRoleStr = User.FindFirst("role")?.Value ?? "";
-            bool isSuperAdmin = userRoleStr == "SuperAdmin";
-
-            if (!isSuperAdmin)
-            {
-                if (!string.IsNullOrEmpty(dto.FirstName))
-                    user.FirstName = dto.FirstName;
-                if (!string.IsNullOrEmpty(dto.LastName))
-                    user.LastName = dto.LastName;
-            }
+            // Update fields
+            // fullLegalName, email, and taxId are NEVER updatable via this endpoint
             
             // Handle both Phone and PhoneNumber
             if (!string.IsNullOrEmpty(dto.Phone))
@@ -158,9 +148,7 @@ public class UsersController : ControllerBase
             if (dto.DateOfBirth.HasValue)
                 user.DateOfBirth = dto.DateOfBirth.Value;
             
-            // Handle both TaxNumber and TaxId fields separately
-            if (!string.IsNullOrEmpty(dto.TaxId))
-                user.TaxId = dto.TaxId;
+            // TaxNumber (Steuernummer) is editable; TaxId (Steuer-ID) is never updatable
             if (!string.IsNullOrEmpty(dto.TaxNumber))
                 user.TaxNumber = dto.TaxNumber;
 

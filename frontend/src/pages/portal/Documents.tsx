@@ -512,17 +512,21 @@ export default function Documents() {
           <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm text-center border border-gray-200 dark:border-gray-700">
             <div className="text-6xl mb-4">📄</div>
             <h3 className="text-xl font-semibold text-textPrimary dark:text-gray-100 mb-2">Keine Dokumente gefunden</h3>
-            <p className="text-textSecondary dark:text-gray-400 mb-4">Laden Sie Ihr erstes Dokument hoch.</p>
-            <label className="btn-primary cursor-pointer inline-block">
-              📤 Dokument hochladen
-              <input
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={uploading}
-              />
-            </label>
+            <p className="text-textSecondary dark:text-gray-400 mb-4">
+              {user && canUpload(user.role) ? 'Laden Sie Ihr erstes Dokument hoch.' : 'Es wurden noch keine Dokumente hochgeladen.'}
+            </p>
+            {user && canUpload(user.role) && (
+              <label className="btn-primary cursor-pointer inline-block">
+                📤 Dokument hochladen
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              </label>
+            )}
           </div>
         )}
       </main>
