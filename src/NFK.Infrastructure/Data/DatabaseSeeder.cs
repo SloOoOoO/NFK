@@ -149,6 +149,15 @@ public static class DatabaseSeeder
         context.UserRoles.AddRange(userRoles);
         await context.SaveChangesAsync();
 
+        // Seed AssistantAssignment: assign assistant@nfk.de to consultant@nfk.de
+        var assistantAssignment = new AssistantAssignment
+        {
+            AssistantUserId = assistantUser.Id,
+            ConsultantUserId = consultantUser.Id
+        };
+        context.AssistantAssignments.Add(assistantAssignment);
+        await context.SaveChangesAsync();
+
         // Seed Clients
         var clients = new List<Client>
         {

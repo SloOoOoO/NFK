@@ -437,6 +437,43 @@ export default function Profile() {
               </div>
             )}
 
+            {/* Receptionist Message Visibility Toggle - only for Consultant/SuperAdmin */}
+            {(user.role === 'Consultant' || user.role === 'SuperAdmin') && (
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-lg mb-2 text-primary dark:text-blue-400">
+                  Sichtbarkeit für Rezeptionisten
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Steuern Sie, ob Rezeptionisten Ihre Nachrichten sehen können.
+                </p>
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={user.receptionistCanSeeMessages !== false}
+                      onChange={async (e) => {
+                        const newValue = e.target.checked;
+                        try {
+                          await usersAPI.updateReceptionistVisibility(newValue);
+                          setUser({ ...user, receptionistCanSeeMessages: newValue });
+                        } catch (err) {
+                          console.error('Failed to update visibility setting:', err);
+                          alert('Fehler beim Speichern der Einstellung');
+                        }
+                      }}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                  </label>
+                  <span className="text-sm text-textPrimary dark:text-gray-200">
+                    {user.receptionistCanSeeMessages !== false
+                      ? 'Rezeptionisten können Ihre Nachrichten sehen'
+                      : 'Rezeptionisten können Ihre Nachrichten nicht sehen'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Delete Profile Section */}
             <div className="mt-8 pt-6 border-t border-red-200 dark:border-red-900/50">
               <h3 className="font-semibold text-lg mb-2 text-red-600 dark:text-red-400">{t('profile.dangerZone')}</h3>

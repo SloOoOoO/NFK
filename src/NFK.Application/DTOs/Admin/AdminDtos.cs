@@ -97,3 +97,15 @@ public record LoginDayDto(
     string Date,
     int Count
 );
+
+public record AssistantAssignmentDto(
+    int Id,
+    int AssistantUserId,
+    string AssistantName,
+    int ConsultantUserId,
+    string ConsultantName
+);
+
+public record AssignAssistantRequest(
+    int ConsultantUserId
+);

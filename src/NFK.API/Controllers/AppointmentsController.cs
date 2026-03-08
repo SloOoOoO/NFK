@@ -57,6 +57,24 @@ public class AppointmentsController : ControllerBase
                 // For clients/registered users, only show appointments where their linked client record matches
                 query = query.Where(a => a.Client.UserId == userId);
             }
+            else if (string.Equals(userRole, "Assistant", StringComparison.OrdinalIgnoreCase))
+            {
+                // Assistants see appointments of their assigned consultant (if any)
+                var assignedConsultantId = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == userId)
+                    .Select(a => (int?)a.ConsultantUserId)
+                    .FirstOrDefaultAsync();
+
+                if (assignedConsultantId.HasValue)
+                {
+                    query = query.Where(a => a.ConsultantUserId == assignedConsultantId.Value);
+                }
+                else
+                {
+                    // No assigned consultant - show empty list
+                    query = query.Where(a => false);
+                }
+            }
 
             var appointments = await query
                 .OrderBy(a => a.StartTime)

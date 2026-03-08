@@ -22,11 +22,14 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [newRole, setNewRole] = useState('');
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
+  const [consultantUsers, setConsultantUsers] = useState<any[]>([]);
+  const [selectedConsultantId, setSelectedConsultantId] = useState<number | null>(null);
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -42,6 +45,15 @@ export default function AdminDashboard() {
       // Fetch audit logs and statistics for tabs
       fetchAuditLogs();
       fetchStatistics();
+
+      // Fetch consultant/superadmin users for assistant assignment
+      const consultantsRes = await apiClient.get('/users?role=Consultant');
+      const superAdminsRes = await apiClient.get('/users?role=SuperAdmin');
+      const allConsultants = [
+        ...(Array.isArray(consultantsRes.data) ? consultantsRes.data : []),
+        ...(Array.isArray(superAdminsRes.data) ? superAdminsRes.data : []),
+      ];
+      setConsultantUsers(allConsultants);
     } catch (error: any) {
       console.error('Failed to fetch admin data:', error);
       if (error?.response?.status === 401 || error?.response?.status === 403) {
@@ -140,6 +152,33 @@ export default function AdminDashboard() {
     }
   };
 
+  const openAssignmentModal = async (user: any) => {
+    setSelectedUser(user);
+    setSelectedConsultantId(null);
+    // Try to fetch existing assignment
+    try {
+      const res = await adminAPI.getAssistantAssignment(user.id);
+      if (res.data?.consultantUserId) {
+        setSelectedConsultantId(res.data.consultantUserId);
+      }
+    } catch {
+      // No existing assignment - that's fine
+    }
+    setShowAssignmentModal(true);
+  };
+
+  const handleAssignmentSave = async () => {
+    if (!selectedUser || !selectedConsultantId) return;
+    try {
+      await adminAPI.setAssistantAssignment(selectedUser.id, selectedConsultantId);
+      setShowAssignmentModal(false);
+      alert('Assistent erfolgreich zugewiesen');
+    } catch (error) {
+      console.error('Failed to assign assistant:', error);
+      alert('Fehler beim Zuweisen des Assistenten');
+    }
+  };
+
   const roles = ['SuperAdmin', 'Consultant', 'Receptionist', 'Assistant'];
 
   return (
@@ -234,6 +273,14 @@ export default function AdminDashboard() {
                                   className="px-3 py-1 bg-primary dark:bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-700 text-xs"
                                 >
                                   Rolle ändern
+                                </button>
+                              )}
+                              {currentUser?.role === 'SuperAdmin' && user.role === 'Assistant' && (
+                                <button
+                                  onClick={() => openAssignmentModal(user)}
+                                  className="px-3 py-1 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 text-xs"
+                                >
+                                  Zuweisung
                                 </button>
                               )}
                               {currentUser?.role === 'SuperAdmin' && (
@@ -736,6 +783,63 @@ export default function AdminDashboard() {
               <button
                 onClick={handleUserUpdate}
                 className="btn-primary"
+              >
+                Speichern
+              </button>
+            </div>
+
+            <Dialog.Close asChild>
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Assistant Assignment Modal */}
+      <Dialog.Root open={showAssignmentModal} onOpenChange={setShowAssignmentModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+            <Dialog.Title className="text-xl font-bold mb-4 dark:text-white">
+              Assistent zuweisen
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-textSecondary dark:text-gray-400 mb-4">
+              Berater für {selectedUser?.fullName} auswählen
+            </Dialog.Description>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                Berater / SuperAdmin
+              </label>
+              <select
+                value={selectedConsultantId || ''}
+                onChange={(e) => setSelectedConsultantId(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">-- Berater auswählen --</option>
+                {consultantUsers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.firstName} {c.lastName} ({c.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button className="btn-secondary">
+                  Abbrechen
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleAssignmentSave}
+                disabled={!selectedConsultantId}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Speichern
               </button>

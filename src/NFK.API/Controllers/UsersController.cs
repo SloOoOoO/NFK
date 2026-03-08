@@ -188,6 +188,40 @@ public class UsersController : ControllerBase
         }
     }
 
+    [HttpPut("receptionist-visibility")]
+    [Authorize]
+    public async Task<IActionResult> UpdateReceptionistVisibility([FromBody] UpdateReceptionistVisibilityRequest request)
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                return NotFound(new { message = "Benutzer nicht gefunden" });
+
+            // Only Consultant and SuperAdmin can change this setting
+            var allowedRoles = new[] { "Consultant", "SuperAdmin" };
+            if (!user.UserRoles.Any(ur => allowedRoles.Contains(ur.Role.Name)))
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur Berater und SuperAdmins können diese Einstellung ändern" });
+            }
+
+            user.ReceptionistCanSeeMessages = request.ReceptionistCanSeeMessages;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, receptionistCanSeeMessages = user.ReceptionistCanSeeMessages });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating receptionist visibility");
+            return StatusCode(500, new { error = "internal_error", message = "Fehler beim Aktualisieren der Einstellung" });
+        }
+    }
+
     [HttpDelete("profile")]
     [Authorize]
     public async Task<IActionResult> DeleteProfile([FromBody] DeleteProfileRequest request)

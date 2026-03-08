@@ -36,8 +36,12 @@ public class MessagesController : ControllerBase
             var userRole = User.FindFirst("role")?.Value ?? "";
 
             var query = _context.Messages
-                .Include(m => m.SenderUser)
-                .Include(m => m.RecipientUser)
+                .Include(m => m.SenderUser!)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+                .Include(m => m.RecipientUser!)
+                    .ThenInclude(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
                 .AsQueryable();
 
             // Role-based filtering
@@ -48,9 +52,56 @@ public class MessagesController : ControllerBase
                     (m.RecipientUserId == currentUserId.Value || m.SenderUserId == currentUserId.Value) 
                     && !m.IsPoolEmail);
             }
+            else if (userRole == "Receptionist")
+            {
+                // Receptionists can see pool emails + messages to/from them,
+                // but only from Consultant/SuperAdmin users who have ReceptionistCanSeeMessages = true
+                query = query.Where(m =>
+                    m.IsPoolEmail ||
+                    m.RecipientUserId == currentUserId.Value ||
+                    m.SenderUserId == currentUserId.Value ||
+                    (
+                        // Messages where sender is Consultant/SuperAdmin and they allow receptionist visibility
+                        m.SenderUser != null &&
+                        m.SenderUser.ReceptionistCanSeeMessages &&
+                        m.SenderUser.UserRoles.Any(ur => ur.Role.Name == "Consultant" || ur.Role.Name == "SuperAdmin")
+                    ) ||
+                    (
+                        // Messages where recipient is Consultant/SuperAdmin and they allow receptionist visibility
+                        m.RecipientUser != null &&
+                        m.RecipientUser.ReceptionistCanSeeMessages &&
+                        m.RecipientUser.UserRoles.Any(ur => ur.Role.Name == "Consultant" || ur.Role.Name == "SuperAdmin")
+                    )
+                );
+            }
+            else if (userRole == "Assistant")
+            {
+                // Assistants see their own messages + assigned consultant's messages
+                var assignedConsultantId = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == currentUserId.Value)
+                    .Select(a => (int?)a.ConsultantUserId)
+                    .FirstOrDefaultAsync();
+
+                if (assignedConsultantId.HasValue)
+                {
+                    query = query.Where(m =>
+                        m.RecipientUserId == currentUserId.Value ||
+                        m.SenderUserId == currentUserId.Value ||
+                        m.IsPoolEmail ||
+                        m.RecipientUserId == assignedConsultantId.Value ||
+                        m.SenderUserId == assignedConsultantId.Value);
+                }
+                else
+                {
+                    query = query.Where(m =>
+                        m.RecipientUserId == currentUserId.Value ||
+                        m.SenderUserId == currentUserId.Value ||
+                        m.IsPoolEmail);
+                }
+            }
             else
             {
-                // Employees (SuperAdmin, Consultant, Receptionist, Assistant) can see:
+                // Other employees (SuperAdmin, Consultant) can see:
                 // 1. Messages sent to them
                 // 2. Pool emails
                 // 3. Messages they sent
