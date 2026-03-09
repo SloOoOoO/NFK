@@ -23,10 +23,13 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int? userId = null, [FromQuery] int? clientId = null)
+    public async Task<IActionResult> GetAll([FromQuery] int? userId = null, [FromQuery] int? clientId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            page = Math.Max(page, 1);
+
             var currentUserId = GetCurrentUserId();
             if (currentUserId == null)
             {
@@ -46,6 +49,7 @@ public class DocumentsController : ControllerBase
             var userRole = user.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
 
             var query = _context.Documents
+                .AsNoTracking()
                 .Include(d => d.UploadedByUser)
                 .Include(d => d.Case)
                     .ThenInclude(c => c!.Client)
@@ -106,8 +110,11 @@ public class DocumentsController : ControllerBase
                 return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Dokumenten" });
             }
 
+            var totalCount = await query.CountAsync();
             var documents = await query
                 .OrderByDescending(d => d.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var documentDtos = documents.Select(d => new DocumentDto(
@@ -123,7 +130,17 @@ public class DocumentsController : ControllerBase
                 d.UploadedByUser != null ? $"{d.UploadedByUser.FirstName} {d.UploadedByUser.LastName}" : null
             )).ToList();
 
-            return Ok(documentDtos);
+            return Ok(new
+            {
+                data = documentDtos,
+                pagination = new
+                {
+                    totalCount,
+                    pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                    currentPage = page,
+                    pageSize
+                }
+            });
         }
         catch (Exception ex)
         {

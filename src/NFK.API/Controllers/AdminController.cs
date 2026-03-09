@@ -5,6 +5,7 @@ using NFK.Application.DTOs.Admin;
 using NFK.Application.Utils;
 using NFK.Domain.Entities.Users;
 using NFK.Infrastructure.Data;
+using NFK.Infrastructure.Security;
 
 namespace NFK.API.Controllers;
 
@@ -15,11 +16,13 @@ public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<AdminController> _logger;
+    private readonly EncryptionService _encryption;
 
-    public AdminController(ApplicationDbContext context, ILogger<AdminController> logger)
+    public AdminController(ApplicationDbContext context, ILogger<AdminController> logger, EncryptionService encryption)
     {
         _context = context;
         _logger = logger;
+        _encryption = encryption;
     }
 
     [HttpGet("users")]
@@ -102,26 +105,26 @@ public class AdminController : ControllerBase
                     user.Email,
                     user.FirstName,
                     user.LastName,
-                    user.PhoneNumber,
-                    user.FullLegalName,
+                    PhoneNumber = _encryption.SafeDecrypt(user.PhoneNumber),
+                    FullLegalName = _encryption.SafeDecrypt(user.FullLegalName),
                     user.DateOfBirth,
-                    user.Address,
-                    user.City,
-                    user.PostalCode,
+                    Address = _encryption.SafeDecrypt(user.Address),
+                    City = _encryption.SafeDecrypt(user.City),
+                    PostalCode = _encryption.SafeDecrypt(user.PostalCode),
                     user.Country,
-                    user.TaxId,
-                    user.TaxNumber,
-                    user.VatId,
-                    user.CommercialRegister,
+                    TaxId = _encryption.SafeDecrypt(user.TaxId),
+                    TaxNumber = _encryption.SafeDecrypt(user.TaxNumber),
+                    VatId = _encryption.SafeDecrypt(user.VatId),
+                    CommercialRegister = _encryption.SafeDecrypt(user.CommercialRegister),
                     user.ClientType,
                     user.CompanyName,
                     user.Salutation,
-                    user.FirmLegalName,
-                    user.FirmTaxId,
-                    user.FirmChamberRegistration,
-                    user.FirmAddress,
-                    user.FirmCity,
-                    user.FirmPostalCode,
+                    FirmLegalName = _encryption.SafeDecrypt(user.FirmLegalName),
+                    FirmTaxId = _encryption.SafeDecrypt(user.FirmTaxId),
+                    FirmChamberRegistration = _encryption.SafeDecrypt(user.FirmChamberRegistration),
+                    FirmAddress = _encryption.SafeDecrypt(user.FirmAddress),
+                    FirmCity = _encryption.SafeDecrypt(user.FirmCity),
+                    FirmPostalCode = _encryption.SafeDecrypt(user.FirmPostalCode),
                     user.FirmCountry,
                     user.GoogleId,
                     user.DATEVId,
@@ -144,10 +147,10 @@ public class AdminController : ControllerBase
                     user.Email,
                     user.FirstName,
                     user.LastName,
-                    user.PhoneNumber,
-                    user.Address,
-                    user.City,
-                    user.PostalCode,
+                    PhoneNumber = _encryption.SafeDecrypt(user.PhoneNumber),
+                    Address = _encryption.SafeDecrypt(user.Address),
+                    City = _encryption.SafeDecrypt(user.City),
+                    PostalCode = _encryption.SafeDecrypt(user.PostalCode),
                     user.Country,
                     Role = user.UserRoles.FirstOrDefault()?.Role.Name ?? "Client"
                 };
@@ -261,21 +264,21 @@ public class AdminController : ControllerBase
             }
 
             // Update personal information (email, firstName, lastName, fullLegalName are NOT editable via admin)
-            if (request.PhoneNumber != null) user.PhoneNumber = request.PhoneNumber;
+            if (request.PhoneNumber != null) user.PhoneNumber = _encryption.Encrypt(request.PhoneNumber);
             if (request.DateOfBirth.HasValue) user.DateOfBirth = request.DateOfBirth;
-            if (request.TaxId != null) user.TaxId = request.TaxId;
-            if (request.TaxNumber != null) user.TaxNumber = request.TaxNumber;
-            if (request.VatId != null) user.VatId = request.VatId;
+            if (request.TaxId != null) user.TaxId = _encryption.Encrypt(request.TaxId);
+            if (request.TaxNumber != null) user.TaxNumber = _encryption.Encrypt(request.TaxNumber);
+            if (request.VatId != null) user.VatId = _encryption.Encrypt(request.VatId);
             if (request.ClientType != null) user.ClientType = request.ClientType;
             if (request.CompanyName != null) user.CompanyName = request.CompanyName;
             if (request.Salutation != null) user.Salutation = request.Salutation;
-            if (request.CommercialRegister != null) user.CommercialRegister = request.CommercialRegister;
+            if (request.CommercialRegister != null) user.CommercialRegister = _encryption.Encrypt(request.CommercialRegister);
             if (request.Gender != null) user.Gender = request.Gender;
             
             // Update address
-            if (request.Address != null) user.Address = request.Address;
-            if (request.City != null) user.City = request.City;
-            if (request.PostalCode != null) user.PostalCode = request.PostalCode;
+            if (request.Address != null) user.Address = _encryption.Encrypt(request.Address);
+            if (request.City != null) user.City = _encryption.Encrypt(request.City);
+            if (request.PostalCode != null) user.PostalCode = _encryption.Encrypt(request.PostalCode);
             if (request.Country != null) user.Country = request.Country;
 
             user.UpdatedAt = DateTime.UtcNow;

@@ -83,3 +83,7 @@ temp/
 *.pem
 private.key
 public.key
+
+# Environment / secrets files that must never be committed
+NFK.env.txt
+*.env.txt

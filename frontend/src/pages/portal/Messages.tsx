@@ -79,7 +79,7 @@ export default function Messages() {
     setLoading(true);
     try {
       const response = await messagesAPI.getAll();
-      const messagesData = Array.isArray(response.data) ? response.data : [];
+      const messagesData = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       const transformedMessages = messagesData.map((m: any) => ({
         id: m.id,
         sender: m.isSent ? (m.recipient || m.sender) : m.sender,

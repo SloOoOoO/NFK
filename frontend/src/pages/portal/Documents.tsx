@@ -111,7 +111,7 @@ export default function Documents() {
       }
       
       const response = await apiClient.get(url);
-      const docsData = Array.isArray(response.data) ? response.data : [];
+      const docsData = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       setDocuments(docsData);
     } catch (err: any) {
       console.error('Error fetching documents:', err);
@@ -207,17 +207,12 @@ export default function Documents() {
 
   const handleDownload = async (documentId: number, fileName: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/documents/${documentId}/download`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
+      // Use apiClient so the base URL is env-configured and auth token is injected automatically
+      const response = await apiClient.get(`/documents/${documentId}/download`, {
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        throw new Error('Download fehlgeschlagen');
-      }
-
-      const blob = await response.blob();
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

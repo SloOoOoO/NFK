@@ -4,7 +4,7 @@ services:
     container_name: nfk-sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=SqlServer2025
+      - SA_PASSWORD=${SA_PASSWORD:-SqlServer2025}
       - MSSQL_PID=Developer
     ports:
       - "1433:1433"
@@ -13,7 +13,7 @@ services:
     networks:
       - nfk-network
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "SqlServer2025" -C -Q "SELECT 1" || exit 1
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD:-SqlServer2025}" -C -Q "SELECT 1" || exit 1
       interval: 30s
       timeout: 10s
       retries: 5
@@ -69,9 +69,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NFK;User Id=sa;Password=SqlServer2025;TrustServerCertificate=True;MultipleActiveResultSets=true
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=NFK;User Id=sa;Password=${SA_PASSWORD:-SqlServer2025};TrustServerCertificate=True;MultipleActiveResultSets=true
       - ConnectionStrings__Redis=redis:6379
-      - Jwt__Secret=ThisIsAVeryLongSecretKeyForJWTTokenGenerationAtLeast32CharactersLong2025
+      - Jwt__Secret=${JWT_SECRET:-ThisIsAVeryLongSecretKeyForJWTTokenGenerationAtLeast32CharactersLong2025}
       - Jwt__Issuer=NFK. API
       - Jwt__Audience=NFK. Client
       # SMTP – uses local Mailpit in dev so email works out of the box.
@@ -85,6 +85,8 @@ services:
       # Seeded admin account credentials (development only)
       - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-admin@nfk.local}
       - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-Admin123!}
+      # Encryption master key – MUST be overridden in production via .env or secrets manager
+      - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY:-DevEncryptionKey32CharactersLong!}
     ports:
       - "8080:8080"
     depends_on:

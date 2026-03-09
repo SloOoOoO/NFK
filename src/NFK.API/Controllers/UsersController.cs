@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Users;
 using NFK.Infrastructure.Data;
+using NFK.Infrastructure.Security;
 
 namespace NFK.API.Controllers;
 
@@ -14,11 +15,13 @@ public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<UsersController> _logger;
+    private readonly EncryptionService _encryption;
 
-    public UsersController(ApplicationDbContext context, ILogger<UsersController> logger)
+    public UsersController(ApplicationDbContext context, ILogger<UsersController> logger, EncryptionService encryption)
     {
         _context = context;
         _logger = logger;
+        _encryption = encryption;
     }
 
     [HttpGet]
@@ -133,16 +136,16 @@ public class UsersController : ControllerBase
             
             // Handle both Phone and PhoneNumber
             if (!string.IsNullOrEmpty(dto.Phone))
-                user.PhoneNumber = dto.Phone;
+                user.PhoneNumber = _encryption.Encrypt(dto.Phone);
             if (!string.IsNullOrEmpty(dto.PhoneNumber))
-                user.PhoneNumber = dto.PhoneNumber;
+                user.PhoneNumber = _encryption.Encrypt(dto.PhoneNumber);
                 
             if (!string.IsNullOrEmpty(dto.Address))
-                user.Address = dto.Address;
+                user.Address = _encryption.Encrypt(dto.Address);
             if (!string.IsNullOrEmpty(dto.City))
-                user.City = dto.City;
+                user.City = _encryption.Encrypt(dto.City);
             if (!string.IsNullOrEmpty(dto.PostalCode))
-                user.PostalCode = dto.PostalCode;
+                user.PostalCode = _encryption.Encrypt(dto.PostalCode);
             if (!string.IsNullOrEmpty(dto.Country))
                 user.Country = dto.Country;
             if (dto.DateOfBirth.HasValue)
@@ -150,7 +153,7 @@ public class UsersController : ControllerBase
             
             // TaxNumber (Steuernummer) is editable; TaxId (Steuer-ID) is never updatable
             if (!string.IsNullOrEmpty(dto.TaxNumber))
-                user.TaxNumber = dto.TaxNumber;
+                user.TaxNumber = _encryption.Encrypt(dto.TaxNumber);
 
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
@@ -163,15 +166,15 @@ public class UsersController : ControllerBase
                     user.FirstName,
                     user.LastName,
                     user.Email,
-                    Phone = user.PhoneNumber,
-                    PhoneNumber = user.PhoneNumber,
-                    user.Address,
-                    user.City,
-                    user.PostalCode,
+                    Phone = _encryption.SafeDecrypt(user.PhoneNumber),
+                    PhoneNumber = _encryption.SafeDecrypt(user.PhoneNumber),
+                    Address = _encryption.SafeDecrypt(user.Address),
+                    City = _encryption.SafeDecrypt(user.City),
+                    PostalCode = _encryption.SafeDecrypt(user.PostalCode),
                     user.Country,
                     user.DateOfBirth,
-                    user.TaxId,
-                    user.TaxNumber,
+                    TaxId = _encryption.SafeDecrypt(user.TaxId),
+                    TaxNumber = _encryption.SafeDecrypt(user.TaxNumber),
                     user.Gender
                 }
             });

@@ -22,14 +22,24 @@ public class EventsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            page = Math.Max(page, 1);
+
+            var totalCount = await _context.Appointments
+                .Where(a => !a.IsDeleted)
+                .CountAsync();
+
             var appointments = await _context.Appointments
+                .AsNoTracking()
                 .Include(a => a.Client)
                 .Where(a => !a.IsDeleted)
                 .OrderBy(a => a.StartTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var eventDtos = appointments.Select(a => new EventDto(
@@ -42,7 +52,17 @@ public class EventsController : ControllerBase
                 a.Notes
             )).ToList();
 
-            return Ok(eventDtos);
+            return Ok(new
+            {
+                data = eventDtos,
+                pagination = new
+                {
+                    totalCount,
+                    pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                    currentPage = page,
+                    pageSize
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -57,6 +77,7 @@ public class EventsController : ControllerBase
         try
         {
             var appointment = await _context.Appointments
+                .AsNoTracking()
                 .Include(a => a.Client)
                 .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
 

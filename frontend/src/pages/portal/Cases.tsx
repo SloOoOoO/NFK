@@ -75,7 +75,7 @@ export default function Cases() {
   const fetchClients = async () => {
     try {
       const response = await clientsAPI.getAll();
-      const clientsData = Array.isArray(response.data) ? response.data : [];
+      const clientsData = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       setClients(clientsData);
     } catch (err: any) {
       console.error('Error fetching clients:', err);
@@ -87,7 +87,7 @@ export default function Cases() {
     setError('');
     try {
       const response = await casesAPI.getAll();
-      const casesData = Array.isArray(response.data) ? response.data : [];
+      const casesData = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       setCases(casesData);
     } catch (err: any) {
       console.error('Error fetching cases:', err);

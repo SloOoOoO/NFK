@@ -20,6 +20,7 @@ public class AuthService : IAuthService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailService _emailService;
     private readonly IDistributedCache _cache;
+    private readonly EncryptionService _encryption;
 
     public AuthService(
         ApplicationDbContext context,
@@ -28,7 +29,8 @@ public class AuthService : IAuthService
         ILogger<AuthService> logger,
         IHttpContextAccessor httpContextAccessor,
         IEmailService emailService,
-        IDistributedCache cache)
+        IDistributedCache cache,
+        EncryptionService encryption)
     {
         _context = context;
         _jwtService = jwtService;
@@ -37,6 +39,7 @@ public class AuthService : IAuthService
         _httpContextAccessor = httpContextAccessor;
         _emailService = emailService;
         _cache = cache;
+        _encryption = encryption;
     }
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
@@ -100,28 +103,28 @@ public class AuthService : IAuthService
                 user.PasswordHash = passwordHash;
                 user.FirstName = SanitizeInput(request.FirstName);
                 user.LastName = SanitizeInput(request.LastName);
-                user.PhoneNumber = request.PhoneNumber;
-                user.FullLegalName = request.FullLegalName;
+                user.PhoneNumber = _encryption.Encrypt(request.PhoneNumber);
+                user.FullLegalName = _encryption.Encrypt(request.FullLegalName);
                 user.DateOfBirth = request.DateOfBirth;
-                user.Address = request.Address ?? request.Street;
-                user.City = request.City;
-                user.PostalCode = request.PostalCode;
+                user.Address = _encryption.Encrypt(request.Address ?? request.Street);
+                user.City = _encryption.Encrypt(request.City);
+                user.PostalCode = _encryption.Encrypt(request.PostalCode);
                 user.Country = request.Country ?? "Germany";
-                user.TaxId = request.TaxId;
-                user.TaxNumber = request.TaxNumber;
-                user.VatId = request.VatId;
-                user.CommercialRegister = request.CommercialRegister;
+                user.TaxId = _encryption.Encrypt(request.TaxId);
+                user.TaxNumber = _encryption.Encrypt(request.TaxNumber);
+                user.VatId = _encryption.Encrypt(request.VatId);
+                user.CommercialRegister = _encryption.Encrypt(request.CommercialRegister);
                 user.PhoneVerified = false;
                 user.ClientType = request.ClientType;
                 user.CompanyName = request.CompanyName;
                 user.Salutation = request.Salutation;
                 user.Gender = request.Gender;
-                user.FirmLegalName = request.FirmLegalName;
-                user.FirmTaxId = request.FirmTaxId;
-                user.FirmChamberRegistration = request.FirmChamberRegistration;
-                user.FirmAddress = request.FirmAddress;
-                user.FirmCity = request.FirmCity;
-                user.FirmPostalCode = request.FirmPostalCode;
+                user.FirmLegalName = _encryption.Encrypt(request.FirmLegalName);
+                user.FirmTaxId = _encryption.Encrypt(request.FirmTaxId);
+                user.FirmChamberRegistration = _encryption.Encrypt(request.FirmChamberRegistration);
+                user.FirmAddress = _encryption.Encrypt(request.FirmAddress);
+                user.FirmCity = _encryption.Encrypt(request.FirmCity);
+                user.FirmPostalCode = _encryption.Encrypt(request.FirmPostalCode);
                 user.FirmCountry = request.FirmCountry;
                 user.GoogleId = request.GoogleId;
                 user.DATEVId = request.DATEVId;
@@ -145,17 +148,17 @@ public class AuthService : IAuthService
                     PasswordHash = passwordHash,
                     FirstName = SanitizeInput(request.FirstName),
                     LastName = SanitizeInput(request.LastName),
-                    PhoneNumber = request.PhoneNumber,
-                    FullLegalName = request.FullLegalName,
+                    PhoneNumber = _encryption.Encrypt(request.PhoneNumber),
+                    FullLegalName = _encryption.Encrypt(request.FullLegalName),
                     DateOfBirth = request.DateOfBirth,
-                    Address = request.Address ?? request.Street, // Use Street if Address not provided
-                    City = request.City,
-                    PostalCode = request.PostalCode,
+                    Address = _encryption.Encrypt(request.Address ?? request.Street),
+                    City = _encryption.Encrypt(request.City),
+                    PostalCode = _encryption.Encrypt(request.PostalCode),
                     Country = request.Country ?? "Germany",
-                    TaxId = request.TaxId,
-                    TaxNumber = request.TaxNumber,
-                    VatId = request.VatId,
-                    CommercialRegister = request.CommercialRegister,
+                    TaxId = _encryption.Encrypt(request.TaxId),
+                    TaxNumber = _encryption.Encrypt(request.TaxNumber),
+                    VatId = _encryption.Encrypt(request.VatId),
+                    CommercialRegister = _encryption.Encrypt(request.CommercialRegister),
                     PhoneVerified = false,
                     // Client type and company fields
                     ClientType = request.ClientType,
@@ -163,12 +166,12 @@ public class AuthService : IAuthService
                     Salutation = request.Salutation,
                     Gender = request.Gender,
                     // Firm details (optional)
-                    FirmLegalName = request.FirmLegalName,
-                    FirmTaxId = request.FirmTaxId,
-                    FirmChamberRegistration = request.FirmChamberRegistration,
-                    FirmAddress = request.FirmAddress,
-                    FirmCity = request.FirmCity,
-                    FirmPostalCode = request.FirmPostalCode,
+                    FirmLegalName = _encryption.Encrypt(request.FirmLegalName),
+                    FirmTaxId = _encryption.Encrypt(request.FirmTaxId),
+                    FirmChamberRegistration = _encryption.Encrypt(request.FirmChamberRegistration),
+                    FirmAddress = _encryption.Encrypt(request.FirmAddress),
+                    FirmCity = _encryption.Encrypt(request.FirmCity),
+                    FirmPostalCode = _encryption.Encrypt(request.FirmPostalCode),
                     FirmCountry = request.FirmCountry,
                     // OAuth IDs
                     GoogleId = request.GoogleId,
