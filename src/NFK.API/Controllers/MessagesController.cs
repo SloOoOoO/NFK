@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Messages;
 using NFK.Infrastructure.Data;
+using NFK.Infrastructure.Security;
 
 namespace NFK.API.Controllers;
 
@@ -14,18 +15,23 @@ public class MessagesController : ControllerBase
     private static readonly string[] ClientRoles = ["Client", "RegisteredUser"];
     private readonly ApplicationDbContext _context;
     private readonly ILogger<MessagesController> _logger;
+    private readonly EncryptionService _encryption;
 
-    public MessagesController(ApplicationDbContext context, ILogger<MessagesController> logger)
+    public MessagesController(ApplicationDbContext context, ILogger<MessagesController> logger, EncryptionService encryption)
     {
         _context = context;
         _logger = logger;
+        _encryption = encryption;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            page = Math.Max(page, 1);
+
             var currentUserId = GetCurrentUserId();
             if (currentUserId == null)
             {
@@ -99,25 +105,43 @@ public class MessagesController : ControllerBase
                     m.IsPoolEmail);
             }
 
+            var totalCount = await query.CountAsync();
             var messages = await query
+                .AsNoTracking()
                 .OrderByDescending(m => m.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            var messageDtos = messages.Select(m => new MessageDto(
-                m.Id,
-                (m.SenderUser?.FirstName ?? "") + " " + (m.SenderUser?.LastName ?? ""),
-                m.Subject,
-                m.Content.Length > 100 ? m.Content.Substring(0, 100) + "..." : m.Content,
-                m.Content,
-                m.CreatedAt,
-                !m.IsRead,
-                m.IsPoolEmail,
-                Recipient: (m.RecipientUser?.FirstName ?? "") + " " + (m.RecipientUser?.LastName ?? ""),
-                IsSent: m.SenderUserId == currentUserId.Value,
-                AssistantVisible: m.AssistantVisible
-            )).ToList();
+            var messageDtos = messages.Select(m => {
+                var subject = _encryption.SafeDecrypt(m.Subject) ?? m.Subject;
+                var content = _encryption.SafeDecrypt(m.Content) ?? m.Content;
+                return new MessageDto(
+                    m.Id,
+                    (m.SenderUser?.FirstName ?? "") + " " + (m.SenderUser?.LastName ?? ""),
+                    subject,
+                    content.Length > 100 ? content.Substring(0, 100) + "..." : content,
+                    content,
+                    m.CreatedAt,
+                    !m.IsRead,
+                    m.IsPoolEmail,
+                    Recipient: (m.RecipientUser?.FirstName ?? "") + " " + (m.RecipientUser?.LastName ?? ""),
+                    IsSent: m.SenderUserId == currentUserId.Value,
+                    AssistantVisible: m.AssistantVisible
+                );
+            }).ToList();
 
-            return Ok(messageDtos);
+            return Ok(new
+            {
+                data = messageDtos,
+                pagination = new
+                {
+                    totalCount,
+                    pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                    currentPage = page,
+                    pageSize
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -243,12 +267,14 @@ public class MessagesController : ControllerBase
                 await _context.SaveChangesAsync();
             }
 
+            var decryptedSubject = _encryption.SafeDecrypt(message.Subject) ?? message.Subject;
+            var decryptedContent = _encryption.SafeDecrypt(message.Content) ?? message.Content;
             var messageDto = new MessageDto(
                 message.Id,
                 (message.SenderUser?.FirstName ?? "") + " " + (message.SenderUser?.LastName ?? ""),
-                message.Subject,
-                message.Content.Length > 100 ? message.Content.Substring(0, 100) + "..." : message.Content,
-                message.Content,
+                decryptedSubject,
+                decryptedContent.Length > 100 ? decryptedContent.Substring(0, 100) + "..." : decryptedContent,
+                decryptedContent,
                 message.CreatedAt,
                 !message.IsRead,
                 message.IsPoolEmail
@@ -331,13 +357,13 @@ public class MessagesController : ControllerBase
                 }
             }
 
-            // Create the message
+            // Create the message – encrypt Subject and Content before persisting
             var message = new Domain.Entities.Messaging.Message
             {
                 SenderUserId = currentUserId.Value,
                 RecipientUserId = request.RecipientUserId,
-                Subject = request.Subject,
-                Content = request.Content,
+                Subject = _encryption.Encrypt(request.Subject) ?? request.Subject,
+                Content = _encryption.Encrypt(request.Content) ?? request.Content,
                 CaseId = request.CaseId,
                 IsRead = false,
                 IsPoolEmail = false,
@@ -413,17 +439,19 @@ public class MessagesController : ControllerBase
                 recipientUserId = originalMessage.RecipientUserId;
             }
 
-            // Create reply message
-            var replySubject = originalMessage.Subject.StartsWith("Re: ") 
-                ? originalMessage.Subject 
-                : $"Re: {originalMessage.Subject}";
+            // Create reply message – encrypt Subject and Content before persisting
+            // Decrypt the original subject so the "Re: " prefix is readable; then re-encrypt
+            var originalSubject = _encryption.SafeDecrypt(originalMessage.Subject) ?? originalMessage.Subject;
+            var replySubject = originalSubject.StartsWith("Re: ") 
+                ? originalSubject 
+                : $"Re: {originalSubject}";
 
             var replyMessage = new Domain.Entities.Messaging.Message
             {
                 SenderUserId = currentUserId.Value,
                 RecipientUserId = recipientUserId,
-                Subject = replySubject,
-                Content = request.Content,
+                Subject = _encryption.Encrypt(replySubject) ?? replySubject,
+                Content = _encryption.Encrypt(request.Content) ?? request.Content,
                 CaseId = originalMessage.CaseId,
                 IsRead = false,
                 IsPoolEmail = false
@@ -536,16 +564,18 @@ public class MessagesController : ControllerBase
                 return Ok(new { message = "No recipients found" });
             }
 
-            // Create a message for each employee user
+            // Create a message for each employee user – encrypt Subject and Content
             var messages = new List<Domain.Entities.Messaging.Message>();
             foreach (var user in employeeUsers)
             {
+                var rawSubject = $"[External] {request.Subject}";
+                var rawContent = $"From: {request.From}\nTo: {request.To}\nDate: {DateTime.UtcNow:yyyy-MM-dd HH:mm}\n\n{request.Body}";
                 var message = new Domain.Entities.Messaging.Message
                 {
                     SenderUserId = null, // External email, no internal sender
                     RecipientUserId = user.Id,
-                    Subject = $"[External] {request.Subject}",
-                    Content = $"From: {request.From}\nTo: {request.To}\nDate: {DateTime.UtcNow:yyyy-MM-dd HH:mm}\n\n{request.Body}",
+                    Subject = _encryption.Encrypt(rawSubject) ?? rawSubject,
+                    Content = _encryption.Encrypt(rawContent) ?? rawContent,
                     IsRead = false
                 };
                 messages.Add(message);

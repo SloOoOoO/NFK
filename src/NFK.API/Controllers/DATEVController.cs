@@ -29,12 +29,19 @@ public class DATEVController : ControllerBase
     }
 
     [HttpGet("jobs")]
-    public async Task<IActionResult> GetJobs()
+    public async Task<IActionResult> GetJobs([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            page = Math.Max(page, 1);
+
+            var totalCount = await _context.DATEVJobs.CountAsync();
             var jobs = await _context.DATEVJobs
+                .AsNoTracking()
                 .OrderByDescending(j => j.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var jobDtos = jobs.Select(j => new DATEVJobDto(
@@ -46,7 +53,17 @@ public class DATEVController : ControllerBase
                 GetJobSummary(j)
             )).ToList();
 
-            return Ok(jobDtos);
+            return Ok(new
+            {
+                data = jobDtos,
+                pagination = new
+                {
+                    totalCount,
+                    pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                    currentPage = page,
+                    pageSize
+                }
+            });
         }
         catch (Exception ex)
         {

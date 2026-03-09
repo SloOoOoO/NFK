@@ -40,18 +40,18 @@ export default function Dashboard() {
       }
 
       // Process clients
-      const clients = clientsRes.status === 'fulfilled' && Array.isArray(clientsRes.value.data) 
-        ? clientsRes.value.data 
+      const clients = clientsRes.status === 'fulfilled'
+        ? (Array.isArray(clientsRes.value.data) ? clientsRes.value.data : (Array.isArray(clientsRes.value.data?.data) ? clientsRes.value.data.data : []))
         : [];
       
       // Process cases
-      const cases = casesRes.status === 'fulfilled' && Array.isArray(casesRes.value.data) 
-        ? casesRes.value.data 
+      const cases = casesRes.status === 'fulfilled'
+        ? (Array.isArray(casesRes.value.data) ? casesRes.value.data : (Array.isArray(casesRes.value.data?.data) ? casesRes.value.data.data : []))
         : [];
       
       // Process documents
-      const documents = docsRes.status === 'fulfilled' && Array.isArray(docsRes.value.data) 
-        ? docsRes.value.data 
+      const documents = docsRes.status === 'fulfilled'
+        ? (Array.isArray(docsRes.value.data) ? docsRes.value.data : (Array.isArray(docsRes.value.data?.data) ? docsRes.value.data.data : []))
         : [];
 
       // Compute stats from real data

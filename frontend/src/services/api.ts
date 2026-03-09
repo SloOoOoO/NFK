@@ -139,7 +139,7 @@ export const messagesAPI = {
   getAll: () => apiClient.get('/messages'),
   getById: (id: number) => apiClient.get(`/messages/${id}`),
   markAsRead: (id: number) => apiClient.put(`/messages/${id}/read`),
-  send: (data: { recipientUserId: number; subject: string; content: string; caseId?: number }) => 
+  send: (data: { recipientUserId: number; subject: string; content: string; caseId?: number; assistantVisible?: boolean }) => 
     apiClient.post('/messages/send', data),
   reply: (id: number, content: string) => apiClient.post(`/messages/${id}/reply`, { content }),
   delete: (id: number) => apiClient.delete(`/messages/${id}`),

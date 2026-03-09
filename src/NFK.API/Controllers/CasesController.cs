@@ -23,10 +23,13 @@ public class CasesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            page = Math.Max(page, 1);
+
             var currentUserId = GetCurrentUserId();
             if (currentUserId == null)
             {
@@ -42,6 +45,7 @@ public class CasesController : ControllerBase
             var userRole = user?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
 
             var query = _context.Cases
+                .AsNoTracking()
                 .Include(c => c.Client)
                     .ThenInclude(cl => cl.User)
                 .AsQueryable();
@@ -70,8 +74,11 @@ public class CasesController : ControllerBase
                 return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Fällen" });
             }
 
+            var totalCount = await query.CountAsync();
             var cases = await query
                 .OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var caseDtos = cases.Select(c => new CaseDto(
@@ -87,7 +94,17 @@ public class CasesController : ControllerBase
                 c.UpdatedAt
             )).ToList();
 
-            return Ok(caseDtos);
+            return Ok(new
+            {
+                data = caseDtos,
+                pagination = new
+                {
+                    totalCount,
+                    pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                    currentPage = page,
+                    pageSize
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -108,6 +125,7 @@ public class CasesController : ControllerBase
             }
 
             var caseEntity = await _context.Cases
+                .AsNoTracking()
                 .Include(c => c.Client)
                     .ThenInclude(cl => cl.User)
                 .FirstOrDefaultAsync(c => c.Id == id);

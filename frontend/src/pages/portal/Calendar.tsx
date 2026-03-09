@@ -57,7 +57,9 @@ export default function Calendar() {
   const fetchClients = async () => {
     try {
       const response = await apiClient.get('/clients');
-      setClients(response.data);
+      // Handle both paginated {data:[],pagination:{}} and legacy array responses
+      const clientsData = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
+      setClients(clientsData);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }

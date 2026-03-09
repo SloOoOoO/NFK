@@ -22,10 +22,14 @@ public class ClientsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
+            // Clamp pageSize to valid range
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            page = Math.Max(page, 1);
+
             var currentUserId = GetCurrentUserId();
             if (currentUserId == null)
             {
@@ -69,8 +73,11 @@ public class ClientsController : ControllerBase
                 return StatusCode(403, new { error = "forbidden", message = "Keine Berechtigung zum Anzeigen von Klienten" });
             }
 
+            var totalCount = await query.CountAsync();
             var clients = await query
                 .OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var clientDtos = clients.Select(c => new ClientDto(
@@ -91,7 +98,17 @@ public class ClientsController : ControllerBase
                 c.ConsultantUser != null ? $"{c.ConsultantUser.FirstName} {c.ConsultantUser.LastName}" : null
             )).ToList();
 
-            return Ok(clientDtos);
+            return Ok(new
+            {
+                data = clientDtos,
+                pagination = new
+                {
+                    totalCount,
+                    pageCount = (int)Math.Ceiling((double)totalCount / pageSize),
+                    currentPage = page,
+                    pageSize
+                }
+            });
         }
         catch (Exception ex)
         {

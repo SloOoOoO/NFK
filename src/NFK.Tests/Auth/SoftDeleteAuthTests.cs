@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NFK.Application.Interfaces;
@@ -51,10 +52,18 @@ public class SoftDeleteAuthTests : IDisposable
 
         _authService = new AuthService(
             _db, jwtService, passwordHasher, logger, httpContext.Object,
-            _emailMock.Object, cacheMock.Object);
+            _emailMock.Object, cacheMock.Object, CreateTestEncryptionService());
     }
 
     public void Dispose() => _db.Dispose();
+
+    private static EncryptionService CreateTestEncryptionService()
+    {
+        var configMock = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+        configMock.Setup(c => c["Encryption:MasterKey"]).Returns("TestEncryptionKey32CharactersLong!");
+        configMock.Setup(c => c["Encryption:DerivationSalt"]).Returns((string?)null);
+        return new EncryptionService(configMock.Object, NullLogger<EncryptionService>.Instance);
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

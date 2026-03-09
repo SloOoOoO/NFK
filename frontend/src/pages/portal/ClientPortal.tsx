@@ -64,22 +64,26 @@ export default function ClientPortal() {
         setCurrentUser(userRes.value.data);
       }
 
-      if (casesRes.status === 'fulfilled' && Array.isArray(casesRes.value.data)) {
-        setCases(casesRes.value.data);
+      if (casesRes.status === 'fulfilled') {
+        const d = casesRes.value.data;
+        setCases(Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []));
       }
 
-      if (docsRes.status === 'fulfilled' && Array.isArray(docsRes.value.data)) {
-        setDocuments(docsRes.value.data);
+      if (docsRes.status === 'fulfilled') {
+        const d = docsRes.value.data;
+        setDocuments(Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []));
       }
 
-      if (messagesRes.status === 'fulfilled' && Array.isArray(messagesRes.value.data)) {
-        setMessages(messagesRes.value.data);
+      if (messagesRes.status === 'fulfilled') {
+        const d = messagesRes.value.data;
+        setMessages(Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []));
       }
 
       // Fetch client record to get assigned consultant
       try {
         const clientsRes = await clientsAPI.getAll();
-        const clientsData = Array.isArray(clientsRes.data) ? clientsRes.data : [];
+        const d = clientsRes.data;
+        const clientsData = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []);
         if (clientsData.length > 0 && clientsData[0].consultantName) {
           setConsultantName(clientsData[0].consultantName);
         }

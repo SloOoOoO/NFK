@@ -88,8 +88,8 @@ export default function Clients() {
     setError('');
     try {
       const response = await clientsAPI.getAll();
-      // Handle both array and object responses
-      const clientsData = Array.isArray(response.data) ? response.data : [];
+      // Handle both paginated {data:[],pagination:{}} and legacy array responses
+      const clientsData = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       setClients(clientsData);
     } catch (err: any) {
       console.error('Error fetching clients:', err);
