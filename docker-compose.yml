@@ -114,9 +114,6 @@ services:
       - api
     networks:
       - nfk-network
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
 
 networks:
   nfk-network:
