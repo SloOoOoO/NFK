@@ -114,6 +114,12 @@ services:
       - api
     networks:
       - nfk-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   nfk-network:
