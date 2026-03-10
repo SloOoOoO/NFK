@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReCAPTCHA from 'react-google-recaptcha';
+import { AxiosError } from 'axios';
 import { authAPI } from '../../services/api';
 import { calculatePasswordStrength, PASSWORD_MIN_LENGTH, PASSWORD_PATTERNS } from '../../utils/passwordValidation';
 import { validateSteuerID } from '../../utils/taxValidation';
@@ -270,26 +271,38 @@ export default function Register() {
       }, 2000);
     } catch (err: unknown) {
       console.error('Registration failed:', err);
-      const axiosError = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
       recaptchaRef.current?.reset();
 
-      if (axiosError.response?.status === 409 || axiosError.response?.data?.error === 'user_exists') {
-        setIsEmailConflict(true);
-        setApiError(
-          'Ein Konto mit dieser E-Mail-Adresse existiert bereits. Bitte melden Sie sich an oder fordern Sie eine neue Bestätigungs-E-Mail an.'
-        );
-      } else if (axiosError.response?.status === 400) {
-        setIsEmailConflict(false);
-        setApiError(
-          axiosError.response?.data?.message ||
-          'Ungültige Eingabe. Bitte überprüfen Sie Ihre Angaben.'
-        );
+      if (err instanceof AxiosError) {
+        const status = err.response?.status;
+        const raw = err.response?.data;
+        const errorCode = raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'string' ? raw.error : undefined;
+        const errorMessage = raw && typeof raw === 'object' && 'message' in raw && typeof raw.message === 'string' ? raw.message : undefined;
+
+        if (status === 409 || errorCode === 'user_exists') {
+          setIsEmailConflict(true);
+          setApiError(
+            'Ein Konto mit dieser E-Mail-Adresse existiert bereits. Bitte melden Sie sich an oder fordern Sie eine neue Bestätigungs-E-Mail an.'
+          );
+        } else if (status === 400) {
+          setIsEmailConflict(false);
+          setApiError(
+            errorMessage ||
+            'Ungültige Eingabe. Bitte überprüfen Sie Ihre Angaben.'
+          );
+        } else if (status === 429) {
+          setIsEmailConflict(false);
+          setApiError('Zu viele Anfragen. Bitte versuchen Sie es später erneut.');
+        } else {
+          setIsEmailConflict(false);
+          setApiError(
+            errorMessage ||
+            'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+          );
+        }
       } else {
         setIsEmailConflict(false);
-        setApiError(
-          axiosError.response?.data?.message ||
-          'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-        );
+        setApiError('Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
       }
     } finally {
       setLoading(false);
