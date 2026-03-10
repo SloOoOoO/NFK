@@ -196,6 +196,12 @@ export default function Messages() {
   // Pagination for the message list sidebar
   const messagesPerPage = 3;
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever the message list changes (e.g. after fetch or search)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredMessages.length]);
+
   const totalPages = Math.max(1, Math.ceil(filteredMessages.length / messagesPerPage));
   const paginatedMessages = filteredMessages.slice(
     (currentPage - 1) * messagesPerPage,

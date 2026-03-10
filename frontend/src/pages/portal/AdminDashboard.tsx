@@ -195,10 +195,6 @@ export default function AdminDashboard() {
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
-    if (deleteConfirmText !== 'eteled') {
-      alert('Bitte geben Sie "delete" rückwärts ein (eteled), um die Löschung zu bestätigen.');
-      return;
-    }
     try {
       await adminAPI.deleteUser(selectedUser.id, deleteConfirmText);
       const response = await adminAPI.getAllUsers();
