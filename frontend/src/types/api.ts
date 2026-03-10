@@ -6,6 +6,7 @@ export interface User {
   lastName: string;
   email: string;
   role: string;
+  roles?: string[];
   gender?: string;
 }
 
@@ -20,9 +21,26 @@ export interface RegisterData {
   lastName: string;
   email: string;
   password: string;
+  salutation?: string;
   gender?: string;
+  clientType?: string;
   companyName?: string;
+  street?: string;
+  postalCode?: string;
+  city?: string;
+  country?: string;
   taxId?: string;
+  taxNumber?: string;
+  vatId?: string;
+  commercialRegister?: string;
+  phoneNumber?: string;
+  fullLegalName?: string;
+  dateOfBirth?: string;
+  googleId?: string;
+  datevId?: string;
+  privacyConsent?: boolean;
+  termsConsent?: boolean;
+  recaptchaToken?: string;
 }
 
 export interface Client {
