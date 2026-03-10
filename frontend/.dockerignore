@@ -1,6 +1,10 @@
 node_modules
+npm-debug.log*
 dist
+dist-ssr
+.env
+.env.local
+.env.*.local
 .git
 .gitignore
-README.md
 *.md
