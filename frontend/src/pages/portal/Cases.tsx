@@ -369,7 +369,7 @@ export default function Cases() {
                         >
                           Details
                         </button>
-                        {user && !isClientRole(user.role) && (
+                        {user && user.role === 'SuperAdmin' && (
                           <>
                             <button 
                               onClick={() => openEditModal(caseItem)}

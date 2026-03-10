@@ -274,6 +274,24 @@ public class CasesController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Only SuperAdmin can edit cases
+            var currentUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = currentUser?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+            if (userRole != "SuperAdmin")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur SuperAdmins können Fälle bearbeiten" });
+            }
+
             var caseEntity = await _context.Cases
                 .Include(c => c.Client)
                 .FirstOrDefaultAsync(c => c.Id == id);
@@ -357,6 +375,24 @@ public class CasesController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Only SuperAdmin can delete cases
+            var currentUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = currentUser?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+            if (userRole != "SuperAdmin")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur SuperAdmins können Fälle löschen" });
+            }
+
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.Id == id);
 
             if (caseEntity == null)

@@ -109,3 +109,7 @@ public record AssistantAssignmentDto(
 public record AssignAssistantRequest(
     int ConsultantUserId
 );
+
+public record DeleteUserRequest(
+    string ConfirmationText
+);

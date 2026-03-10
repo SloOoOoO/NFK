@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Users;
+using NFK.Application.Interfaces;
 using NFK.Infrastructure.Data;
 using NFK.Infrastructure.Security;
 
@@ -16,12 +17,14 @@ public class UsersController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ILogger<UsersController> _logger;
     private readonly EncryptionService _encryption;
+    private readonly IEmailService _emailService;
 
-    public UsersController(ApplicationDbContext context, ILogger<UsersController> logger, EncryptionService encryption)
+    public UsersController(ApplicationDbContext context, ILogger<UsersController> logger, EncryptionService encryption, IEmailService emailService)
     {
         _context = context;
         _logger = logger;
         _encryption = encryption;
+        _emailService = emailService;
     }
 
     [HttpGet]
@@ -314,6 +317,16 @@ public class UsersController : ControllerBase
             _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
 
             await _context.SaveChangesAsync();
+
+            // Send farewell email (best effort - don't fail the deletion if email fails)
+            try
+            {
+                await _emailService.SendAccountDeletionEmailAsync(user.Email, user.FirstName);
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogWarning(emailEx, "Failed to send deletion email to {Email}", user.Email);
+            }
 
             return Ok(new { 
                 success = true,

@@ -243,6 +243,47 @@ public class EmailService : IEmailService
         await SendEmailAsync(toEmail, emailSubject, body);
     }
 
+    public async Task SendAccountDeletionEmailAsync(string email, string firstName)
+    {
+        var subject = "Ihr Konto bei NFK Buchhaltung wurde gelöscht";
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #1e40af; color: white; padding: 20px; text-align: center; }}
+        .content {{ background-color: #f9fafb; padding: 30px; }}
+        .footer {{ text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>NFK Buchhaltung</h1>
+        </div>
+        <div class=""content"">
+            <h2>Konto gelöscht</h2>
+            <p>Hallo {System.Net.WebUtility.HtmlEncode(firstName)},</p>
+            <p>wir möchten Sie darüber informieren, dass Ihr Konto bei NFK Buchhaltung erfolgreich gelöscht wurde.</p>
+            <p>Im Zuge der Kontolöschung wurden alle mit Ihrem Konto verknüpften Daten entfernt, darunter Ihre persönlichen Informationen, Dokumente und Termine.</p>
+            <p>Sollten Sie in Zukunft erneut unsere Dienste in Anspruch nehmen möchten, können Sie sich jederzeit mit dieser E-Mail-Adresse neu registrieren.</p>
+            <p>Wir danken Ihnen für Ihr Vertrauen und wünschen Ihnen alles Gute.</p>
+            <p>Mit freundlichen Grüßen,<br>Ihr NFK Buchhaltung Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© 2026 NFK Buchhaltung. Alle Rechte vorbehalten.</p>
+            <p>{_fromEmail}</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(email, subject, body);
+    }
+
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
         try

@@ -399,18 +399,22 @@ export default function Clients() {
                           >
                             Details
                           </button>
-                          <button 
-                            onClick={() => openEditModal(client)}
-                            className="text-primary hover:underline mr-3"
-                          >
-                            Bearbeiten
-                          </button>
-                          <button 
-                            onClick={() => openDeleteModal(client)}
-                            className="text-red-600 dark:text-red-400 hover:underline"
-                          >
-                            Löschen
-                          </button>
+                          {user?.role === 'SuperAdmin' && (
+                            <>
+                              <button 
+                                onClick={() => openEditModal(client)}
+                                className="text-primary hover:underline mr-3"
+                              >
+                                Bearbeiten
+                              </button>
+                              <button 
+                                onClick={() => openDeleteModal(client)}
+                                className="text-red-600 dark:text-red-400 hover:underline"
+                              >
+                                Löschen
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))
