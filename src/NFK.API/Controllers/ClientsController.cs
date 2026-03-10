@@ -327,6 +327,24 @@ public class ClientsController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Only SuperAdmin can edit clients
+            var currentUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = currentUser?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+            if (userRole != "SuperAdmin")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur SuperAdmins können Mandanten bearbeiten" });
+            }
+
             var client = await _context.Clients
                 .Include(c => c.User)
                 .Include(c => c.ConsultantUser)
@@ -381,6 +399,24 @@ public class ClientsController : ControllerBase
     {
         try
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized(new { error = "unauthorized", message = "Nicht authentifiziert" });
+            }
+
+            // Only SuperAdmin can delete clients
+            var currentUser = await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == currentUserId.Value);
+
+            var userRole = currentUser?.UserRoles.FirstOrDefault()?.Role?.Name ?? "Client";
+            if (userRole != "SuperAdmin")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur SuperAdmins können Mandanten löschen" });
+            }
+
             var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == id);
 
             if (client == null)

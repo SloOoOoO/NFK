@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/
 // Extended request config to track retry attempts
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  _retryCount?: number;
 }
 
 // Create axios instance with default config
@@ -64,6 +65,17 @@ apiClient.interceptors.response.use(
         localStorage.removeItem('user');
         window.location.href = '/auth/login';
         return Promise.reject(error);
+      }
+    }
+
+    // Handle 429 Too Many Requests - retry with exponential backoff (max 3 attempts)
+    if (error.response?.status === 429 && originalRequest) {
+      const retryCount = originalRequest._retryCount ?? 0;
+      if (retryCount < 3) {
+        originalRequest._retryCount = retryCount + 1;
+        const delay = Math.pow(2, retryCount) * 500; // 500ms, 1s, 2s
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return apiClient(originalRequest);
       }
     }
 
@@ -164,6 +176,8 @@ export const adminAPI = {
     apiClient.put(`/admin/users/${userId}/role`, { role }),
   updateUserProfile: (userId: number, data: Record<string, unknown>) =>
     apiClient.put(`/admin/users/${userId}/profile`, data),
+  deleteUser: (userId: number, confirmationText: string) =>
+    apiClient.delete(`/admin/users/${userId}`, { data: { confirmationText } }),
   getHeaderText: () => apiClient.get('/admin/header-text'),
   updateHeaderText: (data: { welcomeTitle: string; welcomeSubtitle: string }) =>
     apiClient.put('/admin/header-text', data),

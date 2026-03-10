@@ -193,6 +193,21 @@ export default function Messages() {
   // Filter messages based on active tab
   const filteredMessages = messages; // For now, show all messages in both tabs
 
+  // Pagination for the message list sidebar
+  const messagesPerPage = 3;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever the message list changes (e.g. after fetch or search)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredMessages.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMessages.length / messagesPerPage));
+  const paginatedMessages = filteredMessages.slice(
+    (currentPage - 1) * messagesPerPage,
+    currentPage * messagesPerPage
+  );
+
   return (
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
@@ -255,13 +270,13 @@ export default function Messages() {
               <h2 className="font-semibold text-textPrimary dark:text-gray-100">Posteingang</h2>
             </div>
             
-            <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <div className="p-8 text-center text-textSecondary dark:text-gray-400">Lädt...</div>
               ) : filteredMessages.length === 0 ? (
                 <div className="p-8 text-center text-textSecondary dark:text-gray-400">Keine Nachrichten</div>
               ) : (
-                filteredMessages.map((message) => (
+                paginatedMessages.map((message) => (
                   <div
                     key={message.id}
                     onClick={() => handleSelectMessage(message.id)}
@@ -301,6 +316,29 @@ export default function Messages() {
                 ))
               )}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm rounded-md bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  ← Vorherige
+                </button>
+                <span className="text-xs text-textSecondary dark:text-gray-400">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm rounded-md bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Nächste →
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Message Preview */}

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFK.Application.DTOs.Admin;
+using NFK.Application.Interfaces;
 using NFK.Application.Utils;
 using NFK.Domain.Entities.Users;
 using NFK.Infrastructure.Data;
@@ -17,12 +18,14 @@ public class AdminController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ILogger<AdminController> _logger;
     private readonly EncryptionService _encryption;
+    private readonly IEmailService _emailService;
 
-    public AdminController(ApplicationDbContext context, ILogger<AdminController> logger, EncryptionService encryption)
+    public AdminController(ApplicationDbContext context, ILogger<AdminController> logger, EncryptionService encryption, IEmailService emailService)
     {
         _context = context;
         _logger = logger;
         _encryption = encryption;
+        _emailService = emailService;
     }
 
     [HttpGet("users")]
@@ -568,6 +571,142 @@ public class AdminController : ControllerBase
         {
             _logger.LogError(ex, "Error assigning assistant {AssistantId} to consultant", id);
             return StatusCode(500, new { error = "internal_error", message = "Error assigning assistant" });
+        }
+    }
+
+    [HttpDelete("users/{id}")]
+    [Authorize(Roles = "SuperAdmin")]
+    public async Task<IActionResult> DeleteUser(int id, [FromBody] DeleteUserRequest request)
+    {
+        try
+        {
+            // Validate confirmation text ("eteled" = "delete" reversed)
+            var reversedDelete = new string("delete".Reverse().ToArray());
+            if (string.IsNullOrEmpty(request.ConfirmationText) || request.ConfirmationText.ToLower() != reversedDelete)
+            {
+                return BadRequest(new { error = "invalid_confirmation", message = "Bestätigungstext ungültig. Bitte geben Sie 'delete' rückwärts ein." });
+            }
+
+            // Prevent SuperAdmin from deleting themselves
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            int currentUserId = 0;
+            if (currentUserIdClaim != null && int.TryParse(currentUserIdClaim.Value, out var parsedCurrentUserId))
+            {
+                currentUserId = parsedCurrentUserId;
+                if (currentUserId == id)
+                {
+                    return StatusCode(403, new { error = "forbidden", message = "Sie können Ihr eigenes Konto nicht über diese Funktion löschen." });
+                }
+            }
+
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "not_found", message = "Benutzer nicht gefunden" });
+            }
+
+            var userEmail = user.Email;
+            var userFirstName = user.FirstName;
+
+            // Delete all user's documents (physical files + DB records)
+            var userDocuments = await _context.Documents
+                .IgnoreQueryFilters()
+                .Where(d => d.UploadedByUserId == id)
+                .ToListAsync();
+
+            foreach (var doc in userDocuments)
+            {
+                if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
+                {
+                    try { System.IO.File.Delete(doc.FilePath); }
+                    catch (Exception fileEx) { _logger.LogWarning(fileEx, "Failed to delete file {FilePath}", doc.FilePath); }
+                }
+            }
+            _context.Documents.RemoveRange(userDocuments);
+
+            // Delete user's appointments
+            var userAppointments = await _context.Set<Domain.Entities.Other.Appointment>()
+                .IgnoreQueryFilters()
+                .Where(a => a.ClientId == id || a.ConsultantUserId == id)
+                .ToListAsync();
+            _context.Set<Domain.Entities.Other.Appointment>().RemoveRange(userAppointments);
+
+            // Keep messages but nullify sender references; soft-delete received messages
+            var sentMessages = await _context.Messages
+                .IgnoreQueryFilters()
+                .Where(m => m.SenderUserId == id)
+                .ToListAsync();
+            foreach (var msg in sentMessages) { msg.SenderUserId = null; }
+
+            var receivedMessages = await _context.Messages
+                .IgnoreQueryFilters()
+                .Where(m => m.RecipientUserId == id)
+                .ToListAsync();
+            foreach (var msg in receivedMessages) { msg.IsDeleted = true; }
+
+            // Delete client record if exists
+            var clientRecord = await _context.Clients
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.UserId == id);
+            if (clientRecord != null)
+            {
+                // Delete all cases for this client
+                var clientCases = await _context.Cases
+                    .IgnoreQueryFilters()
+                    .Where(c => c.ClientId == clientRecord.Id).ToListAsync();
+                _context.Cases.RemoveRange(clientCases);
+
+                _context.Clients.Remove(clientRecord);
+            }
+
+            // Remove assistant assignments
+            var assistantAssignments = await _context.AssistantAssignments
+                .Where(a => a.AssistantUserId == id || a.ConsultantUserId == id)
+                .ToListAsync();
+            _context.AssistantAssignments.RemoveRange(assistantAssignments);
+
+            // Remove user roles
+            _context.UserRoles.RemoveRange(user.UserRoles);
+
+            // Hard delete the user
+            _context.Users.Remove(user);
+
+            // Log the deletion
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var auditLog = new Domain.Entities.Audit.AuditLog
+            {
+                UserId = currentUserId,
+                Action = "AdminUserDeletion",
+                EntityType = "User",
+                EntityId = id,
+                IpAddress = ipAddress,
+                Details = $"SuperAdmin deleted user {userEmail}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            // Send farewell email (best effort - don't fail the deletion if email fails)
+            try
+            {
+                await _emailService.SendAccountDeletionEmailAsync(userEmail, userFirstName);
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogWarning(emailEx, "Failed to send deletion email to {Email}", userEmail);
+            }
+
+            return Ok(new { success = true, message = "Benutzer erfolgreich gelöscht" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting user {UserId}", id);
+            return StatusCode(500, new { error = "internal_error", message = "Fehler beim Löschen des Benutzers" });
         }
     }
 }

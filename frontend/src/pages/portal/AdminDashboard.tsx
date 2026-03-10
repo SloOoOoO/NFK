@@ -23,6 +23,8 @@ export default function AdminDashboard() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [newRole, setNewRole] = useState('');
@@ -141,7 +143,19 @@ export default function AdminDashboard() {
   const handleUserUpdate = async () => {
     if (!selectedUser) return;
     try {
-      await adminAPI.updateUserProfile(selectedUser.id, editForm);
+      await adminAPI.updateUserProfile(selectedUser.id, {
+        ...editForm,
+        dateOfBirth: editForm.dateOfBirth || null,
+        phoneNumber: editForm.phoneNumber || null,
+        taxId: editForm.taxId || null,
+        taxNumber: editForm.taxNumber || null,
+        vatId: editForm.vatId || null,
+        commercialRegister: editForm.commercialRegister || null,
+        address: editForm.address || null,
+        city: editForm.city || null,
+        postalCode: editForm.postalCode || null,
+        country: editForm.country || null,
+      });
       const response = await adminAPI.getAllUsers();
       setUsers(response.data);
       setShowEditModal(false);
@@ -176,6 +190,22 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Failed to assign assistant:', error);
       alert('Fehler beim Zuweisen des Assistenten');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    try {
+      await adminAPI.deleteUser(selectedUser.id, deleteConfirmText);
+      const response = await adminAPI.getAllUsers();
+      setUsers(response.data);
+      setShowDeleteUserModal(false);
+      setShowEditModal(false);
+      setDeleteConfirmText('');
+      alert('Benutzer erfolgreich gelöscht');
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      alert('Fehler beim Löschen des Benutzers');
     }
   };
 
@@ -701,12 +731,28 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium mb-2 dark:text-gray-300">
                     Land
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editForm.country || ''}
                     onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:text-white"
-                  />
+                  >
+                    <option value="">—</option>
+                    <option value="Deutschland">Deutschland</option>
+                    <option value="Österreich">Österreich</option>
+                    <option value="Schweiz">Schweiz</option>
+                    <option value="Frankreich">Frankreich</option>
+                    <option value="Niederlande">Niederlande</option>
+                    <option value="Belgien">Belgien</option>
+                    <option value="Polen">Polen</option>
+                    <option value="Tschechien">Tschechien</option>
+                    <option value="Dänemark">Dänemark</option>
+                    <option value="Italien">Italien</option>
+                    <option value="Spanien">Spanien</option>
+                    <option value="Vereinigtes Königreich">Vereinigtes Königreich</option>
+                    <option value="USA">USA</option>
+                    <option value="Türkei">Türkei</option>
+                    <option value="Andere">Andere</option>
+                  </select>
                 </div>
               </div>
 
@@ -788,6 +834,18 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            {selectedUser?.role !== 'SuperAdmin' && (
+              <div className="mt-6 border-t border-red-200 dark:border-red-900 pt-4">
+                <p className="text-sm font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide mb-2">Gefahrenbereich</p>
+                <button
+                  onClick={() => { setShowDeleteUserModal(true); setDeleteConfirmText(''); }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                >
+                  Benutzer löschen
+                </button>
+              </div>
+            )}
+
             <Dialog.Close asChild>
               <button
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -842,6 +900,57 @@ export default function AdminDashboard() {
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Speichern
+              </button>
+            </div>
+
+            <Dialog.Close asChild>
+              <button
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      {/* Delete User Confirmation Modal */}
+      <Dialog.Root open={showDeleteUserModal} onOpenChange={setShowDeleteUserModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+            <Dialog.Title className="text-xl font-bold mb-2 text-red-600 dark:text-red-400">
+              Benutzer löschen
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-textSecondary dark:text-gray-400 mb-4">
+              Diese Aktion kann nicht rückgängig gemacht werden. Der Benutzer <strong className="dark:text-white">{selectedUser?.fullName}</strong> wird vollständig gelöscht, inklusive aller Dokumente, Termine und Fälle.
+            </Dialog.Description>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2 dark:text-gray-300">
+                Geben Sie <strong>delete</strong> rückwärts ein, um die Löschung zu bestätigen:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="eteled"
+                className="w-full px-4 py-2 border border-red-300 dark:border-red-600 rounded-md focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <button className="btn-secondary">
+                  Abbrechen
+                </button>
+              </Dialog.Close>
+              <button
+                onClick={handleDeleteUser}
+                disabled={deleteConfirmText !== 'eteled'}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Endgültig löschen
               </button>
             </div>
 
