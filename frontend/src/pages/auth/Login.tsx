@@ -186,21 +186,21 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex items-center justify-center px-4">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-8">{t('common.login')}</h1>
+    <div className="min-h-screen bg-secondary dark:bg-gray-900 flex items-center justify-center px-4">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-gray-100">{t('common.login')}</h1>
         
         {error && (
-          <div className={`mb-6 p-4 rounded-md ${rateLimited ? 'bg-yellow-50 border border-yellow-200' : 'bg-red-50 border border-red-200'}`}>
-            <p className={`text-sm font-medium ${rateLimited ? 'text-yellow-800' : 'text-red-800'}`}>{error}</p>
+          <div className={`mb-6 p-4 rounded-md ${rateLimited ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+            <p className={`text-sm font-medium ${rateLimited ? 'text-yellow-800 dark:text-yellow-300' : 'text-red-800 dark:text-red-300'}`}>{error}</p>
             {rateLimited && retryAfter > 0 && (
               <div className="mt-2">
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
                   Verbleibende Zeit: {Math.floor(retryAfter / 60)} Min {retryAfter % 60} Sek
                 </p>
-                <div className="mt-2 w-full bg-yellow-200 rounded-full h-2">
+                <div className="mt-2 w-full bg-yellow-200 dark:bg-yellow-800 rounded-full h-2">
                   <div 
-                    className="bg-yellow-600 h-2 rounded-full transition-all duration-1000"
+                    className="bg-yellow-600 dark:bg-yellow-500 h-2 rounded-full transition-all duration-1000"
                     style={{ width: `${Math.max(0, 100 - (retryAfter / DEFAULT_RATE_LIMIT_SECONDS) * 100)}%` }}
                   ></div>
                 </div>
@@ -210,19 +210,19 @@ export default function Login() {
         )}
 
         {showVerificationWarning && (
-          <div className="mb-6 p-4 rounded-md bg-amber-50 border border-amber-200">
-            <p className="text-sm font-medium text-amber-800">
+          <div className="mb-6 p-4 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
               Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse, um sich anmelden zu können.
             </p>
             <div className="mt-2">
               {verificationResendSent ? (
-                <p className="text-sm text-amber-700">Bestätigungs-E-Mail wurde gesendet.</p>
+                <p className="text-sm text-amber-700 dark:text-amber-400">Bestätigungs-E-Mail wurde gesendet.</p>
               ) : (
                 <button
                   type="button"
                   onClick={handleVerificationResend}
                   disabled={verificationResendLoading || verificationResendCooldown > 0}
-                  className="text-sm text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {verificationResendLoading
                     ? 'Sende...'
@@ -237,7 +237,7 @@ export default function Login() {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">
+            <label htmlFor="email" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               {t('auth.emailLabel')}
             </label>
             <input
@@ -245,7 +245,7 @@ export default function Login() {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               required
               disabled={loading}
             />
@@ -253,10 +253,10 @@ export default function Login() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="password" className="block text-sm font-medium">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('auth.passwordLabel')}
               </label>
-              <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline">
+              <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline dark:text-blue-400">
                 {t('auth.forgotPassword')}
               </Link>
             </div>
@@ -265,7 +265,7 @@ export default function Login() {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               required
               disabled={loading}
             />
@@ -291,15 +291,15 @@ export default function Login() {
 
         {/* SSO Divider */}
         <div className="my-6 flex items-center">
-          <div className="flex-1 border-t border-gray-300"></div>
-          <span className="px-4 text-sm text-gray-500">oder</span>
-          <div className="flex-1 border-t border-gray-300"></div>
+          <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+          <span className="px-4 text-sm text-gray-500 dark:text-gray-400">oder</span>
+          <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
         </div>
 
         {/* SSO Buttons */}
         <div className="space-y-3">
           {/* SSO coming soon notice */}
-          <p className="text-xs text-center text-gray-500 mb-1">
+          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-1">
             SSO-Anmeldung wird in Kürze verfügbar sein
           </p>
 
@@ -307,7 +307,7 @@ export default function Login() {
           <button
             onClick={handleDATEVLogin}
             type="button"
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 opacity-50 cursor-not-allowed"
             disabled
             title="DATEV SSO – demnächst verfügbar"
           >
@@ -315,15 +315,15 @@ export default function Login() {
               <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#9ca3af" />
               <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-gray-400">Mit DATEV anmelden</span>
-            <span className="ml-auto text-xs text-gray-400 font-medium">Demnächst</span>
+            <span className="text-gray-400 dark:text-gray-500">Mit DATEV anmelden</span>
+            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 font-medium">Demnächst</span>
           </button>
 
           {/* Google SSO – disabled/greyed out until SSO is enabled */}
           <button
             onClick={handleGoogleLogin}
             type="button"
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 opacity-50 cursor-not-allowed"
             disabled
             title="Google SSO – demnächst verfügbar"
           >
@@ -333,13 +333,13 @@ export default function Login() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            <span className="text-gray-400">Mit Google anmelden</span>
-            <span className="ml-auto text-xs text-gray-400 font-medium">Demnächst</span>
+            <span className="text-gray-400 dark:text-gray-500">Mit Google anmelden</span>
+            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 font-medium">Demnächst</span>
           </button>
         </div>
 
         <div className="mt-6 text-center">
-          <Link to="/auth/register" className="text-primary hover:underline">
+          <Link to="/auth/register" className="text-primary hover:underline dark:text-blue-400">
             {t('auth.noAccount')} {t('auth.registerHere')}
           </Link>
         </div>

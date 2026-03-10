@@ -276,7 +276,7 @@ export default function Register() {
       if (axiosError.response?.status === 409 || axiosError.response?.data?.error === 'user_exists') {
         setIsEmailConflict(true);
         setApiError(
-          'Ein Konto mit dieser E-Mail-Adresse existiert bereits. Bitte melden Sie sich an oder nutzen Sie die Passwort-Zurücksetzen-Funktion.'
+          'Ein Konto mit dieser E-Mail-Adresse existiert bereits. Bitte melden Sie sich an oder fordern Sie eine neue Bestätigungs-E-Mail an.'
         );
       } else if (axiosError.response?.status === 400) {
         setIsEmailConflict(false);
@@ -362,8 +362,8 @@ export default function Register() {
                     Zur Anmeldung
                   </Link>
                   {' · '}
-                  <Link to="/auth/forgot-password" className="text-primary hover:underline font-medium" aria-label="Passwort für bestehendes Konto zurücksetzen">
-                    Passwort vergessen?
+                  <Link to="/auth/login" className="text-primary hover:underline font-medium" aria-label="Bestätigungs-E-Mail erneut anfordern">
+                    Bestätigungs-E-Mail anfordern
                   </Link>
                 </p>
               )}
