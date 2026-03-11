@@ -285,6 +285,8 @@ public class UsersController : ControllerBase
 
             // Hard delete using direct SQL to bypass the soft-delete SaveChangesAsync override.
             // Deletion order respects foreign-key constraints (children before parent).
+            // All SQL operations are wrapped in a transaction to ensure atomicity.
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             // Anonymize messages — preserve conversation history but remove sender/recipient identity
             await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -349,6 +351,8 @@ public class UsersController : ControllerBase
             // Finally, hard delete the user record itself
             await _context.Database.ExecuteSqlInterpolatedAsync(
                 $"DELETE FROM Users WHERE Id = {userId}");
+
+            await transaction.CommitAsync();
 
             _logger.LogInformation("User {UserId} ({Email}) hard-deleted their account", userId, userEmail);
 
