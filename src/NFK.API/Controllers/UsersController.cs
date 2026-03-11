@@ -220,13 +220,8 @@ public class UsersController : ControllerBase
         try
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirst("role")?.Value;
 
-            if (userRole != "Assistant")
-            {
-                return StatusCode(403, new { error = "forbidden", message = "Nur Assistenten können ihre Zuweisung abrufen" });
-            }
-
+            // Scoped to the current user's own assignment only — no authorization issue
             var assignment = await _context.AssistantAssignments
                 .Include(a => a.ConsultantUser)
                 .FirstOrDefaultAsync(a => a.AssistantUserId == userId);

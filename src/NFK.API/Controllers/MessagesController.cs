@@ -79,14 +79,10 @@ public class MessagesController : ControllerBase
 
                 if (assignments.Count > 0)
                 {
+                    var allConsultantIds = assignments.Select(a => a.ConsultantUserId).ToList();
                     // Consultants that allow full visibility (ReceptionistCanSeeMessages = true)
                     var fullAccessIds = assignments
                         .Where(a => a.ReceptionistCanSeeMessages)
-                        .Select(a => a.ConsultantUserId)
-                        .ToList();
-                    // Consultants without full access – only AssistantVisible messages are shown
-                    var restrictedIds = assignments
-                        .Where(a => !a.ReceptionistCanSeeMessages)
                         .Select(a => a.ConsultantUserId)
                         .ToList();
 
@@ -94,13 +90,12 @@ public class MessagesController : ControllerBase
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        // Full-access consultants: show ALL their messages
-                        (fullAccessIds.Contains(m.RecipientUserId) ||
-                         (m.SenderUserId != null && fullAccessIds.Contains(m.SenderUserId.Value))) ||
-                        // Restricted consultants: show only messages explicitly marked AssistantVisible
-                        (m.AssistantVisible && (
-                            restrictedIds.Contains(m.RecipientUserId) ||
-                            (m.SenderUserId != null && restrictedIds.Contains(m.SenderUserId.Value)))));
+                        // Consultant is recipient: show if full access OR message is marked AssistantVisible
+                        (allConsultantIds.Contains(m.RecipientUserId) &&
+                            (fullAccessIds.Contains(m.RecipientUserId) || m.AssistantVisible)) ||
+                        // Consultant is sender: use HasValue to avoid SQL NULL comparison issues
+                        (m.SenderUserId.HasValue && allConsultantIds.Contains(m.SenderUserId.Value) &&
+                            (fullAccessIds.Contains(m.SenderUserId.Value) || m.AssistantVisible)));
                 }
                 else
                 {
@@ -211,12 +206,9 @@ public class MessagesController : ControllerBase
 
                 if (assignments.Count > 0)
                 {
+                    var allConsultantIds = assignments.Select(a => a.ConsultantUserId).ToList();
                     var fullAccessIds = assignments
                         .Where(a => a.ReceptionistCanSeeMessages)
-                        .Select(a => a.ConsultantUserId)
-                        .ToList();
-                    var restrictedIds = assignments
-                        .Where(a => !a.ReceptionistCanSeeMessages)
                         .Select(a => a.ConsultantUserId)
                         .ToList();
 
@@ -224,11 +216,10 @@ public class MessagesController : ControllerBase
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        (fullAccessIds.Contains(m.RecipientUserId) ||
-                         (m.SenderUserId != null && fullAccessIds.Contains(m.SenderUserId.Value))) ||
-                        (m.AssistantVisible && (
-                            restrictedIds.Contains(m.RecipientUserId) ||
-                            (m.SenderUserId != null && restrictedIds.Contains(m.SenderUserId.Value)))));
+                        (allConsultantIds.Contains(m.RecipientUserId) &&
+                            (fullAccessIds.Contains(m.RecipientUserId) || m.AssistantVisible)) ||
+                        (m.SenderUserId.HasValue && allConsultantIds.Contains(m.SenderUserId.Value) &&
+                            (fullAccessIds.Contains(m.SenderUserId.Value) || m.AssistantVisible)));
                 }
                 else
                 {
