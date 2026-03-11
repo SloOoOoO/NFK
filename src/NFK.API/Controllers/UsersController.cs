@@ -83,20 +83,45 @@ public class UsersController : ControllerBase
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int? currentUserIdInt = currentUserId != null && int.TryParse(currentUserId, out var parsedId) ? parsedId : null;
 
+            var userRole = User.FindFirst("role")?.Value ?? "";
             var searchTerm = query.ToLower().Trim();
-            
-            var users = await _context.Users
+
+            var usersQuery = _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .Where(u => u.IsActive && !u.IsDeleted)
                 // Exclude the current user from search results (don't send messages to yourself)
                 .Where(u => currentUserIdInt == null || u.Id != currentUserIdInt.Value)
-                .Where(u => 
+                .Where(u =>
                     u.FirstName.ToLower().Contains(searchTerm) ||
                     u.LastName.ToLower().Contains(searchTerm) ||
                     u.Email.ToLower().Contains(searchTerm) ||
                     (u.FirstName + " " + u.LastName).ToLower().Contains(searchTerm)
-                )
+                );
+
+            // For Assistants: scope search to only clients of their assigned consultant
+            if (userRole == "Assistant" && currentUserIdInt.HasValue)
+            {
+                var assignedConsultantId = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == currentUserIdInt.Value)
+                    .Select(a => (int?)a.ConsultantUserId)
+                    .FirstOrDefaultAsync();
+
+                if (assignedConsultantId.HasValue)
+                {
+                    var clientUserIds = await _context.Clients
+                        .Where(c => c.ConsultantUserId == assignedConsultantId.Value)
+                        .Select(c => c.UserId)
+                        .ToListAsync();
+                    usersQuery = usersQuery.Where(u => clientUserIds.Contains(u.Id));
+                }
+                else
+                {
+                    return Ok(new List<object>());
+                }
+            }
+
+            var users = await usersQuery
                 .OrderBy(u => u.FirstName)
                 .ThenBy(u => u.LastName)
                 .Take(20) // Show up to 20 results
@@ -105,14 +130,14 @@ public class UsersController : ControllerBase
                     u.FirstName,
                     u.LastName,
                     u.Email,
-                    Role = u.UserRoles.FirstOrDefault() != null 
-                        ? u.UserRoles.FirstOrDefault()!.Role.Name 
+                    Role = u.UserRoles.FirstOrDefault() != null
+                        ? u.UserRoles.FirstOrDefault()!.Role.Name
                         : "User",
                     FullName = u.FirstName + " " + u.LastName,
                     u.Gender
                 })
                 .ToListAsync();
-            
+
             return Ok(users);
         }
         catch (Exception ex)

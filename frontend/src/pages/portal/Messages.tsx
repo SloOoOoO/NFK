@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../../components/Sidebar';
 import { messagesAPI, authAPI } from '../../services/api';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -29,6 +30,7 @@ interface User {
 }
 
 export default function Messages() {
+  const { t } = useTranslation();
   const [selectedMessage, setSelectedMessage] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +127,7 @@ export default function Messages() {
   const handleCompose = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) {
-      alert('Bitte wählen Sie einen Empfänger aus');
+      alert(t('messages.selectRecipient'));
       return;
     }
     setSending(true);
@@ -143,7 +145,7 @@ export default function Messages() {
       await fetchMessages();
     } catch (error: any) {
       console.error('Error sending message:', error);
-      const errorMessage = error.response?.data?.message || 'Fehler beim Senden der Nachricht';
+      const errorMessage = error.response?.data?.message || t('messages.sendError');
       alert(errorMessage);
     } finally {
       setSending(false);
@@ -167,14 +169,14 @@ export default function Messages() {
       await fetchMessages();
     } catch (error) {
       console.error('Error sending reply:', error);
-      alert('Fehler beim Senden der Antwort');
+      alert(t('messages.replyError'));
     } finally {
       setSending(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Möchten Sie diese Nachricht wirklich löschen?')) return;
+    if (!confirm(t('messages.deleteConfirm'))) return;
     try {
       await messagesAPI.delete(id);
       await fetchMessages();
@@ -183,7 +185,7 @@ export default function Messages() {
       }
     } catch (error) {
       console.error('Error deleting message:', error);
-      alert('Fehler beim Löschen der Nachricht');
+      alert(t('messages.deleteError'));
     }
   };
 
@@ -215,8 +217,8 @@ export default function Messages() {
       <main className="flex-1 p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-textPrimary dark:text-gray-100 mb-2">Nachrichten</h1>
-          <p className="text-textSecondary dark:text-gray-400">Kommunikation und Benachrichtigungen</p>
+          <h1 className="text-3xl font-bold text-textPrimary dark:text-gray-100 mb-2">{t('messages.title')}</h1>
+          <p className="text-textSecondary dark:text-gray-400">{t('messages.subtitle')}</p>
         </div>
 
         {/* Actions Bar */}
@@ -228,18 +230,18 @@ export default function Messages() {
                   onClick={() => setShowComposeModal(true)}
                   className="btn-primary"
                 >
-                  ✏️ Neue Nachricht
+                  ✏️ {t('messages.compose')}
                 </button>
               )}
               <button className="btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">
-                📧 Alle als gelesen markieren
+                📧 {t('messages.markAllRead')}
               </button>
             </div>
             
             <div className="flex gap-2 w-full md:w-auto">
               <input
                 type="text"
-                placeholder="Nachrichten durchsuchen..."
+                placeholder={t('messages.search')}
                 className="flex-1 md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
@@ -249,15 +251,15 @@ export default function Messages() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Gesamt</p>
+            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">{t('messages.total')}</p>
             <p className="text-2xl font-bold text-primary dark:text-blue-400">{messages.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Ungelesen</p>
+            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">{t('messages.unread')}</p>
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{messages.filter(m => m.unread).length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">Pool E-Mails</p>
+            <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">{t('messages.poolEmails')}</p>
             <p className="text-2xl font-bold text-primary dark:text-blue-400">{messages.filter(m => m.isPoolEmail).length}</p>
           </div>
         </div>
@@ -267,14 +269,14 @@ export default function Messages() {
           {/* Messages List */}
           <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
             <div className="p-4 bg-secondary dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-              <h2 className="font-semibold text-textPrimary dark:text-gray-100">Posteingang</h2>
+              <h2 className="font-semibold text-textPrimary dark:text-gray-100">{t('messages.inbox')}</h2>
             </div>
             
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
-                <div className="p-8 text-center text-textSecondary dark:text-gray-400">Lädt...</div>
+                <div className="p-8 text-center text-textSecondary dark:text-gray-400">{t('common.loading')}</div>
               ) : filteredMessages.length === 0 ? (
-                <div className="p-8 text-center text-textSecondary dark:text-gray-400">Keine Nachrichten</div>
+                <div className="p-8 text-center text-textSecondary dark:text-gray-400">{t('messages.noMessages')}</div>
               ) : (
                 paginatedMessages.map((message) => (
                   <div
@@ -325,7 +327,7 @@ export default function Messages() {
                   disabled={currentPage === 1}
                   className="px-3 py-1 text-sm rounded-md bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  ← Vorherige
+                  ← {t('messages.previous')}
                 </button>
                 <span className="text-xs text-textSecondary dark:text-gray-400">
                   {currentPage} / {totalPages}
@@ -335,7 +337,7 @@ export default function Messages() {
                   disabled={currentPage === totalPages}
                   className="px-3 py-1 text-sm rounded-md bg-secondary dark:bg-gray-700 text-textPrimary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Nächste →
+                  {t('messages.next')} →
                 </button>
               </div>
             )}
@@ -361,24 +363,26 @@ export default function Messages() {
                         <span>{selectedMsg.timestamp}</span>
                         {selectedMsg.isPoolEmail && (
                           <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-1 rounded text-xs">
-                            📧 Pool E-Mail
+                            📧 {t('messages.poolEmailBadge')}
                           </span>
                         )}
                       </div>
                     </div>
                     
                     <div className="flex gap-2">
-                      <button 
-                        onClick={() => setShowReplyModal(true)}
-                        className="p-2 hover:bg-secondary dark:hover:bg-gray-700 rounded" 
-                        title="Antworten"
-                      >
-                        ↩️
-                      </button>
+                      {!selectedMsg.isPoolEmail && (
+                        <button 
+                          onClick={() => setShowReplyModal(true)}
+                          className="p-2 hover:bg-secondary dark:hover:bg-gray-700 rounded" 
+                          title={t('messages.reply')}
+                        >
+                          ↩️
+                        </button>
+                      )}
                       <button 
                         onClick={() => handleDelete(selectedMsg.id)}
                         className="p-2 hover:bg-secondary dark:hover:bg-gray-700 rounded" 
-                        title="Löschen"
+                        title={t('common.delete')}
                       >
                         🗑️
                       </button>
@@ -393,19 +397,21 @@ export default function Messages() {
                 </div>
                 
                 <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-                  <button 
-                    onClick={() => setShowReplyModal(true)}
-                    className="btn-primary"
-                  >
-                    Antworten
-                  </button>
+                  {!selectedMsg.isPoolEmail && (
+                    <button 
+                      onClick={() => setShowReplyModal(true)}
+                      className="btn-primary"
+                    >
+                      {t('messages.reply')}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-96">
                 <div className="text-center">
                   <div className="text-6xl mb-4">✉️</div>
-                  <p className="text-textSecondary dark:text-gray-400">Wählen Sie eine Nachricht aus</p>
+                  <p className="text-textSecondary dark:text-gray-400">{t('messages.selectMessage')}</p>
                 </div>
               </div>
             )}
@@ -418,17 +424,17 @@ export default function Messages() {
             <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
             <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
               <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Neue Nachricht</h2>
+                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">{t('messages.compose')}</h2>
               </Dialog.Title>
               
               <form onSubmit={handleCompose} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">An *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('messages.to')} *</label>
                   <Combobox value={selectedUser} onChange={setSelectedUser}>
                     <div className="relative">
                       <Combobox.Input
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholder="Name oder E-Mail eingeben..."
+                        placeholder={t('messages.recipientPlaceholder')}
                         displayValue={(user: User | null) => user ? (user.fullName || `${user.firstName} ${user.lastName}`) : ''}
                         onChange={(event) => setUserQuery(event.target.value)}
                         disabled={sending}
@@ -442,7 +448,7 @@ export default function Messages() {
                       >
                         <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-600">
                           {searchResults.length === 0 && userQuery !== '' ? (
-                            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Keine Benutzer gefunden</div>
+                            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{t('messages.noUsersFound')}</div>
                           ) : (
                             searchResults.map((user) => (
                               <Combobox.Option
@@ -477,7 +483,7 @@ export default function Messages() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Betreff *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('messages.subject')} *</label>
                   <input
                     type="text"
                     value={composeForm.subject}
@@ -485,12 +491,12 @@ export default function Messages() {
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                     required
                     disabled={sending}
-                    placeholder="Betreff eingeben"
+                    placeholder={t('messages.subjectPlaceholder')}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Nachricht *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('messages.message')} *</label>
                   <textarea
                     value={composeForm.content}
                     onChange={(e) => setComposeForm({ ...composeForm, content: e.target.value })}
@@ -498,7 +504,7 @@ export default function Messages() {
                     rows={8}
                     required
                     disabled={sending}
-                    placeholder="Ihre Nachricht..."
+                    placeholder={t('messages.messagePlaceholder')}
                   />
                 </div>
                 
@@ -514,7 +520,7 @@ export default function Messages() {
                       className="w-4 h-4 text-primary rounded focus:ring-primary"
                     />
                     <label htmlFor="assistantVisible" className="text-sm font-medium text-blue-800 dark:text-blue-300 cursor-pointer select-none">
-                      Assistent kann diese Nachricht sehen
+                      {t('messages.assistantCanSee')}
                     </label>
                   </div>
                 )}
@@ -526,7 +532,7 @@ export default function Messages() {
                       className="flex-1 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                       disabled={sending}
                     >
-                      Abbrechen
+                      {t('common.cancel')}
                     </button>
                   </Dialog.Close>
                   <button
@@ -534,7 +540,7 @@ export default function Messages() {
                     className="flex-1 btn-primary"
                     disabled={sending}
                   >
-                    {sending ? 'Wird gesendet...' : 'Senden'}
+                    {sending ? t('messages.sending') : t('messages.send')}
                   </button>
                 </div>
               </form>
@@ -548,17 +554,17 @@ export default function Messages() {
             <Dialog.Overlay className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50" />
             <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 z-50 max-h-[90vh] overflow-y-auto">
               <Dialog.Title className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">Antworten</h2>
+                <h2 className="text-xl font-semibold text-textPrimary dark:text-gray-100">{t('messages.replyTitle')}</h2>
               </Dialog.Title>
               
               <form onSubmit={handleReply} className="p-6 space-y-4">
                 <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded border border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">An: {selectedMsg?.sender}</p>
-                  <p className="text-sm text-textSecondary dark:text-gray-400">Betreff: Re: {selectedMsg?.subject}</p>
+                  <p className="text-sm text-textSecondary dark:text-gray-400 mb-1">{t('messages.toLabel')}: {selectedMsg?.sender}</p>
+                  <p className="text-sm text-textSecondary dark:text-gray-400">{t('messages.subject')}: Re: {selectedMsg?.subject}</p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">Antwort *</label>
+                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">{t('messages.replyLabel')} *</label>
                   <textarea
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
@@ -566,12 +572,12 @@ export default function Messages() {
                     rows={8}
                     required
                     disabled={sending}
-                    placeholder="Ihre Antwort..."
+                    placeholder={t('messages.replyPlaceholder')}
                   />
                 </div>
                 
                 <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded text-sm text-textSecondary dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                  <p className="font-medium mb-2">Ursprüngliche Nachricht:</p>
+                  <p className="font-medium mb-2">{t('messages.originalMessage')}</p>
                   <p className="whitespace-pre-wrap">{selectedMsg?.body}</p>
                 </div>
                 
@@ -582,7 +588,7 @@ export default function Messages() {
                       className="flex-1 btn-secondary dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                       disabled={sending}
                     >
-                      Abbrechen
+                      {t('common.cancel')}
                     </button>
                   </Dialog.Close>
                   <button
@@ -590,7 +596,7 @@ export default function Messages() {
                     className="flex-1 btn-primary"
                     disabled={sending}
                   >
-                    {sending ? 'Wird gesendet...' : 'Antwort senden'}
+                    {sending ? t('messages.sending') : t('messages.sendReply')}
                   </button>
                 </div>
               </form>
