@@ -357,9 +357,6 @@ public class ClientsController : ControllerBase
 
             client.CompanyName = request.Name;
             client.PhoneNumber = request.Phone;
-            client.Address = request.Address ?? client.Address;
-            client.City = request.City ?? client.City;
-            client.PostalCode = request.PostalCode ?? client.PostalCode;
             if (!string.IsNullOrEmpty(request.Status))
             {
                 client.IsActive = request.Status == "Aktiv";
