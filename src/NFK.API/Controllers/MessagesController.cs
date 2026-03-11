@@ -69,27 +69,38 @@ public class MessagesController : ControllerBase
             else if (userRole == "Assistant")
             {
                 // Assistants see their own messages + assigned consultant's messages
-                var assignment = await _context.AssistantAssignments
+                var assignments = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
                     .Join(_context.Users,
                         a => a.ConsultantUserId,
                         u => u.Id,
                         (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
-                    .FirstOrDefaultAsync();
+                    .ToListAsync();
 
-                if (assignment != null)
+                if (assignments.Count > 0)
                 {
-                    var consultantId = assignment.ConsultantUserId;
-                    var consultantAllowsAccess = assignment.ReceptionistCanSeeMessages;
+                    // Consultants that allow full visibility (ReceptionistCanSeeMessages = true)
+                    var fullAccessIds = assignments
+                        .Where(a => a.ReceptionistCanSeeMessages)
+                        .Select(a => a.ConsultantUserId)
+                        .ToList();
+                    // Consultants without full access – only AssistantVisible messages are shown
+                    var restrictedIds = assignments
+                        .Where(a => !a.ReceptionistCanSeeMessages)
+                        .Select(a => a.ConsultantUserId)
+                        .ToList();
 
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        // Show consultant messages: all if ReceptionistCanSeeMessages, otherwise only AssistantVisible ones
-                        ((consultantAllowsAccess || m.AssistantVisible) && (
-                            m.RecipientUserId == consultantId ||
-                            m.SenderUserId == consultantId)));
+                        // Full-access consultants: show ALL their messages
+                        (fullAccessIds.Contains(m.RecipientUserId) ||
+                         (m.SenderUserId != null && fullAccessIds.Contains(m.SenderUserId.Value))) ||
+                        // Restricted consultants: show only messages explicitly marked AssistantVisible
+                        (m.AssistantVisible && (
+                            restrictedIds.Contains(m.RecipientUserId) ||
+                            (m.SenderUserId != null && restrictedIds.Contains(m.SenderUserId.Value)))));
                 }
                 else
                 {
@@ -190,26 +201,34 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Assistant")
             {
-                var assignment = await _context.AssistantAssignments
+                var assignments = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
                     .Join(_context.Users,
                         a => a.ConsultantUserId,
                         u => u.Id,
                         (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
-                    .FirstOrDefaultAsync();
+                    .ToListAsync();
 
-                if (assignment != null)
+                if (assignments.Count > 0)
                 {
-                    var consultantId = assignment.ConsultantUserId;
-                    var consultantAllowsAccess = assignment.ReceptionistCanSeeMessages;
+                    var fullAccessIds = assignments
+                        .Where(a => a.ReceptionistCanSeeMessages)
+                        .Select(a => a.ConsultantUserId)
+                        .ToList();
+                    var restrictedIds = assignments
+                        .Where(a => !a.ReceptionistCanSeeMessages)
+                        .Select(a => a.ConsultantUserId)
+                        .ToList();
 
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        ((consultantAllowsAccess || m.AssistantVisible) && (
-                            m.RecipientUserId == consultantId ||
-                            m.SenderUserId == consultantId)));
+                        (fullAccessIds.Contains(m.RecipientUserId) ||
+                         (m.SenderUserId != null && fullAccessIds.Contains(m.SenderUserId.Value))) ||
+                        (m.AssistantVisible && (
+                            restrictedIds.Contains(m.RecipientUserId) ||
+                            (m.SenderUserId != null && restrictedIds.Contains(m.SenderUserId.Value)))));
                 }
                 else
                 {
@@ -265,7 +284,29 @@ public class MessagesController : ControllerBase
             if (message.RecipientUserId != currentUserId.Value && message.SenderUserId != currentUserId.Value)
             {
                 var userRole = User.FindFirst("role")?.Value;
-                if (userRole != "SuperAdmin")
+                if (userRole == "SuperAdmin")
+                {
+                    // SuperAdmin can see all messages
+                }
+                else if (userRole == "Assistant")
+                {
+                    // Assistant can see the message if it involves an assigned consultant with proper visibility
+                    var hasAccess = await _context.AssistantAssignments
+                        .Where(a => a.AssistantUserId == currentUserId.Value)
+                        .Join(_context.Users,
+                            a => a.ConsultantUserId,
+                            u => u.Id,
+                            (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
+                        .AnyAsync(a =>
+                            (message.RecipientUserId == a.ConsultantUserId || message.SenderUserId == a.ConsultantUserId) &&
+                            (a.ReceptionistCanSeeMessages || message.AssistantVisible));
+
+                    if (!hasAccess)
+                    {
+                        return Forbid();
+                    }
+                }
+                else
                 {
                     return Forbid();
                 }

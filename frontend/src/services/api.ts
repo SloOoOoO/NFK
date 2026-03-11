@@ -196,6 +196,7 @@ export const usersAPI = {
   deleteProfile: (confirmationText: string) => apiClient.delete('/users/profile', { data: { confirmationText } }),
   updateReceptionistVisibility: (receptionistCanSeeMessages: boolean) =>
     apiClient.put('/users/receptionist-visibility', { receptionistCanSeeMessages }),
+  getMyAssignment: () => apiClient.get('/users/my-assignment'),
 };
 
 // Health check

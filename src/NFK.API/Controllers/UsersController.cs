@@ -214,6 +214,41 @@ public class UsersController : ControllerBase
         }
     }
 
+    [HttpGet("my-assignment")]
+    public async Task<IActionResult> GetMyAssignment()
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userRole = User.FindFirst("role")?.Value;
+
+            if (userRole != "Assistant")
+            {
+                return StatusCode(403, new { error = "forbidden", message = "Nur Assistenten können ihre Zuweisung abrufen" });
+            }
+
+            var assignment = await _context.AssistantAssignments
+                .Include(a => a.ConsultantUser)
+                .FirstOrDefaultAsync(a => a.AssistantUserId == userId);
+
+            if (assignment == null)
+            {
+                return NotFound(new { error = "not_found", message = "Keine Zuweisung gefunden" });
+            }
+
+            return Ok(new
+            {
+                consultantUserId = assignment.ConsultantUserId,
+                consultantName = $"{assignment.ConsultantUser.FirstName} {assignment.ConsultantUser.LastName}"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching assistant assignment");
+            return StatusCode(500, new { error = "internal_error", message = "Fehler beim Abrufen der Zuweisung" });
+        }
+    }
+
     [HttpPut("receptionist-visibility")]
     [Authorize]
     public async Task<IActionResult> UpdateReceptionistVisibility([FromBody] UpdateReceptionistVisibilityRequest request)

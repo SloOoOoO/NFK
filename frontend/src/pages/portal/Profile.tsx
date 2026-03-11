@@ -18,6 +18,7 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [assignedConsultantName, setAssignedConsultantName] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,6 +41,15 @@ export default function Profile() {
         postalCode: response.data.postalCode || '',
         country: response.data.country || '',
       });
+      // Fetch assignment info for Assistant role
+      if (response.data.role === 'Assistant') {
+        try {
+          const assignmentRes = await usersAPI.getMyAssignment();
+          setAssignedConsultantName(assignmentRes.data.consultantName);
+        } catch {
+          // No assignment found – silently ignore
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
       if ((error as any)?.response?.status === 401) {
@@ -225,6 +235,11 @@ export default function Profile() {
                 </h2>
                 <p className="text-textSecondary dark:text-gray-400">{user.email}</p>
                 <p className="text-sm text-primary dark:text-blue-400 mt-1">{user.role}</p>
+                {user.role === 'Assistant' && assignedConsultantName && (
+                  <p className="text-sm text-textSecondary dark:text-gray-400 mt-1">
+                    Zugewiesen an: <span className="font-medium text-textPrimary dark:text-gray-200">{assignedConsultantName}</span>
+                  </p>
+                )}
               </div>
             </div>
 
