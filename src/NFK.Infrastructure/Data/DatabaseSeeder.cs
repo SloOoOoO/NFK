@@ -156,6 +156,15 @@ public static class DatabaseSeeder
             ConsultantUserId = consultantUser.Id
         };
         context.AssistantAssignments.Add(assistantAssignment);
+
+        // Also assign assistant to SuperAdmin (suheylUser) so assistant can see SuperAdmin messages
+        var assistantAssignmentSuperAdmin = new AssistantAssignment
+        {
+            AssistantUserId = assistantUser.Id,
+            ConsultantUserId = suheylUser.Id
+        };
+        context.AssistantAssignments.Add(assistantAssignmentSuperAdmin);
+
         await context.SaveChangesAsync();
 
         // Seed Clients
