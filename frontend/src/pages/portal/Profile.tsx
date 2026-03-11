@@ -19,6 +19,8 @@ export default function Profile() {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [assignedConsultantName, setAssignedConsultantName] = useState<string | null>(null);
+  const [receptionistCanSeeMessages, setReceptionistCanSeeMessages] = useState(true);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,6 +51,10 @@ export default function Profile() {
         } catch {
           // No assignment found – silently ignore
         }
+      }
+      // Set receptionistCanSeeMessages for Consultant/SuperAdmin
+      if (response.data.role === 'Consultant' || response.data.role === 'SuperAdmin') {
+        setReceptionistCanSeeMessages(response.data.receptionistCanSeeMessages ?? true);
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
@@ -143,8 +149,20 @@ export default function Profile() {
     }
   };
 
+  const handleReceptionistVisibilityToggle = async (value: boolean) => {
+    setUpdatingVisibility(true);
+    try {
+      await usersAPI.updateReceptionistVisibility(value);
+      setReceptionistCanSeeMessages(value);
+    } catch (error: any) {
+      console.error('Failed to update visibility setting:', error);
+      alert(error.response?.data?.message || 'Fehler beim Aktualisieren der Einstellung');
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
+
   const canEditField = (field: string) => {
-    // fullLegalName, email, and taxId are always read-only for ALL roles
     if (['fullLegalName', 'email', 'taxId'].includes(field)) {
       return false;
     }
@@ -462,6 +480,37 @@ export default function Profile() {
                     <label className="text-sm font-medium text-textSecondary dark:text-gray-300">Kammernummer</label>
                     <p className="text-textPrimary dark:text-gray-200 mt-1">{user.firmChamberRegistration || 'Nicht angegeben'}</p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Assistant Settings Section for Consultant/SuperAdmin */}
+            {(user.role === 'Consultant' || user.role === 'SuperAdmin') && (
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-lg mb-4 text-primary dark:text-blue-400">Assistent Einstellungen</h3>
+                <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                  <div>
+                    <p className="font-medium text-blue-800 dark:text-blue-300">Assistent kann alle meine Nachrichten sehen</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                      Wenn aktiviert, kann Ihr zugewiesener Assistent alle Ihre Nachrichten (auch ältere) lesen.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleReceptionistVisibilityToggle(!receptionistCanSeeMessages)}
+                    disabled={updatingVisibility}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      receptionistCanSeeMessages ? 'bg-primary dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    aria-checked={receptionistCanSeeMessages}
+                    role="switch"
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        receptionistCanSeeMessages ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
             )}
