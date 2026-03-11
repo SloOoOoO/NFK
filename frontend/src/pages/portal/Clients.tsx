@@ -59,9 +59,6 @@ export default function Clients() {
     email: '',
     contact: '',
     consultantUserId: undefined as number | undefined,
-    address: '',
-    city: '',
-    postalCode: '',
   });
   const [successMessage, setSuccessMessage] = useState('');
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
@@ -199,9 +196,6 @@ export default function Clients() {
       email: client.email,
       contact: client.contact,
       consultantUserId: client.consultantUserId,
-      address: client.address || '',
-      city: client.city || '',
-      postalCode: client.postalCode || '',
     });
     setShowEditModal(true);
   };
@@ -617,38 +611,6 @@ export default function Clients() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-300">Adresse</label>
-                    <input
-                      type="text"
-                      value={editClient.address}
-                      onChange={(e) => setEditClient({ ...editClient, address: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      disabled={editLoading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-300">Stadt</label>
-                    <input
-                      type="text"
-                      value={editClient.city}
-                      onChange={(e) => setEditClient({ ...editClient, city: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      disabled={editLoading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-300">Postleitzahl</label>
-                    <input
-                      type="text"
-                      value={editClient.postalCode}
-                      onChange={(e) => setEditClient({ ...editClient, postalCode: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      disabled={editLoading}
-                    />
-                  </div>
                 </div>
                 
                 <div className="flex gap-3 pt-4">

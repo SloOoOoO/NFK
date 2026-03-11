@@ -69,21 +69,27 @@ public class MessagesController : ControllerBase
             else if (userRole == "Assistant")
             {
                 // Assistants see their own messages + assigned consultant's messages
-                var assignedConsultantId = await _context.AssistantAssignments
+                var assignment = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
-                    .Select(a => (int?)a.ConsultantUserId)
+                    .Join(_context.Users,
+                        a => a.ConsultantUserId,
+                        u => u.Id,
+                        (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
                     .FirstOrDefaultAsync();
 
-                if (assignedConsultantId.HasValue)
+                if (assignment != null)
                 {
+                    var consultantId = assignment.ConsultantUserId;
+                    var consultantAllowsAccess = assignment.ReceptionistCanSeeMessages;
+
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        // Only show messages from the assigned consultant where AssistantVisible = true
-                        (m.AssistantVisible && (
-                            m.RecipientUserId == assignedConsultantId.Value ||
-                            m.SenderUserId == assignedConsultantId.Value)));
+                        // Show consultant messages: all if ReceptionistCanSeeMessages, otherwise only AssistantVisible ones
+                        ((consultantAllowsAccess || m.AssistantVisible) && (
+                            m.RecipientUserId == consultantId ||
+                            m.SenderUserId == consultantId)));
                 }
                 else
                 {
@@ -184,20 +190,26 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Assistant")
             {
-                var assignedConsultantId = await _context.AssistantAssignments
+                var assignment = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
-                    .Select(a => (int?)a.ConsultantUserId)
+                    .Join(_context.Users,
+                        a => a.ConsultantUserId,
+                        u => u.Id,
+                        (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
                     .FirstOrDefaultAsync();
 
-                if (assignedConsultantId.HasValue)
+                if (assignment != null)
                 {
+                    var consultantId = assignment.ConsultantUserId;
+                    var consultantAllowsAccess = assignment.ReceptionistCanSeeMessages;
+
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        (m.AssistantVisible && (
-                            m.RecipientUserId == assignedConsultantId.Value ||
-                            m.SenderUserId == assignedConsultantId.Value)));
+                        ((consultantAllowsAccess || m.AssistantVisible) && (
+                            m.RecipientUserId == consultantId ||
+                            m.SenderUserId == consultantId)));
                 }
                 else
                 {
