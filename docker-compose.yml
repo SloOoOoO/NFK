@@ -87,6 +87,8 @@ services:
       - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-Admin123!}
       # Encryption master key – MUST be overridden in production via .env or secrets manager
       - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY:-DevEncryptionKey32CharactersLong!}
+      # .NET hierarchical format so the configuration system maps it to Encryption:MasterKey
+      - Encryption__MasterKey=${ENCRYPTION_MASTER_KEY:-DevEncryptionKey32CharactersLong!}
     ports:
       - "8080:8080"
     depends_on:
