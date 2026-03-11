@@ -244,7 +244,6 @@ public class UsersController : ControllerBase
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var user = await _context.Users
-                .Include(u => u.UserRoles)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -252,81 +251,110 @@ public class UsersController : ControllerBase
                 return NotFound(new { error = "not_found", message = "Benutzer nicht gefunden" });
             }
 
-            // Soft delete user
-            user.IsDeleted = true;
-            user.IsActive = false;
-            user.UpdatedAt = DateTime.UtcNow;
+            var userEmail = user.Email;
+            var userName = user.FirstName;
 
-            // Delete all user's documents
-            var userDocuments = await _context.Documents
-                .Where(d => d.UploadedByUserId == userId && !d.IsDeleted)
-                .ToListAsync();
-
-            foreach (var doc in userDocuments)
-            {
-                doc.IsDeleted = true;
-                
-                // Delete physical file if it exists
-                if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
-                {
-                    try
-                    {
-                        System.IO.File.Delete(doc.FilePath);
-                    }
-                    catch (Exception fileEx)
-                    {
-                        _logger.LogWarning(fileEx, "Failed to delete physical file {FilePath}", doc.FilePath);
-                    }
-                }
-            }
-
-            // Soft delete user's messages (sender and receiver)
-            var userMessages = await _context.Set<Domain.Entities.Messaging.Message>()
-                .Where(m => m.SenderUserId == userId || m.RecipientUserId == userId)
-                .ToListAsync();
-
-            foreach (var message in userMessages)
-            {
-                message.IsDeleted = true;
-            }
-
-            // Cancel user's appointments
-            var userAppointments = await _context.Set<Domain.Entities.Other.Appointment>()
-                .Where(a => a.ClientId == userId || a.ConsultantUserId == userId)
-                .ToListAsync();
-
-            foreach (var appointment in userAppointments)
-            {
-                appointment.Status = "Cancelled";
-                appointment.UpdatedAt = DateTime.UtcNow;
-            }
-
-            // Log the deletion event
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var auditLog = new Domain.Entities.Audit.AuditLog
-            {
-                UserId = userId,
-                Action = "ProfileDeletion",
-                EntityType = "User",
-                EntityId = userId,
-                IpAddress = ipAddress,
-                Details = $"User {user.Email} deleted their profile",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            _context.Set<Domain.Entities.Audit.AuditLog>().Add(auditLog);
-
-            await _context.SaveChangesAsync();
-
-            // Send farewell email (best effort - don't fail the deletion if email fails)
+            // Send farewell email BEFORE deleting the user record
             try
             {
-                await _emailService.SendAccountDeletionEmailAsync(user.Email, user.FirstName);
+                await _emailService.SendAccountDeletionEmailAsync(userEmail, userName);
             }
             catch (Exception emailEx)
             {
-                _logger.LogWarning(emailEx, "Failed to send deletion email to {Email}", user.Email);
+                _logger.LogWarning(emailEx, "Failed to send deletion email to {Email}", userEmail);
             }
+
+            // Hard delete: delete physical document files first
+            var docFilePaths = await _context.Documents
+                .Where(d => d.UploadedByUserId == userId)
+                .Select(d => d.FilePath)
+                .ToListAsync();
+
+            foreach (var filePath in docFilePaths.Where(p => !string.IsNullOrEmpty(p)))
+            {
+                try
+                {
+                    if (System.IO.File.Exists(filePath))
+                        System.IO.File.Delete(filePath!);
+                }
+                catch (Exception fileEx)
+                {
+                    _logger.LogWarning(fileEx, "Failed to delete physical file {FilePath}", filePath);
+                }
+            }
+
+            // Hard delete using direct SQL to bypass the soft-delete SaveChangesAsync override.
+            // Deletion order respects foreign-key constraints (children before parent).
+            // All SQL operations are wrapped in a transaction to ensure atomicity.
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            // Anonymize messages — preserve conversation history but remove sender/recipient identity
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE Messages SET SenderUserId = NULL WHERE SenderUserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE Messages SET RecipientUserId = NULL WHERE RecipientUserId = {userId}");
+
+            // Nullify optional FK references so parent records survive
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE Cases SET AssignedToUserId = NULL WHERE AssignedToUserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE Clients SET ConsultantUserId = NULL WHERE ConsultantUserId = {userId}");
+
+            // Delete AssistantAssignments (user may be assistant or consultant)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM AssistantAssignments WHERE AssistantUserId = {userId} OR ConsultantUserId = {userId}");
+
+            // Delete DocumentComments
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM DocumentComments WHERE UserId = {userId}");
+
+            // Delete Documents (physical files already deleted above)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Documents WHERE UploadedByUserId = {userId}");
+
+            // Delete Appointments where this user is consultant (client appointments cascade from Clients delete)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Appointments WHERE ConsultantUserId = {userId}");
+
+            // Delete Clients (cascades to Appointments and Cases linked to the client)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Clients WHERE UserId = {userId}");
+
+            // Delete authentication and session records
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM EmailVerificationTokens WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM PasswordHistories WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM PasswordResetTokens WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM RefreshTokens WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM UserSessions WHERE UserId = {userId}");
+
+            // Delete role and permission assignments
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM UserRoles WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM UserPermissions WHERE UserId = {userId}");
+
+            // Delete audit and tracking records
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM AuditLogs WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM PageVisits WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Notifications WHERE UserId = {userId}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM LoginAttempts WHERE Email = {userEmail}");
+
+            // Finally, hard delete the user record itself
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Users WHERE Id = {userId}");
+
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("User {UserId} ({Email}) hard-deleted their account", userId, userEmail);
 
             return Ok(new { 
                 success = true,

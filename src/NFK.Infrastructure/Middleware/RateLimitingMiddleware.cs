@@ -16,7 +16,7 @@ public class RateLimitingMiddleware
     // Rate limit configurations
     private const int LoginAttempts = 5;
     private const int LoginWindowMinutes = 15;
-    private const int ApiRequestsPerMinute = 200;
+    private const int ApiRequestsPerMinute = 500;
     private const int DocumentDownloadsPerHour = 50;
 
     // Auth endpoints that must never be rate-limited (required for session recovery)
@@ -25,6 +25,8 @@ public class RateLimitingMiddleware
         "/api/v1/auth/me",
         "/api/v1/auth/refresh",
         "/api/v1/auth/login",
+        "/api/v1/messages/unread-count",
+        "/api/v1/notifications",
     ];
     
     public RateLimitingMiddleware(RequestDelegate next, IDistributedCache cache)

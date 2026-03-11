@@ -39,5 +39,6 @@ public record UpdateClientRequest(
     string? Status,
     string? Address,
     string? City,
-    string? PostalCode
+    string? PostalCode,
+    int? ConsultantUserId = null
 );

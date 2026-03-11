@@ -20,6 +20,7 @@ interface Client {
   address?: string;
   city?: string;
   postalCode?: string;
+  consultantUserId?: number;
 }
 
 interface ClientUser {
@@ -51,14 +52,13 @@ export default function Clients() {
     name: '',
     email: '',
     contact: '',
-    phone: '',
     consultantUserId: undefined as number | undefined,
   });
   const [editClient, setEditClient] = useState({
     name: '',
     email: '',
     contact: '',
-    phone: '',
+    consultantUserId: undefined as number | undefined,
     address: '',
     city: '',
     postalCode: '',
@@ -143,7 +143,7 @@ export default function Clients() {
         consultantUserId: newClient.consultantUserId || undefined,
       });
       setShowCreateModal(false);
-      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: undefined });
+      setNewClient({ userId: 0, name: '', email: '', contact: '', consultantUserId: undefined });
       setSuccessMessage('Mandant erfolgreich erstellt');
       setTimeout(() => setSuccessMessage(''), 3000);
       await fetchClients();
@@ -198,7 +198,7 @@ export default function Clients() {
       name: client.name,
       email: client.email,
       contact: client.contact,
-      phone: client.phone || '',
+      consultantUserId: client.consultantUserId,
       address: client.address || '',
       city: client.city || '',
       postalCode: client.postalCode || '',
@@ -524,23 +524,12 @@ export default function Clients() {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Telefon</label>
-                  <input
-                    type="tel"
-                    value={newClient.phone}
-                    onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                    disabled={createLoading}
-                  />
-                </div>
-                
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
                     onClick={() => {
                       setShowCreateModal(false);
-                      setNewClient({ userId: 0, name: '', email: '', contact: '', phone: '', consultantUserId: undefined });
+                      setNewClient({ userId: 0, name: '', email: '', contact: '', consultantUserId: undefined });
                     }}
                     className="flex-1 btn-secondary"
                     disabled={createLoading}
@@ -589,17 +578,6 @@ export default function Clients() {
                       disabled={editLoading}
                     />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2 dark:text-gray-300">Telefon</label>
-                    <input
-                      type="tel"
-                      value={editClient.phone}
-                      onChange={(e) => setEditClient({ ...editClient, phone: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      disabled={editLoading}
-                    />
-                  </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-2 dark:text-gray-300">E-Mail *</label>
@@ -613,16 +591,30 @@ export default function Clients() {
                     />
                   </div>
                   
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2 dark:text-gray-300">Ansprechpartner *</label>
-                    <input
-                      type="text"
-                      value={editClient.contact}
-                      onChange={(e) => setEditClient({ ...editClient, contact: e.target.value })}
+                    <select
+                      value={editClient.consultantUserId ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? Number(e.target.value) : undefined;
+                        const selected = val ? consultantUsers.find(u => u.id === val) : undefined;
+                        setEditClient({
+                          ...editClient,
+                          consultantUserId: val,
+                          contact: selected ? `${selected.firstName} ${selected.lastName}` : editClient.contact,
+                        });
+                      }}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                       required
                       disabled={editLoading}
-                    />
+                    >
+                      <option value="">Ansprechpartner auswählen...</option>
+                      {consultantUsers.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.firstName} {u.lastName} ({u.role})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

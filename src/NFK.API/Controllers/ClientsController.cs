@@ -364,8 +364,15 @@ public class ClientsController : ControllerBase
             {
                 client.IsActive = request.Status == "Aktiv";
             }
+            if (request.ConsultantUserId.HasValue)
+            {
+                client.ConsultantUserId = request.ConsultantUserId.Value;
+            }
 
             await _context.SaveChangesAsync();
+
+            // Reload the consultant navigation property in case it was updated
+            await _context.Entry(client).Reference(c => c.ConsultantUser).LoadAsync();
 
             var clientDto = new ClientDto(
                 client.Id,
