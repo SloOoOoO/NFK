@@ -15,6 +15,7 @@ interface Conversation {
   unreadCount: number;
   isPoolEmail: boolean;
   lastMessageAssistantVisible: boolean;
+  viaConsultantName?: string;
 }
 
 interface ChatMessage {
@@ -116,6 +117,7 @@ export default function Messages() {
         unreadCount: c.unreadCount,
         isPoolEmail: c.isPoolEmail,
         lastMessageAssistantVisible: c.lastMessageAssistantVisible,
+        viaConsultantName: c.viaConsultantName ?? undefined,
       }));
       setConversations(data);
     } catch (err) {
@@ -226,11 +228,6 @@ export default function Messages() {
     return '🧑';
   };
 
-  const formatTime = (timestamp: string) => {
-    // Return only time part if today, otherwise date
-    return timestamp;
-  };
-
   const isActive = (conv: Conversation) =>
     activeConversation?.otherUserId === conv.otherUserId &&
     activeConversation?.isPoolEmail === conv.isPoolEmail;
@@ -305,6 +302,11 @@ export default function Messages() {
                           {conv.lastMessageTime.split(',')[0]}
                         </span>
                       </div>
+                      {conv.viaConsultantName && (
+                        <p className="text-xs text-blue-500 dark:text-blue-400 truncate">
+                          via {conv.viaConsultantName}
+                        </p>
+                      )}
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-textSecondary dark:text-gray-400 truncate flex-1">
                           {conv.lastMessagePreview}
@@ -342,6 +344,9 @@ export default function Messages() {
                       </h3>
                       {activeConversation.isPoolEmail && (
                         <span className="text-xs text-purple-600 dark:text-purple-400">Pool E-Mail</span>
+                      )}
+                      {activeConversation.viaConsultantName && (
+                        <span className="text-xs text-blue-500 dark:text-blue-400">via {activeConversation.viaConsultantName}</span>
                       )}
                     </div>
                   </div>
@@ -415,6 +420,12 @@ export default function Messages() {
                   <div className="bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 p-3 flex-shrink-0 text-center">
                     <p className="text-xs text-textSecondary dark:text-gray-400">
                       📧 {t('messages.poolEmailReadOnly')}
+                    </p>
+                  </div>
+                ) : activeConversation.viaConsultantName ? (
+                  <div className="bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 p-3 flex-shrink-0 text-center">
+                    <p className="text-xs text-textSecondary dark:text-gray-400">
+                      👁 {t('messages.observedReadOnly', { consultant: activeConversation.viaConsultantName })}
                     </p>
                   </div>
                 ) : (
