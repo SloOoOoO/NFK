@@ -13,7 +13,7 @@ namespace NFK.Infrastructure.Data;
 
 public static class DatabaseSeeder
 {
-    public static async Task SeedAsync(ApplicationDbContext context, PasswordHasher passwordHasher)
+    public static async Task SeedAsync(ApplicationDbContext context, PasswordHasher passwordHasher, EncryptionService encryption)
     {
         // Always ensure the RegisteredUser role exists (idempotent – migration may have added it already)
         if (!await context.Roles.AnyAsync(r => r.Name == "RegisteredUser"))
@@ -372,16 +372,20 @@ public static class DatabaseSeeder
             {
                 SenderUserId = consultantUser.Id,
                 RecipientUserId = superAdminUser.Id,
-                Subject = "Dokumente für Jahresabschluss",
-                Content = "Sehr geehrter Herr Berater,\n\nanbei sende ich Ihnen die angeforderten Unterlagen für den Jahresabschluss 2024. Bitte prüfen Sie die Vollständigkeit.\n\nMit freundlichen Grüßen\nAnna Schmidt",
+                Subject = encryption.Encrypt("Dokumente für Jahresabschluss")
+                    ?? throw new InvalidOperationException("Failed to encrypt message subject"),
+                Content = encryption.Encrypt("Sehr geehrter Herr Berater,\n\nanbei sende ich Ihnen die angeforderten Unterlagen für den Jahresabschluss 2024. Bitte prüfen Sie die Vollständigkeit.\n\nMit freundlichen Grüßen\nAnna Schmidt")
+                    ?? throw new InvalidOperationException("Failed to encrypt message content"),
                 IsRead = false
             },
             new Message
             {
                 SenderUserId = superAdminUser.Id,
                 RecipientUserId = consultantUser.Id,
-                Subject = "Rückfrage zu Belegen Q4",
-                Content = "Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nMax Müller",
+                Subject = encryption.Encrypt("Rückfrage zu Belegen Q4")
+                    ?? throw new InvalidOperationException("Failed to encrypt message subject"),
+                Content = encryption.Encrypt("Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nMax Müller")
+                    ?? throw new InvalidOperationException("Failed to encrypt message content"),
                 IsRead = true,
                 ReadAt = DateTime.UtcNow.AddHours(-2)
             },
@@ -389,8 +393,10 @@ public static class DatabaseSeeder
             {
                 SenderUserId = superAdminUser.Id,
                 RecipientUserId = superAdminUser.Id,
-                Subject = "Fall-Update: Umsatzsteuervoranmeldung Q4",
-                Content = "Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: Max Müller\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"),
+                Subject = encryption.Encrypt("Fall-Update: Umsatzsteuervoranmeldung Q4")
+                    ?? throw new InvalidOperationException("Failed to encrypt message subject"),
+                Content = encryption.Encrypt("Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: Max Müller\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"))
+                    ?? throw new InvalidOperationException("Failed to encrypt message content"),
                 IsRead = false
             }
         };
