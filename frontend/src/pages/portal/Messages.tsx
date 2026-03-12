@@ -17,6 +17,7 @@ interface Message {
   unread: boolean;
   isPoolEmail?: boolean;
   isSent?: boolean;
+  assistantVisible?: boolean;
 }
 
 interface User {
@@ -42,6 +43,7 @@ export default function Messages() {
   const [userQuery, setUserQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [replyContent, setReplyContent] = useState('');
+  const [replyAssistantVisible, setReplyAssistantVisible] = useState(false);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -163,9 +165,10 @@ export default function Messages() {
     if (!selectedMessage) return;
     setSending(true);
     try {
-      await messagesAPI.reply(selectedMessage, replyContent);
+      await messagesAPI.reply(selectedMessage, replyContent, replyAssistantVisible);
       setShowReplyModal(false);
       setReplyContent('');
+      setReplyAssistantVisible(false);
       await fetchMessages();
     } catch (error) {
       console.error('Error sending reply:', error);
@@ -187,6 +190,11 @@ export default function Messages() {
       console.error('Error deleting message:', error);
       alert(t('messages.deleteError'));
     }
+  };
+
+  const handleOpenReplyModal = (msg: Message) => {
+    setReplyAssistantVisible(msg.assistantVisible ?? false);
+    setShowReplyModal(true);
   };
 
   const selectedMsg = messages.find(m => m.id === selectedMessage);
@@ -372,7 +380,7 @@ export default function Messages() {
                     <div className="flex gap-2">
                       {!selectedMsg.isPoolEmail && (
                         <button 
-                          onClick={() => setShowReplyModal(true)}
+                          onClick={() => handleOpenReplyModal(selectedMsg)}
                           className="p-2 hover:bg-secondary dark:hover:bg-gray-700 rounded" 
                           title={t('messages.reply')}
                         >
@@ -399,7 +407,7 @@ export default function Messages() {
                 <div className="p-6 border-t border-gray-200 dark:border-gray-700">
                   {!selectedMsg.isPoolEmail && (
                     <button 
-                      onClick={() => setShowReplyModal(true)}
+                      onClick={() => handleOpenReplyModal(selectedMsg)}
                       className="btn-primary"
                     >
                       {t('messages.reply')}
@@ -580,6 +588,23 @@ export default function Messages() {
                   <p className="font-medium mb-2">{t('messages.originalMessage')}</p>
                   <p className="whitespace-pre-wrap">{selectedMsg?.body}</p>
                 </div>
+                
+                {/* Assistant visibility toggle - only for Consultant/SuperAdmin */}
+                {(currentUser?.role === 'Consultant' || currentUser?.role === 'SuperAdmin') && (
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                    <input
+                      type="checkbox"
+                      id="replyAssistantVisible"
+                      checked={replyAssistantVisible}
+                      onChange={(e) => setReplyAssistantVisible(e.target.checked)}
+                      disabled={sending}
+                      className="w-4 h-4 text-primary rounded focus:ring-primary"
+                    />
+                    <label htmlFor="replyAssistantVisible" className="text-sm font-medium text-blue-800 dark:text-blue-300 cursor-pointer select-none">
+                      {t('messages.assistantCanSee')}
+                    </label>
+                  </div>
+                )}
                 
                 <div className="flex gap-3 pt-4">
                   <Dialog.Close asChild>

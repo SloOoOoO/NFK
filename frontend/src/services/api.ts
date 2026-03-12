@@ -154,7 +154,7 @@ export const messagesAPI = {
   markAsRead: (id: number) => apiClient.put(`/messages/${id}/read`),
   send: (data: { recipientUserId: number; subject: string; content: string; caseId?: number; assistantVisible?: boolean }) => 
     apiClient.post('/messages/send', data),
-  reply: (id: number, content: string) => apiClient.post(`/messages/${id}/reply`, { content }),
+  reply: (id: number, content: string, assistantVisible?: boolean) => apiClient.post(`/messages/${id}/reply`, { content, assistantVisible }),
   delete: (id: number) => apiClient.delete(`/messages/${id}`),
 };
 
@@ -194,8 +194,6 @@ export const usersAPI = {
   search: (query: string) => apiClient.get('/users/search', { params: { query } }),
   updateProfile: (data: Record<string, unknown>) => apiClient.put('/users/profile', data),
   deleteProfile: (confirmationText: string) => apiClient.delete('/users/profile', { data: { confirmationText } }),
-  updateReceptionistVisibility: (receptionistCanSeeMessages: boolean) =>
-    apiClient.put('/users/receptionist-visibility', { receptionistCanSeeMessages }),
   getMyAssignment: () => apiClient.get('/users/my-assignment'),
 };
 

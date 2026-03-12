@@ -50,9 +50,6 @@ public class User : BaseEntity
     public DateTime? PasswordChangedAt { get; set; }
     public DateTime? PasswordExpiresAt { get; set; }
 
-    // Messaging settings
-    public bool ReceptionistCanSeeMessages { get; set; } = true;
-
     // Navigation properties
     public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();

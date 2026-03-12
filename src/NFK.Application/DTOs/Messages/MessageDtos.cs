@@ -27,5 +27,6 @@ public record SendMessageRequest(
 );
 
 public record ReplyMessageRequest(
-    string Content
+    string Content,
+    bool? AssistantVisible = null
 );

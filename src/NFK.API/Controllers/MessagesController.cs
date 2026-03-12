@@ -68,33 +68,22 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Assistant")
             {
-                // Assistants see their own messages + assigned consultant's messages
-                var assignments = await _context.AssistantAssignments
+                // Assistants see: own messages + pool emails + messages where AssistantVisible=true involving their assigned consultants
+                var consultantIds = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
-                    .Join(_context.Users,
-                        a => a.ConsultantUserId,
-                        u => u.Id,
-                        (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
+                    .Select(a => a.ConsultantUserId)
                     .ToListAsync();
 
-                if (assignments.Count > 0)
+                if (consultantIds.Count > 0)
                 {
-                    var allConsultantIds = assignments.Select(a => a.ConsultantUserId).ToList();
-                    // Consultants that allow full visibility (ReceptionistCanSeeMessages = true)
-                    var fullAccessIds = assignments
-                        .Where(a => a.ReceptionistCanSeeMessages)
-                        .Select(a => a.ConsultantUserId)
-                        .ToList();
-
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        // Any message explicitly marked AssistantVisible is always shown
-                        m.AssistantVisible ||
-                        // Full-access consultants: show ALL their messages
-                        (fullAccessIds.Contains(m.RecipientUserId) ||
-                         (m.SenderUserId.HasValue && fullAccessIds.Contains(m.SenderUserId.Value))));
+                        // Only messages explicitly marked AssistantVisible involving assigned consultants
+                        (m.AssistantVisible &&
+                         (consultantIds.Contains(m.RecipientUserId) ||
+                          (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)))));
                 }
                 else
                 {
@@ -195,31 +184,20 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Assistant")
             {
-                var assignments = await _context.AssistantAssignments
+                var consultantIds = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
-                    .Join(_context.Users,
-                        a => a.ConsultantUserId,
-                        u => u.Id,
-                        (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
+                    .Select(a => a.ConsultantUserId)
                     .ToListAsync();
 
-                if (assignments.Count > 0)
+                if (consultantIds.Count > 0)
                 {
-                    var allConsultantIds = assignments.Select(a => a.ConsultantUserId).ToList();
-                    var fullAccessIds = assignments
-                        .Where(a => a.ReceptionistCanSeeMessages)
-                        .Select(a => a.ConsultantUserId)
-                        .ToList();
-
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        // Any message explicitly marked AssistantVisible is always shown
-                        m.AssistantVisible ||
-                        // Full-access consultants: show ALL their messages
-                        (fullAccessIds.Contains(m.RecipientUserId) ||
-                         (m.SenderUserId.HasValue && fullAccessIds.Contains(m.SenderUserId.Value))));
+                        (m.AssistantVisible &&
+                         (consultantIds.Contains(m.RecipientUserId) ||
+                          (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)))));
                 }
                 else
                 {
@@ -281,25 +259,13 @@ public class MessagesController : ControllerBase
                 }
                 else if (userRole == "Assistant")
                 {
-                    // Assistant can see the message if it is explicitly marked AssistantVisible,
-                    // or if it involves an assigned consultant with proper visibility
-                    bool hasAccess;
-                    if (message.AssistantVisible)
-                    {
-                        hasAccess = true;
-                    }
-                    else
-                    {
-                        hasAccess = await _context.AssistantAssignments
-                            .Where(a => a.AssistantUserId == currentUserId.Value)
-                            .Join(_context.Users,
-                                a => a.ConsultantUserId,
-                                u => u.Id,
-                                (a, u) => new { a.ConsultantUserId, u.ReceptionistCanSeeMessages })
+                    // Assistant can see the message only if it is explicitly marked AssistantVisible
+                    // and involves an assigned consultant
+                    bool hasAccess = message.AssistantVisible &&
+                        await _context.AssistantAssignments
                             .AnyAsync(a =>
-                                (message.RecipientUserId == a.ConsultantUserId || message.SenderUserId == a.ConsultantUserId) &&
-                                a.ReceptionistCanSeeMessages);
-                    }
+                                a.AssistantUserId == currentUserId.Value &&
+                                (message.RecipientUserId == a.ConsultantUserId || message.SenderUserId == a.ConsultantUserId));
 
                     if (!hasAccess)
                     {
@@ -507,7 +473,8 @@ public class MessagesController : ControllerBase
                 Content = _encryption.Encrypt(request.Content) ?? request.Content,
                 CaseId = originalMessage.CaseId,
                 IsRead = false,
-                IsPoolEmail = false
+                IsPoolEmail = false,
+                AssistantVisible = request.AssistantVisible ?? originalMessage.AssistantVisible
             };
 
             _context.Messages.Add(replyMessage);

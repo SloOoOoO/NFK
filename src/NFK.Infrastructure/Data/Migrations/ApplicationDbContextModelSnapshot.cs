@@ -1451,9 +1451,6 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Property<string>("PostalCode")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("ReceptionistCanSeeMessages")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Salutation")
                         .HasColumnType("nvarchar(max)");
 
