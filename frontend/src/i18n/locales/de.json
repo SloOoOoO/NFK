@@ -299,7 +299,14 @@
     "deleteConfirm": "Möchten Sie diese Nachricht wirklich löschen?",
     "deleteError": "Fehler beim Löschen der Nachricht",
     "previous": "Vorherige",
-    "next": "Nächste"
+    "next": "Nächste",
+    "newChat": "Neuer Chat",
+    "conversations": "Unterhaltungen",
+    "noConversations": "Keine Unterhaltungen",
+    "selectConversation": "Wählen Sie eine Unterhaltung aus",
+    "selectConversationHint": "Klicken Sie auf eine Unterhaltung in der linken Leiste",
+    "startConversation": "Noch keine Nachrichten. Schreiben Sie die erste Nachricht!",
+    "typeMessage": "Nachricht eingeben... (Enter zum Senden)"
   },
   "calendar": {
     "title": "Kalender",

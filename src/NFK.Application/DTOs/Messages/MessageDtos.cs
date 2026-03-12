@@ -30,3 +30,25 @@ public record ReplyMessageRequest(
     string Content,
     bool? AssistantVisible = null
 );
+
+public record ConversationDto(
+    int? OtherUserId,
+    string OtherUserName,
+    string LastMessagePreview,
+    DateTime LastMessageTime,
+    int UnreadCount,
+    bool IsPoolEmail,
+    bool LastMessageAssistantVisible
+);
+
+public record ConversationMessageDto(
+    int Id,
+    int? SenderId,
+    string SenderName,
+    string Content,
+    string Subject,
+    DateTime Timestamp,
+    bool IsRead,
+    bool IsMine,
+    bool AssistantVisible
+);
