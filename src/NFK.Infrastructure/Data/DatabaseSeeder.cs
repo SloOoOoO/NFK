@@ -150,20 +150,24 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         // Seed AssistantAssignment: assign assistant@nfk.de to consultant@nfk.de
-        var assistantAssignment = new AssistantAssignment
+        if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == consultantUser.Id))
         {
-            AssistantUserId = assistantUser.Id,
-            ConsultantUserId = consultantUser.Id
-        };
-        context.AssistantAssignments.Add(assistantAssignment);
+            context.AssistantAssignments.Add(new AssistantAssignment
+            {
+                AssistantUserId = assistantUser.Id,
+                ConsultantUserId = consultantUser.Id
+            });
+        }
 
         // Also assign assistant to SuperAdmin (suheylUser) so assistant can see SuperAdmin messages
-        var assistantAssignmentSuperAdmin = new AssistantAssignment
+        if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == suheylUser.Id))
         {
-            AssistantUserId = assistantUser.Id,
-            ConsultantUserId = suheylUser.Id
-        };
-        context.AssistantAssignments.Add(assistantAssignmentSuperAdmin);
+            context.AssistantAssignments.Add(new AssistantAssignment
+            {
+                AssistantUserId = assistantUser.Id,
+                ConsultantUserId = suheylUser.Id
+            });
+        }
 
         await context.SaveChangesAsync();
 
