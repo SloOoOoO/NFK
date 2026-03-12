@@ -557,6 +557,16 @@ public class MessagesController : ControllerBase
 
             var userRole = User.FindFirst("role")?.Value ?? "";
 
+            // Fetch assigned consultant IDs for assistant role (empty for all other roles)
+            var assistantConsultantIds = new List<int>();
+            if (userRole == "Assistant")
+            {
+                assistantConsultantIds = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == currentUserId.Value)
+                    .Select(a => a.ConsultantUserId)
+                    .ToListAsync();
+            }
+
             // Build base query using same access rules as GetAll
             IQueryable<Domain.Entities.Messaging.Message> query = _context.Messages
                 .Include(m => m.SenderUser)
@@ -578,20 +588,15 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Assistant")
             {
-                var consultantIds = await _context.AssistantAssignments
-                    .Where(a => a.AssistantUserId == currentUserId.Value)
-                    .Select(a => a.ConsultantUserId)
-                    .ToListAsync();
-
-                if (consultantIds.Count > 0)
+                if (assistantConsultantIds.Count > 0)
                 {
                     query = query.Where(m =>
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
                         (m.AssistantVisible &&
-                         (consultantIds.Contains(m.RecipientUserId) ||
-                          (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)))));
+                         (assistantConsultantIds.Contains(m.RecipientUserId) ||
+                          (m.SenderUserId.HasValue && assistantConsultantIds.Contains(m.SenderUserId.Value)))));
                 }
                 else
                 {
@@ -641,20 +646,32 @@ public class MessagesController : ControllerBase
             var directMessages = messages
                 .Where(m => !m.IsPoolEmail && (m.SenderUserId == currentUserId.Value || m.SenderUserId.HasValue))
                 .ToList();
+
+            // For assistants, observed consultant↔client messages (where assistant is neither sender
+            // nor recipient) must be grouped by the client (non-consultant) user, not by the consultant.
             var grouped = directMessages
-                .GroupBy(m => m.SenderUserId == currentUserId.Value ? m.RecipientUserId : m.SenderUserId!.Value)
+                .GroupBy(m =>
+                {
+                    if (m.SenderUserId == currentUserId.Value)
+                        return m.RecipientUserId;
+                    if (m.RecipientUserId == currentUserId.Value)
+                        return m.SenderUserId!.Value;
+                    // Observed message (assistant is neither sender nor recipient):
+                    // group by the non-consultant user so the conversation appears under the client.
+                    if (m.SenderUserId.HasValue && assistantConsultantIds.Contains(m.SenderUserId.Value))
+                        return m.RecipientUserId; // sender is consultant → group by recipient (client)
+                    return m.SenderUserId!.Value; // recipient is consultant → group by sender (client)
+                })
                 .ToList();
 
             foreach (var group in grouped.OrderByDescending(g => g.Max(m => m.CreatedAt)))
             {
                 var latest = group.OrderByDescending(m => m.CreatedAt).First();
-                var otherUserId = latest.SenderUserId == currentUserId.Value
-                    ? latest.RecipientUserId
-                    : latest.SenderUserId!.Value;
+                var otherUserId = group.Key;
 
-                var otherUser = latest.SenderUserId == currentUserId.Value
-                    ? latest.RecipientUser
-                    : latest.SenderUser;
+                // Resolve the user object for the group key (the "other user")
+                var otherUser = group.FirstOrDefault(m => m.SenderUserId == otherUserId)?.SenderUser
+                    ?? group.FirstOrDefault(m => m.RecipientUserId == otherUserId)?.RecipientUser;
 
                 var otherUserName = otherUser != null
                     ? $"{otherUser.FirstName} {otherUser.LastName}"
@@ -724,23 +741,32 @@ public class MessagesController : ControllerBase
                 // For assistants, apply visibility restrictions
                 if (userRole == "Assistant")
                 {
-                    var hasAssignment = await _context.AssistantAssignments
-                        .AnyAsync(a => a.AssistantUserId == currentUserId.Value && a.ConsultantUserId == userId);
+                    var consultantIds = await _context.AssistantAssignments
+                        .Where(a => a.AssistantUserId == currentUserId.Value)
+                        .Select(a => a.ConsultantUserId)
+                        .ToListAsync();
 
-                    if (!hasAssignment)
+                    if (consultantIds.Contains(userId))
                     {
-                        // Only own messages allowed
-                        query = query.Where(m =>
-                            m.SenderUserId == currentUserId.Value ||
-                            m.RecipientUserId == currentUserId.Value);
-                    }
-                    else
-                    {
-                        // For assigned consultants, only AssistantVisible messages (plus own)
+                        // userId is one of the assigned consultants: show AssistantVisible messages plus own
                         query = query.Where(m =>
                             m.SenderUserId == currentUserId.Value ||
                             m.RecipientUserId == currentUserId.Value ||
                             m.AssistantVisible);
+                    }
+                    else
+                    {
+                        // userId is a client (or someone else): show the assistant's own direct messages
+                        // with userId PLUS any AssistantVisible messages between assigned consultants and userId
+                        query = _context.Messages
+                            .Include(m => m.SenderUser)
+                            .Include(m => m.RecipientUser)
+                            .Where(m => !m.IsPoolEmail && (
+                                (m.SenderUserId == currentUserId.Value && m.RecipientUserId == userId) ||
+                                (m.SenderUserId == userId && m.RecipientUserId == currentUserId.Value) ||
+                                (m.AssistantVisible && consultantIds.Count > 0 &&
+                                 ((m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value) && m.RecipientUserId == userId) ||
+                                  (m.SenderUserId == userId && consultantIds.Contains(m.RecipientUserId))))));
                     }
                 }
             }

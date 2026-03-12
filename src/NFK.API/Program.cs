@@ -228,8 +228,10 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Running database migrations...");
         await context.Database.MigrateAsync();
         
+        var encryption = services.GetRequiredService<NFK.Infrastructure.Security.EncryptionService>();
+        
         logger.LogInformation("Seeding database...");
-        await DatabaseSeeder.SeedAsync(context, passwordHasher);
+        await DatabaseSeeder.SeedAsync(context, passwordHasher, encryption);
         
         logger.LogInformation("Database initialization completed successfully");
     }
