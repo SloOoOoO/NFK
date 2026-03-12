@@ -542,6 +542,255 @@ public class MessagesController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Returns a list of conversations (grouped by the other user) for the current user.
+    /// Pool emails appear as a single special conversation entry.
+    /// </summary>
+    [HttpGet("conversations")]
+    public async Task<IActionResult> GetConversations()
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+
+            var userRole = User.FindFirst("role")?.Value ?? "";
+
+            // Build base query using same access rules as GetAll
+            IQueryable<Domain.Entities.Messaging.Message> query = _context.Messages
+                .Include(m => m.SenderUser)
+                .Include(m => m.RecipientUser)
+                .AsQueryable();
+
+            if (ClientRoles.Contains(userRole))
+            {
+                query = query.Where(m =>
+                    (m.RecipientUserId == currentUserId.Value || m.SenderUserId == currentUserId.Value)
+                    && !m.IsPoolEmail);
+            }
+            else if (userRole == "Receptionist")
+            {
+                query = query.Where(m =>
+                    m.IsPoolEmail ||
+                    m.RecipientUserId == currentUserId.Value ||
+                    m.SenderUserId == currentUserId.Value);
+            }
+            else if (userRole == "Assistant")
+            {
+                var consultantIds = await _context.AssistantAssignments
+                    .Where(a => a.AssistantUserId == currentUserId.Value)
+                    .Select(a => a.ConsultantUserId)
+                    .ToListAsync();
+
+                if (consultantIds.Count > 0)
+                {
+                    query = query.Where(m =>
+                        m.RecipientUserId == currentUserId.Value ||
+                        m.SenderUserId == currentUserId.Value ||
+                        m.IsPoolEmail ||
+                        (m.AssistantVisible &&
+                         (consultantIds.Contains(m.RecipientUserId) ||
+                          (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)))));
+                }
+                else
+                {
+                    query = query.Where(m =>
+                        m.RecipientUserId == currentUserId.Value ||
+                        m.SenderUserId == currentUserId.Value ||
+                        m.IsPoolEmail);
+                }
+            }
+            else
+            {
+                query = query.Where(m =>
+                    m.RecipientUserId == currentUserId.Value ||
+                    m.SenderUserId == currentUserId.Value ||
+                    m.IsPoolEmail);
+            }
+
+            var messages = await query
+                .AsNoTracking()
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync();
+
+            // Group messages into conversations
+            var conversations = new List<ConversationDto>();
+
+            // Pool email conversation (all pool emails grouped together)
+            var poolMessages = messages.Where(m => m.IsPoolEmail).ToList();
+            if (poolMessages.Count > 0)
+            {
+                var latest = poolMessages.First();
+                var content = _encryption.SafeDecrypt(latest.Content) ?? latest.Content;
+                var unread = poolMessages.Count(m => !m.IsRead && m.RecipientUserId == currentUserId.Value);
+                conversations.Add(new ConversationDto(
+                    null,
+                    "📧 Pool E-Mail",
+                    content.Length > 80 ? content[..80] + "..." : content,
+                    latest.CreatedAt,
+                    unread,
+                    true,
+                    latest.AssistantVisible
+                ));
+            }
+
+            // Direct conversations grouped by the other user
+            // Exclude messages with null SenderUserId (external messages without a known sender)
+            // that were not sent by the current user, to avoid them being grouped under userId 0
+            var directMessages = messages
+                .Where(m => !m.IsPoolEmail && (m.SenderUserId == currentUserId.Value || m.SenderUserId.HasValue))
+                .ToList();
+            var grouped = directMessages
+                .GroupBy(m => m.SenderUserId == currentUserId.Value ? m.RecipientUserId : m.SenderUserId!.Value)
+                .ToList();
+
+            foreach (var group in grouped.OrderByDescending(g => g.Max(m => m.CreatedAt)))
+            {
+                var latest = group.OrderByDescending(m => m.CreatedAt).First();
+                var otherUserId = latest.SenderUserId == currentUserId.Value
+                    ? latest.RecipientUserId
+                    : latest.SenderUserId!.Value;
+
+                var otherUser = latest.SenderUserId == currentUserId.Value
+                    ? latest.RecipientUser
+                    : latest.SenderUser;
+
+                var otherUserName = otherUser != null
+                    ? $"{otherUser.FirstName} {otherUser.LastName}"
+                    : "Unknown";
+
+                var content = _encryption.SafeDecrypt(latest.Content) ?? latest.Content;
+                var unread = group.Count(m => !m.IsRead && m.RecipientUserId == currentUserId.Value);
+
+                conversations.Add(new ConversationDto(
+                    otherUserId,
+                    otherUserName,
+                    content.Length > 80 ? content[..80] + "..." : content,
+                    latest.CreatedAt,
+                    unread,
+                    false,
+                    latest.AssistantVisible
+                ));
+            }
+
+            return Ok(conversations.OrderByDescending(c => c.LastMessageTime).ToList());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching conversations");
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching conversations" });
+        }
+    }
+
+    /// <summary>
+    /// Returns all messages between the current user and the specified user, ordered oldest first.
+    /// Use userId = 0 to get all pool emails.
+    /// </summary>
+    [HttpGet("conversation/{userId:int}")]
+    public async Task<IActionResult> GetConversation(int userId)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+                return Unauthorized(new { error = "unauthorized", message = "User not found" });
+
+            var userRole = User.FindFirst("role")?.Value ?? "";
+            IQueryable<Domain.Entities.Messaging.Message> query;
+
+            if (userId == 0)
+            {
+                // Pool emails
+                query = _context.Messages
+                    .Include(m => m.SenderUser)
+                    .Include(m => m.RecipientUser)
+                    .Where(m => m.IsPoolEmail);
+
+                // Apply role-based access to pool emails
+                if (ClientRoles.Contains(userRole))
+                    return Forbid(); // clients cannot see pool emails
+            }
+            else
+            {
+                // Direct conversation between current user and userId
+                query = _context.Messages
+                    .Include(m => m.SenderUser)
+                    .Include(m => m.RecipientUser)
+                    .Where(m => !m.IsPoolEmail &&
+                        ((m.SenderUserId == currentUserId.Value && m.RecipientUserId == userId) ||
+                         (m.SenderUserId == userId && m.RecipientUserId == currentUserId.Value)));
+
+                // For assistants, apply visibility restrictions
+                if (userRole == "Assistant")
+                {
+                    var hasAssignment = await _context.AssistantAssignments
+                        .AnyAsync(a => a.AssistantUserId == currentUserId.Value && a.ConsultantUserId == userId);
+
+                    if (!hasAssignment)
+                    {
+                        // Only own messages allowed
+                        query = query.Where(m =>
+                            m.SenderUserId == currentUserId.Value ||
+                            m.RecipientUserId == currentUserId.Value);
+                    }
+                    else
+                    {
+                        // For assigned consultants, only AssistantVisible messages (plus own)
+                        query = query.Where(m =>
+                            m.SenderUserId == currentUserId.Value ||
+                            m.RecipientUserId == currentUserId.Value ||
+                            m.AssistantVisible);
+                    }
+                }
+            }
+
+            var messages = await query
+                .AsNoTracking()
+                .OrderBy(m => m.CreatedAt)
+                .ToListAsync();
+
+            // Mark unread messages as read
+            var unreadIds = messages
+                .Where(m => !m.IsRead && m.RecipientUserId == currentUserId.Value)
+                .Select(m => m.Id)
+                .ToList();
+
+            if (unreadIds.Count > 0)
+            {
+                await _context.Messages
+                    .Where(m => unreadIds.Contains(m.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(m => m.IsRead, true)
+                        .SetProperty(m => m.ReadAt, DateTime.UtcNow));
+            }
+
+            var dtos = messages.Select(m =>
+            {
+                var content = _encryption.SafeDecrypt(m.Content) ?? m.Content;
+                var subject = _encryption.SafeDecrypt(m.Subject) ?? m.Subject;
+                return new ConversationMessageDto(
+                    m.Id,
+                    m.SenderUserId,
+                    m.SenderUser != null ? $"{m.SenderUser.FirstName} {m.SenderUser.LastName}" : "Extern",
+                    content,
+                    subject,
+                    m.CreatedAt,
+                    m.IsRead,
+                    m.SenderUserId == currentUserId.Value,
+                    m.AssistantVisible
+                );
+            }).ToList();
+
+            return Ok(dtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching conversation with user {UserId}", userId);
+            return StatusCode(500, new { error = "internal_error", message = "Error fetching conversation" });
+        }
+    }
+
     private IActionResult Forbidden(object value)
     {
         return StatusCode(403, value);

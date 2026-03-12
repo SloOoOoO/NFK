@@ -156,6 +156,8 @@ export const messagesAPI = {
     apiClient.post('/messages/send', data),
   reply: (id: number, content: string, assistantVisible?: boolean) => apiClient.post(`/messages/${id}/reply`, { content, assistantVisible }),
   delete: (id: number) => apiClient.delete(`/messages/${id}`),
+  getConversations: () => apiClient.get('/messages/conversations'),
+  getConversation: (userId: number) => apiClient.get(`/messages/conversation/${userId}`),
 };
 
 // Events/Calendar API
