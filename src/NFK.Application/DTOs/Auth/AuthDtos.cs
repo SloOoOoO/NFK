@@ -96,8 +96,7 @@ public record UserResponse(
     string? Gender = null,
     string? FirmLegalName = null,
     string? FirmTaxId = null,
-    string? FirmChamberRegistration = null,
-    bool ReceptionistCanSeeMessages = true
+    string? FirmChamberRegistration = null
 );
 
 public record ForgotPasswordRequest(

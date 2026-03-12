@@ -577,8 +577,7 @@ public class AuthService : IAuthService
             user.Gender,
             _encryption.SafeDecrypt(user.FirmLegalName),
             _encryption.SafeDecrypt(user.FirmTaxId),
-            _encryption.SafeDecrypt(user.FirmChamberRegistration),
-            user.ReceptionistCanSeeMessages
+            _encryption.SafeDecrypt(user.FirmChamberRegistration)
         );
     }
 
