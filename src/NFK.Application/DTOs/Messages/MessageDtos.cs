@@ -38,7 +38,8 @@ public record ConversationDto(
     DateTime LastMessageTime,
     int UnreadCount,
     bool IsPoolEmail,
-    bool LastMessageAssistantVisible
+    bool LastMessageAssistantVisible,
+    string? ViaConsultantName = null
 );
 
 public record ConversationMessageDto(

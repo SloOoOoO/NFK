@@ -308,7 +308,8 @@
     "startConversation": "Noch keine Nachrichten. Schreiben Sie die erste Nachricht!",
     "typeMessage": "Nachricht eingeben... (Enter zum Senden)",
     "defaultChatSubject": "Chat",
-    "poolEmailReadOnly": "Pool E-Mails können nicht beantwortet werden"
+    "poolEmailReadOnly": "Pool E-Mails können nicht beantwortet werden",
+    "observedReadOnly": "Nur lesen – Konversation von {{consultant}}"
   },
   "calendar": {
     "title": "Kalender",

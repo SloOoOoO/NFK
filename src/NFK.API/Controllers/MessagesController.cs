@@ -680,6 +680,26 @@ public class MessagesController : ControllerBase
                 var content = _encryption.SafeDecrypt(latest.Content) ?? latest.Content;
                 var unread = group.Count(m => !m.IsRead && m.RecipientUserId == currentUserId.Value);
 
+                // For assistant: if none of the messages involve the assistant directly,
+                // this is an observed consultant↔client conversation — populate ViaConsultantName.
+                string? viaConsultantName = null;
+                if (userRole == "Assistant" && assistantConsultantIds.Count > 0)
+                {
+                    var assistantParticipates = group.Any(m =>
+                        m.SenderUserId == currentUserId.Value || m.RecipientUserId == currentUserId.Value);
+                    if (!assistantParticipates)
+                    {
+                        Func<Domain.Entities.Users.User?, string?> getUserName =
+                            u => u != null ? $"{u.FirstName} {u.LastName}" : null;
+
+                        var consultantMsg = group.FirstOrDefault(m =>
+                            m.SenderUserId.HasValue && assistantConsultantIds.Contains(m.SenderUserId.Value));
+                        viaConsultantName = getUserName(consultantMsg?.SenderUser)
+                            ?? getUserName(group.FirstOrDefault(m =>
+                                assistantConsultantIds.Contains(m.RecipientUserId))?.RecipientUser);
+                    }
+                }
+
                 conversations.Add(new ConversationDto(
                     otherUserId,
                     otherUserName,
@@ -687,7 +707,8 @@ public class MessagesController : ControllerBase
                     latest.CreatedAt,
                     unread,
                     false,
-                    latest.AssistantVisible
+                    latest.AssistantVisible,
+                    viaConsultantName
                 ));
             }
 
