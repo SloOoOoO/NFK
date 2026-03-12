@@ -1015,8 +1015,9 @@ namespace NFK.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssistantUserId")
-                        .IsUnique();
+                    b.HasIndex("AssistantUserId", "ConsultantUserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AssistantAssignments_AssistantUserId_ConsultantUserId");
 
                     b.HasIndex("ConsultantUserId");
 
