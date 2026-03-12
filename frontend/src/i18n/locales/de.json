@@ -306,7 +306,9 @@
     "selectConversation": "Wählen Sie eine Unterhaltung aus",
     "selectConversationHint": "Klicken Sie auf eine Unterhaltung in der linken Leiste",
     "startConversation": "Noch keine Nachrichten. Schreiben Sie die erste Nachricht!",
-    "typeMessage": "Nachricht eingeben... (Enter zum Senden)"
+    "typeMessage": "Nachricht eingeben... (Enter zum Senden)",
+    "defaultChatSubject": "Chat",
+    "poolEmailReadOnly": "Pool E-Mails können nicht beantwortet werden"
   },
   "calendar": {
     "title": "Kalender",

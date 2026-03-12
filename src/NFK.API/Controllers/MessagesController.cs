@@ -636,9 +636,13 @@ public class MessagesController : ControllerBase
             }
 
             // Direct conversations grouped by the other user
-            var directMessages = messages.Where(m => !m.IsPoolEmail).ToList();
+            // Exclude messages with null SenderUserId (external messages without a known sender)
+            // that were not sent by the current user, to avoid them being grouped under userId 0
+            var directMessages = messages
+                .Where(m => !m.IsPoolEmail && (m.SenderUserId == currentUserId.Value || m.SenderUserId.HasValue))
+                .ToList();
             var grouped = directMessages
-                .GroupBy(m => m.SenderUserId == currentUserId.Value ? m.RecipientUserId : (m.SenderUserId ?? 0))
+                .GroupBy(m => m.SenderUserId == currentUserId.Value ? m.RecipientUserId : m.SenderUserId!.Value)
                 .ToList();
 
             foreach (var group in grouped.OrderByDescending(g => g.Max(m => m.CreatedAt)))
@@ -646,7 +650,7 @@ public class MessagesController : ControllerBase
                 var latest = group.OrderByDescending(m => m.CreatedAt).First();
                 var otherUserId = latest.SenderUserId == currentUserId.Value
                     ? latest.RecipientUserId
-                    : (latest.SenderUserId ?? 0);
+                    : latest.SenderUserId!.Value;
 
                 var otherUser = latest.SenderUserId == currentUserId.Value
                     ? latest.RecipientUser
@@ -654,7 +658,7 @@ public class MessagesController : ControllerBase
 
                 var otherUserName = otherUser != null
                     ? $"{otherUser.FirstName} {otherUser.LastName}"
-                    : "Unbekannt";
+                    : "Unknown";
 
                 var content = _encryption.SafeDecrypt(latest.Content) ?? latest.Content;
                 var unread = group.Count(m => !m.IsRead && m.RecipientUserId == currentUserId.Value);

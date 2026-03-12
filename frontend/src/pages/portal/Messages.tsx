@@ -174,7 +174,7 @@ export default function Messages() {
         // No prior messages — use send endpoint with subject from compose context or default
         await messagesAPI.send({
           recipientUserId: activeConversation.otherUserId!,
-          subject: 'Chat',
+          subject: t('messages.defaultChatSubject'),
           content: chatInput.trim(),
           assistantVisible: canSetAssistantVisible ? chatAssistantVisible : false,
         });
@@ -200,7 +200,7 @@ export default function Messages() {
     try {
       await messagesAPI.send({
         recipientUserId: selectedUser.id,
-        subject: composeSubject || 'Chat',
+        subject: composeSubject || t('messages.defaultChatSubject'),
         content: composeContent,
         assistantVisible: canSetAssistantVisible ? composeAssistantVisible : false,
       });
@@ -411,7 +411,13 @@ export default function Messages() {
                 </div>
 
                 {/* Input area */}
-                {!activeConversation.isPoolEmail && (
+                {activeConversation.isPoolEmail ? (
+                  <div className="bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 p-3 flex-shrink-0 text-center">
+                    <p className="text-xs text-textSecondary dark:text-gray-400">
+                      📧 {t('messages.poolEmailReadOnly')}
+                    </p>
+                  </div>
+                ) : (
                   <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 flex-shrink-0">
                     <form onSubmit={handleSendChatMessage} className="flex items-end gap-3">
                       <textarea
@@ -420,7 +426,8 @@ export default function Messages() {
                         onKeyDown={e => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            handleSendChatMessage(e as any);
+                            const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                            handleSendChatMessage(fakeEvent);
                           }
                         }}
                         placeholder={t('messages.typeMessage')}

@@ -306,7 +306,9 @@
     "selectConversation": "Select a conversation",
     "selectConversationHint": "Click a conversation in the left panel",
     "startConversation": "No messages yet. Send the first one!",
-    "typeMessage": "Type a message... (Enter to send)"
+    "typeMessage": "Type a message... (Enter to send)",
+    "defaultChatSubject": "Chat",
+    "poolEmailReadOnly": "Pool emails cannot be replied to"
   },
   "calendar": {
     "title": "Calendar",
