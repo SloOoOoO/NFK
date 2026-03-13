@@ -154,7 +154,7 @@ export default function Profile() {
     return (
       <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
         <Sidebar />
-        <main className="flex-1 p-8">
+        <main className="flex-1 ml-64 p-8">
           <div className="text-center py-12">
             <div className="text-lg text-textSecondary dark:text-gray-400">{t('profile.loadingProfile')}</div>
           </div>
@@ -167,7 +167,7 @@ export default function Profile() {
     return (
       <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
         <Sidebar />
-        <main className="flex-1 p-8">
+        <main className="flex-1 ml-64 p-8">
           <div className="text-center py-12">
             <div className="text-lg text-red-600 dark:text-red-400">{t('profile.errorLoading')}</div>
           </div>
@@ -180,7 +180,7 @@ export default function Profile() {
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-primary dark:text-blue-400">{t('profile.title')}</h1>

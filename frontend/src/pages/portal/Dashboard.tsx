@@ -147,7 +147,7 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         {/* Welcome Hero Section with Gradient */}
         <div className="bg-gradient-to-r from-primary to-primary/80 dark:from-blue-600 dark:to-blue-700 text-white p-8 rounded-lg shadow-lg mb-8">
           <div className="flex items-center justify-between">

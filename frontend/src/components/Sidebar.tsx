@@ -84,7 +84,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-screen">
+    <aside className="fixed top-0 left-0 h-screen w-64 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-40">
       <div className="p-6">
         <div className="flex items-center justify-between">
           <div>

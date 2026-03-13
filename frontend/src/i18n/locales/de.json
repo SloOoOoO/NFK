@@ -309,7 +309,8 @@
     "typeMessage": "Nachricht eingeben... (Enter zum Senden)",
     "defaultChatSubject": "Chat",
     "poolEmailReadOnly": "Pool E-Mails können nicht beantwortet werden",
-    "observedReadOnly": "Nur lesen – Konversation von {{consultant}}"
+    "observedReadOnly": "🔒 Nur-Lesen — Sie beobachten diese Unterhaltung ({{consultant}})",
+    "readOnlyConversation": "Diese Unterhaltung ist schreibgeschützt. Sie können nur zuschauen."
   },
   "calendar": {
     "title": "Kalender",

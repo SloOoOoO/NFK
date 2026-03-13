@@ -8,7 +8,7 @@ export default function Connections() {
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
