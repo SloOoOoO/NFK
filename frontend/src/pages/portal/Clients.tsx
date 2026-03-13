@@ -242,7 +242,7 @@ export default function Clients() {
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 ml-64 p-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-textPrimary dark:text-white mb-2">Mandanten</h1>

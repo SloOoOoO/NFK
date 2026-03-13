@@ -11,7 +11,8 @@ public record MessageDto(
     bool IsPoolEmail = false,
     string? Recipient = null,
     bool IsSent = false,
-    bool AssistantVisible = false
+    bool AssistantVisible = false,
+    bool IsWhatsApp = false
 );
 
 public record MarkMessageReadRequest(
@@ -39,7 +40,9 @@ public record ConversationDto(
     int UnreadCount,
     bool IsPoolEmail,
     bool LastMessageAssistantVisible,
-    string? ViaConsultantName = null
+    string? ViaConsultantName = null,
+    bool IsReadOnly = false,
+    bool IsWhatsApp = false
 );
 
 public record ConversationMessageDto(
@@ -51,5 +54,6 @@ public record ConversationMessageDto(
     DateTime Timestamp,
     bool IsRead,
     bool IsMine,
-    bool AssistantVisible
+    bool AssistantVisible,
+    bool IsWhatsApp = false
 );

@@ -38,6 +38,16 @@ public class Message : BaseEntity
     /// </summary>
     public bool AssistantVisible { get; set; }
 
+    /// <summary>
+    /// True if this message was sent/received via WhatsApp.
+    /// </summary>
+    public bool IsWhatsApp { get; set; }
+
+    /// <summary>
+    /// WhatsApp message ID (wamid) for tracking. Null for non-WhatsApp messages.
+    /// </summary>
+    public string? WhatsAppMessageId { get; set; }
+
     // Navigation properties
     public virtual Users.User? SenderUser { get; set; }
     public virtual Users.User RecipientUser { get; set; } = null!;

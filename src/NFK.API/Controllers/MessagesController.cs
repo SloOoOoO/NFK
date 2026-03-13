@@ -68,7 +68,7 @@ public class MessagesController : ControllerBase
             }
             else if (userRole == "Assistant")
             {
-                // Assistants see: own messages + pool emails + messages where AssistantVisible=true involving their assigned consultants
+                // Assistants see: own messages + pool emails + ALL messages involving their assigned consultants
                 var consultantIds = await _context.AssistantAssignments
                     .Where(a => a.AssistantUserId == currentUserId.Value)
                     .Select(a => a.ConsultantUserId)
@@ -80,10 +80,9 @@ public class MessagesController : ControllerBase
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        // Only messages explicitly marked AssistantVisible involving assigned consultants
-                        (m.AssistantVisible &&
-                         (consultantIds.Contains(m.RecipientUserId) ||
-                          (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)))));
+                        // ALL messages involving assigned consultants (no AssistantVisible flag needed)
+                        consultantIds.Contains(m.RecipientUserId) ||
+                        (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)));
                 }
                 else
                 {
@@ -127,7 +126,8 @@ public class MessagesController : ControllerBase
                     m.IsPoolEmail,
                     Recipient: (m.RecipientUser?.FirstName ?? "") + " " + (m.RecipientUser?.LastName ?? ""),
                     IsSent: m.SenderUserId == currentUserId.Value,
-                    AssistantVisible: m.AssistantVisible
+                    AssistantVisible: m.AssistantVisible,
+                    IsWhatsApp: m.IsWhatsApp
                 );
             }).ToList();
 
@@ -195,9 +195,9 @@ public class MessagesController : ControllerBase
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        (m.AssistantVisible &&
-                         (consultantIds.Contains(m.RecipientUserId) ||
-                          (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)))));
+                        // ALL messages involving assigned consultants
+                        consultantIds.Contains(m.RecipientUserId) ||
+                        (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)));
                 }
                 else
                 {
@@ -259,10 +259,8 @@ public class MessagesController : ControllerBase
                 }
                 else if (userRole == "Assistant")
                 {
-                    // Assistant can see the message only if it is explicitly marked AssistantVisible
-                    // and involves an assigned consultant
-                    bool hasAccess = message.AssistantVisible &&
-                        await _context.AssistantAssignments
+                    // Assistant can see the message if it involves an assigned consultant
+                    bool hasAccess = await _context.AssistantAssignments
                             .AnyAsync(a =>
                                 a.AssistantUserId == currentUserId.Value &&
                                 (message.RecipientUserId == a.ConsultantUserId || message.SenderUserId == a.ConsultantUserId));
@@ -594,9 +592,9 @@ public class MessagesController : ControllerBase
                         m.RecipientUserId == currentUserId.Value ||
                         m.SenderUserId == currentUserId.Value ||
                         m.IsPoolEmail ||
-                        (m.AssistantVisible &&
-                         (assistantConsultantIds.Contains(m.RecipientUserId) ||
-                          (m.SenderUserId.HasValue && assistantConsultantIds.Contains(m.SenderUserId.Value)))));
+                        // ALL messages involving assigned consultants (no AssistantVisible flag needed)
+                        assistantConsultantIds.Contains(m.RecipientUserId) ||
+                        (m.SenderUserId.HasValue && assistantConsultantIds.Contains(m.SenderUserId.Value)));
                 }
                 else
                 {
@@ -708,7 +706,9 @@ public class MessagesController : ControllerBase
                     unread,
                     false,
                     latest.AssistantVisible,
-                    viaConsultantName
+                    viaConsultantName,
+                    IsReadOnly: viaConsultantName != null, // read-only when assistant is observing consultant↔client conversation
+                    IsWhatsApp: group.Any(m => m.IsWhatsApp)
                 ));
             }
 
@@ -759,7 +759,7 @@ public class MessagesController : ControllerBase
                         ((m.SenderUserId == currentUserId.Value && m.RecipientUserId == userId) ||
                          (m.SenderUserId == userId && m.RecipientUserId == currentUserId.Value)));
 
-                // For assistants, apply visibility restrictions
+                // For assistants, apply simplified visibility rules (no AssistantVisible check needed)
                 if (userRole == "Assistant")
                 {
                     var consultantIds = await _context.AssistantAssignments
@@ -769,23 +769,24 @@ public class MessagesController : ControllerBase
 
                     if (consultantIds.Contains(userId))
                     {
-                        // userId is one of the assigned consultants: show AssistantVisible messages plus own
+                        // userId is one of the assigned consultants: show all messages to/from that consultant
                         query = query.Where(m =>
                             m.SenderUserId == currentUserId.Value ||
                             m.RecipientUserId == currentUserId.Value ||
-                            m.AssistantVisible);
+                            consultantIds.Contains(m.RecipientUserId) ||
+                            (m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value)));
                     }
                     else
                     {
                         // userId is a client (or someone else): show the assistant's own direct messages
-                        // with userId PLUS any AssistantVisible messages between assigned consultants and userId
+                        // with userId PLUS ALL messages between assigned consultants and userId
                         query = _context.Messages
                             .Include(m => m.SenderUser)
                             .Include(m => m.RecipientUser)
                             .Where(m => !m.IsPoolEmail && (
                                 (m.SenderUserId == currentUserId.Value && m.RecipientUserId == userId) ||
                                 (m.SenderUserId == userId && m.RecipientUserId == currentUserId.Value) ||
-                                (m.AssistantVisible && consultantIds.Count > 0 &&
+                                (consultantIds.Count > 0 &&
                                  ((m.SenderUserId.HasValue && consultantIds.Contains(m.SenderUserId.Value) && m.RecipientUserId == userId) ||
                                   (m.SenderUserId == userId && consultantIds.Contains(m.RecipientUserId))))));
                     }
@@ -797,7 +798,7 @@ public class MessagesController : ControllerBase
                 .OrderBy(m => m.CreatedAt)
                 .ToListAsync();
 
-            // Mark unread messages as read
+            // Mark unread messages as read (only for messages the current user received)
             var unreadIds = messages
                 .Where(m => !m.IsRead && m.RecipientUserId == currentUserId.Value)
                 .Select(m => m.Id)
@@ -825,7 +826,8 @@ public class MessagesController : ControllerBase
                     m.CreatedAt,
                     m.IsRead,
                     m.SenderUserId == currentUserId.Value,
-                    m.AssistantVisible
+                    m.AssistantVisible,
+                    m.IsWhatsApp
                 );
             }).ToList();
 
