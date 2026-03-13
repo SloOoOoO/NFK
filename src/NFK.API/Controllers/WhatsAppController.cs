@@ -258,22 +258,58 @@ public class WhatsAppController : ControllerBase
         }
     }
 
+    private static readonly Dictionary<string, string> AllowedMimeExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "image/jpeg", "jpg" },
+        { "image/png", "png" },
+        { "image/gif", "gif" },
+        { "image/webp", "webp" },
+        { "application/pdf", "pdf" },
+        { "application/msword", "doc" },
+        { "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx" },
+        { "application/vnd.ms-excel", "xls" },
+        { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx" },
+        { "text/plain", "txt" },
+        { "audio/mpeg", "mp3" },
+        { "audio/ogg", "ogg" },
+        { "audio/opus", "opus" },
+        { "video/mp4", "mp4" },
+        { "application/octet-stream", "bin" },
+    };
+
     private async Task SaveWhatsAppMedia(string mediaId, string mediaType, int userId, int messageId)
     {
         try
         {
-            var (data, mimeType, fileName) = await _whatsAppService.DownloadMedia(mediaId);
+            var (data, mimeType, rawFileName) = await _whatsAppService.DownloadMedia(mediaId);
             if (data == null) return;
+
+            // Validate MIME type against allowed list
+            var effectiveMime = mimeType ?? "application/octet-stream";
+            if (!AllowedMimeExtensions.TryGetValue(effectiveMime, out var safeExt))
+            {
+                _logger.LogWarning("Rejecting WhatsApp media with unsupported MIME type: {MimeType}", effectiveMime);
+                return;
+            }
+
+            // Sanitize filename: remove path traversal characters and limit to safe characters
+            string fileName;
+            if (!string.IsNullOrEmpty(rawFileName))
+            {
+                // Strip directory separators and keep only safe characters
+                var baseName = Path.GetFileNameWithoutExtension(rawFileName);
+                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"[^\w\-]", "_");
+                baseName = baseName.Length > 100 ? baseName[..100] : baseName;
+                fileName = $"{baseName}.{safeExt}";
+            }
+            else
+            {
+                fileName = $"whatsapp_{mediaId}.{safeExt}";
+            }
 
             var uploadPath = _configuration["Storage:LocalPath"] ?? "/uploads";
             var waDir = Path.Combine(uploadPath, "whatsapp", userId.ToString());
             Directory.CreateDirectory(waDir);
-
-            if (string.IsNullOrEmpty(fileName))
-            {
-                var ext = mimeType?.Split('/').LastOrDefault() ?? "bin";
-                fileName = $"whatsapp_{mediaId}.{ext}";
-            }
 
             var filePath = Path.Combine(waDir, fileName);
             await System.IO.File.WriteAllBytesAsync(filePath, data);
@@ -283,7 +319,7 @@ public class WhatsAppController : ControllerBase
             {
                 FileName = fileName,
                 FilePath = filePath,
-                FileType = mimeType ?? "application/octet-stream",
+                FileType = effectiveMime,
                 FileSize = data.Length,
                 Status = Domain.Enums.DocumentStatus.Pending,
                 UploadedByUserId = userId,

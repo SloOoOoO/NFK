@@ -168,7 +168,10 @@ export default function Messages() {
   const handleSendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !activeConversation || activeConversation.isPoolEmail) return;
-    if (activeConversation.isReadOnly) return; // Read-only conversations cannot be replied to
+    if (activeConversation.isReadOnly) {
+      alert(t('messages.readOnlyConversation'));
+      return;
+    }
     setSending(true);
     try {
       const lastMsg = chatMessages[chatMessages.length - 1];

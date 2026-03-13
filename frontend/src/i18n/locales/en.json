@@ -309,7 +309,8 @@
     "typeMessage": "Type a message... (Enter to send)",
     "defaultChatSubject": "Chat",
     "poolEmailReadOnly": "Pool emails cannot be replied to",
-    "observedReadOnly": "Read only – conversation by {{consultant}}"
+    "observedReadOnly": "🔒 Read-only — You are observing this conversation ({{consultant}})",
+    "readOnlyConversation": "This conversation is read-only. You can only observe."
   },
   "calendar": {
     "title": "Calendar",
