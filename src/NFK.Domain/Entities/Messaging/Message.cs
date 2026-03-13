@@ -38,6 +38,16 @@ public class Message : BaseEntity
     /// </summary>
     public bool AssistantVisible { get; set; }
 
+    /// <summary>
+    /// Indicates this message was received or sent via WhatsApp Business API.
+    /// </summary>
+    public bool IsWhatsApp { get; set; }
+
+    /// <summary>
+    /// The WhatsApp message ID (wamid) for deduplication and reference.
+    /// </summary>
+    public string? WhatsAppMessageId { get; set; }
+
     // Navigation properties
     public virtual Users.User? SenderUser { get; set; }
     public virtual Users.User RecipientUser { get; set; } = null!;

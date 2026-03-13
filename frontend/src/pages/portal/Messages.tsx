@@ -14,8 +14,7 @@ interface Conversation {
   lastMessageTime: string;
   unreadCount: number;
   isPoolEmail: boolean;
-  lastMessageAssistantVisible: boolean;
-  viaConsultantName?: string;
+  isWhatsApp: boolean;
 }
 
 interface ChatMessage {
@@ -27,7 +26,7 @@ interface ChatMessage {
   timestamp: string;
   isRead: boolean;
   isMine: boolean;
-  assistantVisible: boolean;
+  isWhatsApp: boolean;
 }
 
 interface User {
@@ -54,21 +53,18 @@ export default function Messages() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [loadingChat, setLoadingChat] = useState(false);
   const [chatInput, setChatInput] = useState('');
-  const [chatAssistantVisible, setChatAssistantVisible] = useState(false);
   const [sending, setSending] = useState(false);
 
   // New chat compose modal
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [composeSubject, setComposeSubject] = useState('');
   const [composeContent, setComposeContent] = useState('');
-  const [composeAssistantVisible, setComposeAssistantVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userQuery, setUserQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [composeSending, setComposeSending] = useState(false);
 
   const isClient = currentUser?.role === 'Client' || currentUser?.role === 'RegisteredUser';
-  const canSetAssistantVisible = currentUser?.role === 'Consultant' || currentUser?.role === 'SuperAdmin';
 
   useEffect(() => {
     fetchCurrentUser();
@@ -116,8 +112,7 @@ export default function Messages() {
         lastMessageTime: new Date(c.lastMessageTime).toLocaleString('de-DE'),
         unreadCount: c.unreadCount,
         isPoolEmail: c.isPoolEmail,
-        lastMessageAssistantVisible: c.lastMessageAssistantVisible,
-        viaConsultantName: c.viaConsultantName ?? undefined,
+        isWhatsApp: c.isWhatsApp ?? false,
       }));
       setConversations(data);
     } catch (err) {
@@ -130,7 +125,6 @@ export default function Messages() {
 
   const openConversation = useCallback(async (conv: Conversation) => {
     setActiveConversation(conv);
-    setChatAssistantVisible(conv.lastMessageAssistantVisible);
     setLoadingChat(true);
     setChatMessages([]);
     try {
@@ -145,7 +139,7 @@ export default function Messages() {
         timestamp: new Date(m.timestamp).toLocaleString('de-DE'),
         isRead: m.isRead,
         isMine: m.isMine,
-        assistantVisible: m.assistantVisible,
+        isWhatsApp: m.isWhatsApp ?? false,
       }));
       setChatMessages(msgs);
       // Mark conversation as read by refreshing count
@@ -171,14 +165,13 @@ export default function Messages() {
       const lastMsg = chatMessages[chatMessages.length - 1];
       if (lastMsg) {
         // Reply to the last message in the conversation
-        await messagesAPI.reply(lastMsg.id, chatInput.trim(), canSetAssistantVisible ? chatAssistantVisible : undefined);
+        await messagesAPI.reply(lastMsg.id, chatInput.trim());
       } else {
         // No prior messages — use send endpoint with subject from compose context or default
         await messagesAPI.send({
           recipientUserId: activeConversation.otherUserId!,
           subject: t('messages.defaultChatSubject'),
           content: chatInput.trim(),
-          assistantVisible: canSetAssistantVisible ? chatAssistantVisible : false,
         });
       }
       setChatInput('');
@@ -204,12 +197,10 @@ export default function Messages() {
         recipientUserId: selectedUser.id,
         subject: composeSubject || t('messages.defaultChatSubject'),
         content: composeContent,
-        assistantVisible: canSetAssistantVisible ? composeAssistantVisible : false,
       });
       setShowComposeModal(false);
       setComposeSubject('');
       setComposeContent('');
-      setComposeAssistantVisible(false);
       setSelectedUser(null);
       setUserQuery('');
       // Refresh conversations and open the new one
@@ -236,7 +227,7 @@ export default function Messages() {
     <div className="flex min-h-screen bg-secondary dark:bg-gray-900">
       <Sidebar />
 
-      <main className="flex-1 flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
+      <main className="flex-1 ml-64 flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
         {/* Top header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div>
@@ -284,9 +275,9 @@ export default function Messages() {
                   >
                     {/* Avatar */}
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${
-                      conv.isPoolEmail ? 'bg-purple-500' : 'bg-teal-500'
+                      conv.isPoolEmail ? 'bg-purple-500' : conv.isWhatsApp ? 'bg-green-500' : 'bg-teal-500'
                     }`}>
-                      {conv.isPoolEmail ? '📧' : conv.otherUserName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      {conv.isPoolEmail ? '📧' : conv.isWhatsApp ? '📱' : conv.otherUserName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -297,16 +288,14 @@ export default function Messages() {
                             : 'text-textSecondary dark:text-gray-300'
                         }`}>
                           {conv.otherUserName}
+                          {conv.isWhatsApp && (
+                            <span className="ml-1 text-xs text-green-600 dark:text-green-400">📱</span>
+                          )}
                         </span>
                         <span className="text-xs text-textSecondary dark:text-gray-400 whitespace-nowrap ml-2">
                           {conv.lastMessageTime.split(',')[0]}
                         </span>
                       </div>
-                      {conv.viaConsultantName && (
-                        <p className="text-xs text-blue-500 dark:text-blue-400 truncate">
-                          via {conv.viaConsultantName}
-                        </p>
-                      )}
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-textSecondary dark:text-gray-400 truncate flex-1">
                           {conv.lastMessagePreview}
@@ -332,10 +321,12 @@ export default function Messages() {
                 <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
-                      activeConversation.isPoolEmail ? 'bg-purple-500' : 'bg-teal-500'
+                      activeConversation.isPoolEmail ? 'bg-purple-500' : activeConversation.isWhatsApp ? 'bg-green-500' : 'bg-teal-500'
                     }`}>
                       {activeConversation.isPoolEmail
                         ? '📧'
+                        : activeConversation.isWhatsApp
+                        ? '📱'
                         : activeConversation.otherUserName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </div>
                     <div>
@@ -345,26 +336,11 @@ export default function Messages() {
                       {activeConversation.isPoolEmail && (
                         <span className="text-xs text-purple-600 dark:text-purple-400">Pool E-Mail</span>
                       )}
-                      {activeConversation.viaConsultantName && (
-                        <span className="text-xs text-blue-500 dark:text-blue-400">via {activeConversation.viaConsultantName}</span>
+                      {activeConversation.isWhatsApp && !activeConversation.isPoolEmail && (
+                        <span className="text-xs text-green-600 dark:text-green-400">WhatsApp</span>
                       )}
                     </div>
                   </div>
-
-                  {/* AssistantVisible toggle for Consultant/SuperAdmin */}
-                  {canSetAssistantVisible && !activeConversation.isPoolEmail && (
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={chatAssistantVisible}
-                        onChange={e => setChatAssistantVisible(e.target.checked)}
-                        className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-                      />
-                      <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
-                        {t('messages.assistantCanSee')}
-                      </span>
-                    </label>
-                  )}
                 </div>
 
                 {/* Messages area */}
@@ -389,8 +365,10 @@ export default function Messages() {
                         <div
                           className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
                             msg.isMine
-                              ? 'bg-teal-500 text-white rounded-br-sm'
-                              : 'bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100 rounded-bl-sm border border-gray-100 dark:border-gray-600'
+                              ? msg.isWhatsApp ? 'bg-green-500 text-white rounded-br-sm' : 'bg-teal-500 text-white rounded-br-sm'
+                              : msg.isWhatsApp
+                                ? 'bg-green-50 dark:bg-green-900/20 text-textPrimary dark:text-gray-100 rounded-bl-sm border border-green-200 dark:border-green-800'
+                                : 'bg-white dark:bg-gray-700 text-textPrimary dark:text-gray-100 rounded-bl-sm border border-gray-100 dark:border-gray-600'
                           }`}
                         >
                           {!msg.isMine && (
@@ -399,10 +377,10 @@ export default function Messages() {
                             </p>
                           )}
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                          <div className={`flex items-center justify-end gap-1 mt-1 ${msg.isMine ? 'text-teal-100' : 'text-textSecondary dark:text-gray-400'}`}>
+                          <div className={`flex items-center justify-end gap-1 mt-1 ${msg.isMine ? (msg.isWhatsApp ? 'text-green-100' : 'text-teal-100') : 'text-textSecondary dark:text-gray-400'}`}>
                             <span className="text-xs">{msg.timestamp.split(',')[1]?.trim() || msg.timestamp}</span>
-                            {msg.assistantVisible && (
-                              <span className="text-xs" title={t('messages.assistantCanSee')}>👁</span>
+                            {msg.isWhatsApp && (
+                              <span className="text-xs" title="WhatsApp">📱</span>
                             )}
                             {msg.isMine && (
                               <span className="text-xs">{msg.isRead ? '✓✓' : '✓'}</span>
@@ -420,12 +398,6 @@ export default function Messages() {
                   <div className="bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 p-3 flex-shrink-0 text-center">
                     <p className="text-xs text-textSecondary dark:text-gray-400">
                       📧 {t('messages.poolEmailReadOnly')}
-                    </p>
-                  </div>
-                ) : activeConversation.viaConsultantName ? (
-                  <div className="bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 p-3 flex-shrink-0 text-center">
-                    <p className="text-xs text-textSecondary dark:text-gray-400">
-                      👁 {t('messages.observedReadOnly', { consultant: activeConversation.viaConsultantName })}
                     </p>
                   </div>
                 ) : (
@@ -564,22 +536,6 @@ export default function Messages() {
                   placeholder={t('messages.messagePlaceholder')}
                 />
               </div>
-
-              {canSetAssistantVisible && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-                  <input
-                    type="checkbox"
-                    id="composeAssistantVisible"
-                    checked={composeAssistantVisible}
-                    onChange={e => setComposeAssistantVisible(e.target.checked)}
-                    disabled={composeSending}
-                    className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
-                  />
-                  <label htmlFor="composeAssistantVisible" className="text-sm font-medium text-blue-800 dark:text-blue-300 cursor-pointer select-none">
-                    {t('messages.assistantCanSee')}
-                  </label>
-                </div>
-              )}
 
               <div className="flex gap-3 pt-2">
                 <Dialog.Close asChild>

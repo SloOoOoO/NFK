@@ -152,12 +152,17 @@ export const messagesAPI = {
   getAll: () => apiClient.get('/messages'),
   getById: (id: number) => apiClient.get(`/messages/${id}`),
   markAsRead: (id: number) => apiClient.put(`/messages/${id}/read`),
-  send: (data: { recipientUserId: number; subject: string; content: string; caseId?: number; assistantVisible?: boolean }) => 
+  send: (data: { recipientUserId: number; subject: string; content: string; caseId?: number }) => 
     apiClient.post('/messages/send', data),
-  reply: (id: number, content: string, assistantVisible?: boolean) => apiClient.post(`/messages/${id}/reply`, { content, assistantVisible }),
+  reply: (id: number, content: string) => apiClient.post(`/messages/${id}/reply`, { content }),
   delete: (id: number) => apiClient.delete(`/messages/${id}`),
   getConversations: () => apiClient.get('/messages/conversations'),
   getConversation: (userId: number) => apiClient.get(`/messages/conversation/${userId}`),
+};
+
+export const whatsappAPI = {
+  send: (data: { recipientUserId: number; content: string }) =>
+    apiClient.post('/whatsapp/send', data),
 };
 
 // Events/Calendar API

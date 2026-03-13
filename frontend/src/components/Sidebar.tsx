@@ -84,7 +84,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-screen">
+    <aside className="fixed top-0 left-0 w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto z-40 flex flex-col">
       <div className="p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -95,7 +95,7 @@ export default function Sidebar() {
         </div>
       </div>
       
-      <nav className="px-3">
+      <nav className="px-3 flex-1">
         {filteredNavItems.map((item) => (
           <NavLink
             key={item.path}
@@ -119,7 +119,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         {loading ? (
           <div className="text-center text-sm text-textSecondary dark:text-gray-400">{t('common.loading')}</div>
         ) : (
