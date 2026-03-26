@@ -126,8 +126,7 @@ public class MessagesController : ControllerBase
                     m.IsPoolEmail,
                     Recipient: (m.RecipientUser?.FirstName ?? "") + " " + (m.RecipientUser?.LastName ?? ""),
                     IsSent: m.SenderUserId == currentUserId.Value,
-                    AssistantVisible: m.AssistantVisible,
-                    IsWhatsApp: m.IsWhatsApp
+                    AssistantVisible: m.AssistantVisible
                 );
             }).ToList();
 
@@ -707,8 +706,7 @@ public class MessagesController : ControllerBase
                     false,
                     latest.AssistantVisible,
                     viaConsultantName,
-                    IsReadOnly: viaConsultantName != null, // read-only when assistant is observing consultant↔client conversation
-                    IsWhatsApp: group.Any(m => m.IsWhatsApp)
+                    IsReadOnly: viaConsultantName != null // read-only when assistant is observing consultant↔client conversation
                 ));
             }
 
@@ -826,8 +824,7 @@ public class MessagesController : ControllerBase
                     m.CreatedAt,
                     m.IsRead,
                     m.SenderUserId == currentUserId.Value,
-                    m.AssistantVisible,
-                    m.IsWhatsApp
+                    m.AssistantVisible
                 );
             }).ToList();
 

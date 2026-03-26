@@ -204,12 +204,6 @@ export const healthAPI = {
   check: () => axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`),
 };
 
-// WhatsApp API
-export const whatsappAPI = {
-  send: (data: { recipientUserId: number; content: string }) =>
-    apiClient.post('/whatsapp/send', data),
-};
-
 // Contact form API
 export const contactAPI = {
   submit: (data: { name: string; email: string; subject: string; message: string }) =>

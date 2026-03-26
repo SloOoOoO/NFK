@@ -17,7 +17,6 @@ interface Conversation {
   lastMessageAssistantVisible: boolean;
   viaConsultantName?: string;
   isReadOnly?: boolean;
-  isWhatsApp?: boolean;
 }
 
 interface ChatMessage {
@@ -30,7 +29,6 @@ interface ChatMessage {
   isRead: boolean;
   isMine: boolean;
   assistantVisible: boolean;
-  isWhatsApp?: boolean;
 }
 
 interface User {
@@ -119,7 +117,6 @@ export default function Messages() {
         lastMessageAssistantVisible: c.lastMessageAssistantVisible,
         viaConsultantName: c.viaConsultantName ?? undefined,
         isReadOnly: c.isReadOnly ?? false,
-        isWhatsApp: c.isWhatsApp ?? false,
       }));
       setConversations(data);
     } catch (err) {
@@ -147,7 +144,6 @@ export default function Messages() {
         isRead: m.isRead,
         isMine: m.isMine,
         assistantVisible: m.assistantVisible,
-        isWhatsApp: m.isWhatsApp ?? false,
       }));
       setChatMessages(msgs);
       // Mark conversation as read by refreshing count
@@ -310,11 +306,6 @@ export default function Messages() {
                           via {conv.viaConsultantName}
                         </p>
                       )}
-                      {conv.isWhatsApp && (
-                        <p className="text-xs text-green-500 dark:text-green-400 truncate">
-                          📱 WhatsApp
-                        </p>
-                      )}
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-textSecondary dark:text-gray-400 truncate flex-1">
                           {conv.lastMessagePreview}
@@ -352,9 +343,6 @@ export default function Messages() {
                       </h3>
                       {activeConversation.isPoolEmail && (
                         <span className="text-xs text-purple-600 dark:text-purple-400">Pool E-Mail</span>
-                      )}
-                      {activeConversation.isWhatsApp && (
-                        <span className="text-xs text-green-600 dark:text-green-400 ml-1">📱 Via WhatsApp</span>
                       )}
                       {activeConversation.viaConsultantName && (
                         <span className="text-xs text-blue-500 dark:text-blue-400 block">via {activeConversation.viaConsultantName}</span>
@@ -397,9 +385,6 @@ export default function Messages() {
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                           <div className={`flex items-center justify-end gap-1 mt-1 ${msg.isMine ? 'text-teal-100' : 'text-textSecondary dark:text-gray-400'}`}>
                             <span className="text-xs">{msg.timestamp.split(',')[1]?.trim() || msg.timestamp}</span>
-                            {msg.isWhatsApp && (
-                              <span className="text-xs" title="WhatsApp Nachricht">📱</span>
-                            )}
                             {msg.isMine && (
                               <span className="text-xs">{msg.isRead ? '✓✓' : '✓'}</span>
                             )}
