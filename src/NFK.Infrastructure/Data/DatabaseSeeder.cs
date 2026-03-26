@@ -149,27 +149,34 @@ public static class DatabaseSeeder
         context.UserRoles.AddRange(userRoles);
         await context.SaveChangesAsync();
 
-        // Seed AssistantAssignment: assign assistant@nfk.de to consultant@nfk.de
-        if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == consultantUser.Id))
+        try
         {
-            context.AssistantAssignments.Add(new AssistantAssignment
+            // Seed AssistantAssignment: assign assistant@nfk.de to consultant@nfk.de
+            if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == consultantUser.Id))
             {
-                AssistantUserId = assistantUser.Id,
-                ConsultantUserId = consultantUser.Id
-            });
-        }
+                context.AssistantAssignments.Add(new AssistantAssignment
+                {
+                    AssistantUserId = assistantUser.Id,
+                    ConsultantUserId = consultantUser.Id
+                });
+            }
 
-        // Also assign assistant to SuperAdmin (suheylUser) so assistant can see SuperAdmin messages
-        if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == suheylUser.Id))
+            // Also assign assistant to SuperAdmin (suheylUser) so assistant can see SuperAdmin messages
+            if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == suheylUser.Id))
+            {
+                context.AssistantAssignments.Add(new AssistantAssignment
+                {
+                    AssistantUserId = assistantUser.Id,
+                    ConsultantUserId = suheylUser.Id
+                });
+            }
+
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
         {
-            context.AssistantAssignments.Add(new AssistantAssignment
-            {
-                AssistantUserId = assistantUser.Id,
-                ConsultantUserId = suheylUser.Id
-            });
+            Console.WriteLine($"[DatabaseSeeder] Warning: Could not seed AssistantAssignments: {ex.Message}");
         }
-
-        await context.SaveChangesAsync();
 
         // Seed Clients
         var clients = new List<Client>
