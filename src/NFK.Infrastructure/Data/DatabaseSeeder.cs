@@ -57,7 +57,7 @@ public static class DatabaseSeeder
         var suheylUser = new User
         {
             Email = "karatas@nfk-buchhaltung.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
+            PasswordHash = passwordHasher.HashPassword("Suheyl2026!!"),
             FirstName = "Suheyl",
             LastName = "Karatas",
             FullLegalName = "Süheyl Faruk Kataş",
@@ -66,124 +66,28 @@ public static class DatabaseSeeder
             IsEmailConfirmed = true
         };
 
-        var superAdminUser = new User
-        {
-            Email = "superadmin@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
-            FirstName = "Max",
-            LastName = "Müller",
-            FullLegalName = "Max Müller",
-            PhoneNumber = "+49 30 11111111",
-            IsActive = true,
-            IsEmailConfirmed = true
-        };
-
-        var consultantUser = new User
-        {
-            Email = "consultant@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
-            FirstName = "Anna",
-            LastName = "Schmidt",
-            FullLegalName = "Anna Schmidt",
-            PhoneNumber = "+49 40 22222222",
-            IsActive = true,
-            IsEmailConfirmed = true
-        };
-
-        var receptionistUser = new User
-        {
-            Email = "receptionist@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
-            FirstName = "Thomas",
-            LastName = "Weber",
-            FullLegalName = "Thomas Weber",
-            PhoneNumber = "+49 89 33333333",
-            IsActive = true,
-            IsEmailConfirmed = true
-        };
-
-        var assistantUser = new User
-        {
-            Email = "assistant@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
-            FirstName = "Lena",
-            LastName = "Fischer",
-            FullLegalName = "Lena Fischer",
-            PhoneNumber = "+49 69 44444444",
-            IsActive = true,
-            IsEmailConfirmed = true
-        };
-
-        var clientUser = new User
-        {
-            Email = "client@nfk.de",
-            PasswordHash = passwordHasher.HashPassword("Test123!"),
-            FirstName = "Julia",
-            LastName = "Braun",
-            FullLegalName = "Julia Braun",
-            PhoneNumber = "+49 221 55555555",
-            IsActive = true,
-            IsEmailConfirmed = true
-        };
-
-        context.Users.AddRange(suheylUser, superAdminUser, consultantUser, receptionistUser, assistantUser, clientUser);
+        context.Users.AddRange(suheylUser);
         await context.SaveChangesAsync();
 
-        // Assign roles
+        // Assign SuperAdmin role
         var superAdminRole = roles.First(r => r.Name == "SuperAdmin");
-        var consultantRole = roles.First(r => r.Name == "Consultant");
-        var receptionistRole = roles.First(r => r.Name == "Receptionist");
-        var assistantRole = roles.First(r => r.Name == "Assistant");
-        var clientRole = roles.First(r => r.Name == "Client");
 
         var userRoles = new List<UserRoleEntity>
         {
-            new UserRoleEntity { UserId = suheylUser.Id, RoleId = superAdminRole.Id },
-            new UserRoleEntity { UserId = superAdminUser.Id, RoleId = superAdminRole.Id },
-            new UserRoleEntity { UserId = consultantUser.Id, RoleId = consultantRole.Id },
-            new UserRoleEntity { UserId = receptionistUser.Id, RoleId = receptionistRole.Id },
-            new UserRoleEntity { UserId = assistantUser.Id, RoleId = assistantRole.Id },
-            new UserRoleEntity { UserId = clientUser.Id, RoleId = clientRole.Id }
+            new UserRoleEntity { UserId = suheylUser.Id, RoleId = superAdminRole.Id }
         };
 
         context.UserRoles.AddRange(userRoles);
         await context.SaveChangesAsync();
 
-        try
-        {
-            // Seed AssistantAssignment: assign assistant@nfk.de to consultant@nfk.de
-            if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == consultantUser.Id))
-            {
-                context.AssistantAssignments.Add(new AssistantAssignment
-                {
-                    AssistantUserId = assistantUser.Id,
-                    ConsultantUserId = consultantUser.Id
-                });
-            }
-
-            // Also assign assistant to SuperAdmin (suheylUser) so assistant can see SuperAdmin messages
-            if (!await context.AssistantAssignments.AnyAsync(a => a.AssistantUserId == assistantUser.Id && a.ConsultantUserId == suheylUser.Id))
-            {
-                context.AssistantAssignments.Add(new AssistantAssignment
-                {
-                    AssistantUserId = assistantUser.Id,
-                    ConsultantUserId = suheylUser.Id
-                });
-            }
-
-            await context.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[DatabaseSeeder] Warning: Could not seed AssistantAssignments: {ex.Message}");
-        }
+        // No AssistantAssignment seeding needed — only one user account is seeded
 
         // Seed Clients
         var clients = new List<Client>
         {
             new Client
             {
-                UserId = superAdminUser.Id,
+                UserId = suheylUser.Id,
                 CompanyName = "Schmidt GmbH",
                 PhoneNumber = "+49 30 123456",
                 TaxNumber = "M-1001",
@@ -194,7 +98,7 @@ public static class DatabaseSeeder
             },
             new Client
             {
-                UserId = consultantUser.Id,
+                UserId = suheylUser.Id,
                 CompanyName = "Müller & Partner",
                 PhoneNumber = "+49 40 234567",
                 TaxNumber = "M-1002",
@@ -205,7 +109,7 @@ public static class DatabaseSeeder
             },
             new Client
             {
-                UserId = superAdminUser.Id,
+                UserId = suheylUser.Id,
                 CompanyName = "Weber Trading GmbH",
                 PhoneNumber = "+49 89 345678",
                 TaxNumber = "M-1003",
@@ -216,7 +120,7 @@ public static class DatabaseSeeder
             },
             new Client
             {
-                UserId = superAdminUser.Id,
+                UserId = suheylUser.Id,
                 CompanyName = "Koch Consulting",
                 PhoneNumber = "+49 69 456789",
                 TaxNumber = "M-1004",
@@ -227,24 +131,13 @@ public static class DatabaseSeeder
             },
             new Client
             {
-                UserId = superAdminUser.Id,
+                UserId = suheylUser.Id,
                 CompanyName = "Becker Handels AG",
                 PhoneNumber = "+49 221 567890",
                 TaxNumber = "M-1005",
                 Address = "Domstraße 8",
                 City = "Köln",
                 PostalCode = "50667",
-                IsActive = true
-            },
-            new Client
-            {
-                UserId = clientUser.Id,
-                CompanyName = "Julia Braun",
-                PhoneNumber = "+49 221 55555555",
-                TaxNumber = "M-1006",
-                Address = "Bachemer Str. 10",
-                City = "Köln",
-                PostalCode = "50931",
                 IsActive = true
             }
         };
@@ -324,7 +217,7 @@ public static class DatabaseSeeder
                 FileType = "application/pdf",
                 FileSize = 245760,
                 CaseId = cases[0].Id,
-                UploadedByUserId = superAdminUser.Id,
+                UploadedByUserId = suheylUser.Id,
                 Status = DocumentStatus.Approved
             },
             new Document
@@ -334,7 +227,7 @@ public static class DatabaseSeeder
                 FileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 FileSize = 512000,
                 CaseId = cases[1].Id,
-                UploadedByUserId = consultantUser.Id,
+                UploadedByUserId = suheylUser.Id,
                 Status = DocumentStatus.Draft
             },
             new Document
@@ -344,7 +237,7 @@ public static class DatabaseSeeder
                 FileType = "application/pdf",
                 FileSize = 156800,
                 CaseId = cases[2].Id,
-                UploadedByUserId = superAdminUser.Id,
+                UploadedByUserId = suheylUser.Id,
                 Status = DocumentStatus.Approved
             },
             new Document
@@ -354,7 +247,7 @@ public static class DatabaseSeeder
                 FileType = "application/zip",
                 FileSize = 3145728,
                 CaseId = cases[0].Id,
-                UploadedByUserId = superAdminUser.Id,
+                UploadedByUserId = suheylUser.Id,
                 Status = DocumentStatus.Approved
             },
             new Document
@@ -364,7 +257,7 @@ public static class DatabaseSeeder
                 FileType = "application/pdf",
                 FileSize = 204800,
                 CaseId = cases[5].Id,
-                UploadedByUserId = superAdminUser.Id,
+                UploadedByUserId = suheylUser.Id,
                 Status = DocumentStatus.Approved
             }
         };
@@ -377,32 +270,11 @@ public static class DatabaseSeeder
         {
             new Message
             {
-                SenderUserId = consultantUser.Id,
-                RecipientUserId = superAdminUser.Id,
-                Subject = encryption.Encrypt("Dokumente für Jahresabschluss")
+                SenderUserId = suheylUser.Id,
+                RecipientUserId = suheylUser.Id,
+                Subject = encryption.Encrypt("Willkommen im NFK-System")
                     ?? throw new InvalidOperationException("Failed to encrypt message subject"),
-                Content = encryption.Encrypt("Sehr geehrter Herr Berater,\n\nanbei sende ich Ihnen die angeforderten Unterlagen für den Jahresabschluss 2024. Bitte prüfen Sie die Vollständigkeit.\n\nMit freundlichen Grüßen\nAnna Schmidt")
-                    ?? throw new InvalidOperationException("Failed to encrypt message content"),
-                IsRead = false
-            },
-            new Message
-            {
-                SenderUserId = superAdminUser.Id,
-                RecipientUserId = consultantUser.Id,
-                Subject = encryption.Encrypt("Rückfrage zu Belegen Q4")
-                    ?? throw new InvalidOperationException("Failed to encrypt message subject"),
-                Content = encryption.Encrypt("Guten Tag,\n\nich habe eine Frage zu den eingereichten Belegen für Q4 2024. Könnten Sie bitte die Rechnung #12345 nochmals prüfen?\n\nEs scheint eine Unstimmigkeit bei der MwSt. zu geben.\n\nBeste Grüße\nMax Müller")
-                    ?? throw new InvalidOperationException("Failed to encrypt message content"),
-                IsRead = true,
-                ReadAt = DateTime.UtcNow.AddHours(-2)
-            },
-            new Message
-            {
-                SenderUserId = superAdminUser.Id,
-                RecipientUserId = superAdminUser.Id,
-                Subject = encryption.Encrypt("Fall-Update: Umsatzsteuervoranmeldung Q4")
-                    ?? throw new InvalidOperationException("Failed to encrypt message subject"),
-                Content = encryption.Encrypt("Automatische Benachrichtigung:\n\nDer Status Ihres Falls 'Umsatzsteuervoranmeldung Q4' wurde auf 'In Bearbeitung' geändert.\n\nBearbeiter: Max Müller\nZeitpunkt: " + DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm"))
+                Content = encryption.Encrypt("Willkommen im NFK-Buchhaltungssystem. Ihre Daten wurden erfolgreich migriert.")
                     ?? throw new InvalidOperationException("Failed to encrypt message content"),
                 IsRead = false
             }
@@ -417,7 +289,7 @@ public static class DatabaseSeeder
             new Appointment
             {
                 ClientId = clients[0].Id,
-                ConsultantUserId = consultantUser.Id,
+                ConsultantUserId = suheylUser.Id,
                 Title = "Jahresabschluss Besprechung",
                 Description = "Besprechung der vorläufigen Zahlen für den Jahresabschluss",
                 StartTime = DateTime.UtcNow.AddDays(5).Date.AddHours(10),
@@ -428,7 +300,7 @@ public static class DatabaseSeeder
             new Appointment
             {
                 ClientId = clients[1].Id,
-                ConsultantUserId = consultantUser.Id,
+                ConsultantUserId = suheylUser.Id,
                 Title = "Frist: Umsatzsteuervoranmeldung",
                 Description = "Abgabefrist für Umsatzsteuervoranmeldung Q4 2024",
                 StartTime = DateTime.UtcNow.AddDays(10).Date.AddHours(23).AddMinutes(59),
@@ -438,7 +310,7 @@ public static class DatabaseSeeder
             new Appointment
             {
                 ClientId = clients[3].Id,
-                ConsultantUserId = consultantUser.Id,
+                ConsultantUserId = suheylUser.Id,
                 Title = "Beratungsgespräch Investition",
                 Description = "Beratung zur geplanten Investition in neue Produktionsanlagen",
                 StartTime = DateTime.UtcNow.AddDays(8).Date.AddHours(14).AddMinutes(30),
@@ -449,7 +321,7 @@ public static class DatabaseSeeder
             new Appointment
             {
                 ClientId = clients[4].Id,
-                ConsultantUserId = consultantUser.Id,
+                ConsultantUserId = suheylUser.Id,
                 Title = "Betriebsprüfung Vorbereitung",
                 Description = "Vorbesprechung für anstehende Betriebsprüfung",
                 StartTime = DateTime.UtcNow.AddDays(15).Date.AddHours(9),
@@ -460,7 +332,7 @@ public static class DatabaseSeeder
             new Appointment
             {
                 ClientId = clients[0].Id,
-                ConsultantUserId = consultantUser.Id,
+                ConsultantUserId = suheylUser.Id,
                 Title = "Quartalsabschluss Deadline",
                 Description = "Frist für Quartalsabschluss Q1 2025",
                 StartTime = DateTime.UtcNow.AddDays(20).Date.AddHours(23).AddMinutes(59),

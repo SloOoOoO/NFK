@@ -791,12 +791,6 @@ namespace NFK.Infrastructure.Data.Migrations
                     b.Property<bool>("AssistantVisible")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsWhatsApp")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("WhatsAppMessageId")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("RecipientUserId")
                         .HasColumnType("int");
 

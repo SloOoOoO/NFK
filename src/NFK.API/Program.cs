@@ -136,7 +136,7 @@ builder.Services.AddScoped<NFK.Infrastructure.Storage.BlobStorageService>();
 builder.Services.AddScoped<NFK.Infrastructure.Security.EncryptionService>();
 builder.Services.AddScoped<NFK.Infrastructure.Caching.CacheService>();
 
-// OAuth services- conditionally register based on configuration
+// OAuth services - conditionally register based on configuration
 // Google OAuth
 var googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") 
     ?? builder.Configuration["OAuth:Google:ClientId"];
